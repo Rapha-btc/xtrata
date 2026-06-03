@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>XBoard - Web2 to On-chain Transition</title>
+<title>XBoard v1.16 - Faithful Xtrata Slot Rendering</title>
 <style>
   :root {
     --bg: #050505;
@@ -105,20 +105,51 @@
     font: 800 9px/1.15 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   }
 
+  .xtrata-square-frame {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    aspect-ratio: 1 / 1;
+    max-width: 100%;
+    max-height: 100%;
+    background: #000;
+  }
+
+  .xtrata-board-root .xtrata-square-frame {
+    max-width: 100%;
+    max-height: 100%;
+  }
+
   .xtrata-board-media,
   .xtrata-board-frame {
-    width: 100%;
-    height: 100%;
     display: block;
     border: 0;
     background: #000;
-    object-fit: cover;
   }
 
-  .xtrata-board-media.image {
-    object-fit: cover;
+  .xtrata-board-media.image,
+  .xtrata-square-img {
+    flex: 0 0 auto;
+    object-fit: contain;
+    object-position: center;
+    max-width: 100%;
+    max-height: 100%;
+  }
+
+  .xtrata-square-img.pixelated {
     image-rendering: crisp-edges;
     image-rendering: pixelated;
+  }
+
+  .xtrata-board-media.video,
+  .xtrata-square-video,
+  .xtrata-board-frame,
+  .xtrata-panel-frame {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
   }
 
   .xtrata-board-placeholder {
@@ -375,6 +406,13 @@
     background: #000;
   }
 
+  .xtrata-panel-wrap .xtrata-square-frame {
+    height: 100%;
+    width: auto;
+    max-width: 100%;
+    max-height: 100%;
+  }
+
   .xtrata-panel-media.image {
     flex: 0 0 auto;
     width: auto;
@@ -382,8 +420,7 @@
     max-width: 100%;
     max-height: 100%;
     object-fit: contain;
-    image-rendering: crisp-edges;
-    image-rendering: pixelated;
+    object-position: center;
   }
 
   .xtrata-panel-media.video {
@@ -654,6 +691,64 @@
   }
 
   #loading-note.visible { opacity: 1; }
+
+
+
+  .xpm-inscription-preview-card {
+    margin-top: 9px;
+    display: grid;
+    grid-template-columns: 104px 1fr;
+    gap: 10px;
+    align-items: center;
+    padding: 9px;
+    border-radius: 11px;
+    border: 1px solid rgba(236, 72, 153, 0.28);
+    background: rgba(0, 0, 0, 0.42);
+  }
+
+  .xpm-inscription-preview-frame {
+    width: 96px;
+    height: 96px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    background: #000;
+    border: 1px solid rgba(252, 231, 243, 0.16);
+    border-radius: 9px;
+  }
+
+  .xpm-inscription-preview-meta {
+    color: #d4d4d8;
+    font-size: 10px;
+    line-height: 1.4;
+    word-break: break-word;
+  }
+
+  .xpm-inscription-preview-meta strong {
+    display: block;
+    color: #f9a8d4;
+    font-size: 9px;
+    font-weight: 950;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+
+  .xtrata-square-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px;
+    color: #fce7f3;
+    text-align: center;
+    font: 850 10px/1.25 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    background: radial-gradient(circle at 50% 40%, rgba(236, 72, 153, 0.18), rgba(0, 0, 0, 0.9) 72%);
+  }
 
   @media (max-width: 760px) {
     #stage { padding: 8px; }
@@ -1171,111 +1266,6 @@
     word-break: break-word;
   }
 
-  .xpm-inscription-preview {
-    margin-top: 10px;
-    padding: 10px;
-    border-radius: 10px;
-    border: 1px solid rgba(236, 72, 153, 0.28);
-    background: rgba(0, 0, 0, 0.48);
-  }
-
-  .xpm-inscription-preview-head {
-    display: grid;
-    grid-template-columns: 1fr auto;
-    gap: 10px;
-    align-items: center;
-    margin-bottom: 9px;
-  }
-
-  .xpm-inscription-preview-meta {
-    color: #a1a1aa;
-    font: 750 10px/1.35 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-    word-break: break-word;
-  }
-
-  .xpm-inscription-preview-grid {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    gap: 10px;
-  }
-
-  .xpm-inscription-preview-pane {
-    min-width: 0;
-    display: grid;
-    gap: 6px;
-  }
-
-  .xpm-inscription-preview-stage {
-    position: relative;
-    min-height: 154px;
-    overflow: hidden;
-    border: 1px solid rgba(244, 114, 182, 0.28);
-    background: #000;
-  }
-
-  .xpm-inscription-preview-stage.full {
-    aspect-ratio: 1 / 1;
-  }
-
-  .xpm-inscription-preview-stage.slot {
-    min-height: 76px;
-    align-self: center;
-    border-color: rgba(250, 204, 21, 0.44);
-    box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.72);
-  }
-
-  .xpm-inscription-preview-media,
-  .xpm-inscription-preview-frame {
-    width: 100%;
-    height: 100%;
-    display: block;
-    border: 0;
-    background: #000;
-  }
-
-  .xpm-inscription-preview-stage.full .xpm-inscription-preview-media.image {
-    object-fit: contain;
-    image-rendering: crisp-edges;
-    image-rendering: pixelated;
-  }
-
-  .xpm-inscription-preview-stage.slot .xpm-inscription-preview-media.image,
-  .xpm-inscription-preview-stage.slot .xpm-inscription-preview-media.video,
-  .xpm-inscription-preview-stage.slot .xpm-inscription-preview-frame {
-    object-fit: cover;
-  }
-
-  .xpm-inscription-preview-stage.full .xpm-inscription-preview-media.video {
-    object-fit: contain;
-  }
-
-  .xpm-inscription-preview-empty,
-  .xpm-inscription-preview-audio {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    padding: 12px;
-    text-align: center;
-    color: #d4d4d8;
-    font: 800 11px/1.35 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-    background: radial-gradient(circle at 50% 35%, rgba(236, 72, 153, 0.16), rgba(0, 0, 0, 0.88) 72%);
-  }
-
-  .xpm-inscription-preview-audio audio {
-    width: min(100%, 240px);
-  }
-
-  @media (max-width: 720px) {
-    .xpm-inscription-preview-head,
-    .xpm-inscription-preview-grid {
-      grid-template-columns: 1fr;
-    }
-  }
-
   .xpm-preview-title {
     color: #f9a8d4;
     font-size: 9px;
@@ -1365,6 +1355,57 @@
   .xpm-wallet-log-message { color: #e5e7eb; word-break: break-word; }
   .xpm-wallet-log-details { color: #94a3b8; margin-top: 2px; }
 
+
+
+  .xpm-origin-warning {
+    margin-top: 10px;
+    padding: 10px;
+    border-radius: 10px;
+    border: 1px solid rgba(248, 113, 113, 0.42);
+    background: rgba(127, 29, 29, 0.2);
+    color: #fecaca;
+    font-size: 11px;
+    line-height: 1.42;
+  }
+
+  .xpm-origin-warning strong {
+    display: block;
+    margin-bottom: 5px;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 950;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .xpm-origin-warning code {
+    color: #fff;
+    font-size: 10px;
+    word-break: break-all;
+  }
+
+  .xpm-origin-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px;
+    margin-top: 9px;
+  }
+
+  .xpm-chain-status {
+    margin: 7px 0 10px;
+    padding: 9px;
+    border-radius: 10px;
+    border: 1px solid rgba(236, 72, 153, 0.2);
+    background: rgba(0, 0, 0, 0.34);
+    color: #d4d4d8;
+    font-size: 11px;
+    line-height: 1.42;
+  }
+
+  .xpm-chain-status.ok { border-color: rgba(134, 239, 172, 0.28); color: #bbf7d0; }
+  .xpm-chain-status.warn { border-color: rgba(250, 204, 21, 0.34); color: #fef3c7; }
+  .xpm-chain-status.bad { border-color: rgba(248, 113, 113, 0.34); color: #fecaca; }
+
   .xpm-wallet-log-actions {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1446,6 +1487,67 @@
   .xpm-slot-overlay.public .xpm-slot-overlay-bg { stroke: rgba(250, 204, 21, 0.95); stroke-dasharray: 5 4; }
   .xpm-slot-overlay-main { fill: #fff; text-anchor: middle; dominant-baseline: middle; font-weight: 950; letter-spacing: 0.03em; paint-order: stroke; stroke: rgba(5, 5, 5, 0.78); stroke-width: 2; stroke-linejoin: round; }
   .xpm-slot-overlay-sub { fill: #f9a8d4; text-anchor: middle; dominant-baseline: middle; font-weight: 900; letter-spacing: 0.04em; paint-order: stroke; stroke: rgba(5, 5, 5, 0.78); stroke-width: 1.5; stroke-linejoin: round; }
+
+  .xpm-xtrata-log {
+    margin-top: 10px;
+    padding: 10px;
+    border-radius: 10px;
+    border: 1px solid rgba(236, 72, 153, 0.28);
+    background: rgba(3, 3, 7, 0.62);
+    color: #d4d4d8;
+    font: 700 10px/1.42 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  }
+
+  .xpm-xtrata-log-body {
+    display: grid;
+    gap: 5px;
+    max-height: 230px;
+    overflow: auto;
+    padding-right: 2px;
+  }
+
+  .xpm-xtrata-log-row {
+    display: grid;
+    grid-template-columns: 68px 48px 1fr;
+    gap: 7px;
+    align-items: baseline;
+    padding-bottom: 5px;
+    border-bottom: 1px solid rgba(236, 72, 153, 0.12);
+  }
+
+  .xpm-xtrata-log-row:last-child { border-bottom: 0; padding-bottom: 0; }
+  .xpm-xtrata-log-time { color: #94a3b8; }
+  .xpm-xtrata-log-level { color: #f9a8d4; text-transform: uppercase; }
+  .xpm-xtrata-log-level.ok { color: #86efac; }
+  .xpm-xtrata-log-level.warn { color: #facc15; }
+  .xpm-xtrata-log-level.bad { color: #fca5a5; }
+  .xpm-xtrata-log-message { color: #fce7f3; word-break: break-word; }
+  .xpm-xtrata-log-details { color: #94a3b8; margin-top: 2px; }
+  .xpm-xtrata-log-empty { color: #71717a; }
+
+  .xtrata-render-debug-card {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    padding: 14px;
+    text-align: center;
+    background: radial-gradient(circle at 50% 35%, rgba(236, 72, 153, 0.18), rgba(0, 0, 0, 0.92) 74%);
+    color: #fce7f3;
+    font-size: 11px;
+    line-height: 1.35;
+  }
+
+  .xtrata-render-debug-card strong {
+    color: #f472b6;
+    font-size: 10px;
+    font-weight: 950;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
 
   @media (max-width: 760px) {
     #xpm-open {
@@ -1532,6 +1634,19 @@
   const SVGNS = 'http://www.w3.org/2000/svg';
   const XHTMLNS = 'http://www.w3.org/1999/xhtml';
   const XTRATA_RUNTIME_ORIGIN = 'https://xtrata.xyz';
+  const XTRATA_HIRO_MAINNET_API_BASE = 'https://api.mainnet.hiro.so';
+  const XTRATA_READONLY_SENDER = 'SP2CWY47KCSYT6VZDV8CZ1WSBA5JASPHDP95ADB96';
+  const XTRATA_DEBUG_CONFIG_KEY = 'xboard-xtrata-debug-config-v1';
+  const XTRATA_DEFAULT_DEBUG_CONFIG = {
+    apiBase: XTRATA_HIRO_MAINNET_API_BASE,
+    runtimeOrigin: XTRATA_RUNTIME_ORIGIN,
+    contractAddress: 'SP2CWY47KCSYT6VZDV8CZ1WSBA5JASPHDP95ADB96',
+    contractName: 'xtrata-v2',
+    v1ContractName: 'xtrata-v1',
+    chunkBatchSize: 50,
+    maxAutoChunks: 420
+  };
+  const XTRATA_SQUARE_REFERENCE_FLOOR = 256;
   const CONTRACT_ADDR = 'SPGAKH27HF1T170QET72C727873H911BKNMPF8YB';
   const CONTRACT_NAME = 'stacks-board-slot';
   const GRAPHQL_ENDPOINT = 'https://www.stacksboard.art/api/graphql';
@@ -2056,10 +2171,688 @@
     if (mediaMetaEl) mediaMetaEl.textContent = `${labelPrefix}image ${naturalW}×${naturalH} · fitted down to panel`;
   }
 
+  function getSquareFramedImageMetrics(sourceWidth, sourceHeight, referenceSizeFloor = XTRATA_SQUARE_REFERENCE_FLOOR) {
+    const width = Math.max(0, Number(sourceWidth || 0));
+    const height = Math.max(0, Number(sourceHeight || 0));
+    const floor = Math.max(1, Number(referenceSizeFloor || XTRATA_SQUARE_REFERENCE_FLOOR));
+    const referenceSize = Math.max(width, height, floor);
+    return {
+      sourceWidth: width,
+      sourceHeight: height,
+      referenceSize,
+      widthPercent: referenceSize ? (width / referenceSize) * 100 : 100,
+      heightPercent: referenceSize ? (height / referenceSize) * 100 : 100
+    };
+  }
+
+  function contentTypeForSquareImage(url, meta = {}) {
+    const explicit = String(meta?.contentType || meta?.mimeType || meta?.type || '').split(';')[0].trim().toLowerCase();
+    if (explicit) return explicit;
+    const clean = String(url || '').split('?')[0].toLowerCase();
+    if (/\.svg$/i.test(clean)) return 'image/svg+xml';
+    if (/\.(jpe?g|jfif)$/i.test(clean)) return 'image/jpeg';
+    if (/\.png$/i.test(clean)) return 'image/png';
+    if (/\.gif$/i.test(clean)) return 'image/gif';
+    if (/\.webp$/i.test(clean)) return 'image/webp';
+    if (/\.avif$/i.test(clean)) return 'image/avif';
+    return '';
+  }
+
+  function shouldUsePixelatedImageRendering(url, meta = {}, img = null) {
+    const type = contentTypeForSquareImage(url, meta);
+    if (type.includes('svg') || type.includes('jpeg') || type.includes('jpg')) return false;
+    const sourceMax = Math.max(Number(img?.naturalWidth || 0), Number(img?.naturalHeight || 0));
+    if (type.includes('png') || type.includes('gif') || type.includes('webp') || type.includes('avif') || type.includes('apng')) {
+      return !sourceMax || sourceMax <= 768;
+    }
+    return sourceMax > 0 && sourceMax <= 256;
+  }
+
+  function addSquareFrameLog(level, message, details) {
+    // Square-framing is a render concern, so route it into the Xtrata debug log when available.
+    if (typeof addXtrataLog === 'function') addXtrataLog(level, message, details);
+    else console.info('[xtrata-square-frame]', message, details || '');
+  }
+
+  function createSquareFrame({ className = '', squareSize = 0 } = {}) {
+    const frame = document.createElement('div');
+    frame.className = `xtrata-square-frame ${className}`.trim();
+    if (squareSize) {
+      const size = Math.max(1, Number(squareSize || 0));
+      frame.style.width = `${size}px`;
+      frame.style.height = `${size}px`;
+    }
+    return frame;
+  }
+
+  function applySquareFramedImageStyle(img, { url = '', meta = {}, surface = 'image', labelPrefix = '', log = true } = {}) {
+    const sourceWidth = img.naturalWidth || 0;
+    const sourceHeight = img.naturalHeight || 0;
+    if (!sourceWidth || !sourceHeight) return null;
+
+    const metrics = getSquareFramedImageMetrics(sourceWidth, sourceHeight);
+    img.style.width = `${metrics.widthPercent}%`;
+    img.style.height = `${metrics.heightPercent}%`;
+    img.style.maxWidth = '100%';
+    img.style.maxHeight = '100%';
+    img.style.objectFit = 'contain';
+    img.style.objectPosition = 'center';
+    img.classList.toggle('pixelated', shouldUsePixelatedImageRendering(url, meta, img));
+
+    const detail = {
+      surface,
+      sourceWidth,
+      sourceHeight,
+      referenceSize: metrics.referenceSize,
+      widthPercent: Number(metrics.widthPercent.toFixed(3)),
+      heightPercent: Number(metrics.heightPercent.toFixed(3)),
+      pixelated: img.classList.contains('pixelated'),
+      contentType: contentTypeForSquareImage(url, meta) || meta?.contentType || '',
+      url: String(url || '').slice(0, 180)
+    };
+
+    if (log) addSquareFrameLog('ok', 'Applied faithful square-framed image style.', detail);
+    if (mediaMetaEl && surface.startsWith('panel')) {
+      mediaMetaEl.textContent = `${labelPrefix}image ${sourceWidth}×${sourceHeight} · square frame ${detail.widthPercent}%×${detail.heightPercent}%`;
+    }
+    return detail;
+  }
+
+  function createSquareFramedImage(url, { alt = 'Xtrata inscription', className = '', meta = {}, surface = 'image', squareSize = 0, onLoad = null, onError = null } = {}) {
+    const frame = createSquareFrame({ squareSize });
+    const img = document.createElement('img');
+    img.className = `xtrata-square-img ${className}`.trim();
+    img.alt = alt;
+    img.decoding = 'async';
+    img.loading = surface.startsWith('board') ? 'lazy' : 'eager';
+    img.referrerPolicy = 'no-referrer';
+    if ('fetchPriority' in img && !surface.startsWith('board')) img.fetchPriority = 'high';
+    img.onload = () => {
+      const detail = applySquareFramedImageStyle(img, { url, meta, surface, labelPrefix: surface.startsWith('panel') ? `${alt.replace(/^Xtrata inscription /, 'Xtrata ')} · ` : '' });
+      if (typeof onLoad === 'function') onLoad(detail, img, frame);
+    };
+    img.onerror = error => {
+      addSquareFrameLog('warn', 'Square-framed image failed to load.', { surface, url: String(url || '').slice(0, 180), contentType: meta?.contentType || '' });
+      if (typeof onError === 'function') onError(error, img, frame);
+    };
+    img.src = url;
+    frame.appendChild(img);
+    return { frame, img };
+  }
+
+  function createSquareFramedVideo(url, { className = '', surface = 'video', squareSize = 0, controls = false } = {}) {
+    const frame = createSquareFrame({ squareSize });
+    const video = document.createElement('video');
+    video.className = `xtrata-square-video ${className}`.trim();
+    video.src = url;
+    video.loop = true;
+    video.playsInline = true;
+    video.preload = 'metadata';
+    video.muted = !controls;
+    video.controls = Boolean(controls);
+    video.style.width = '100%';
+    video.style.height = '100%';
+    video.style.objectFit = 'contain';
+    video.style.objectPosition = 'center';
+    video.addEventListener('loadedmetadata', () => {
+      addSquareFrameLog('ok', 'Prepared square-framed video.', { surface, videoWidth: video.videoWidth || 0, videoHeight: video.videoHeight || 0, url: String(url || '').slice(0, 180) });
+    }, { once: true });
+    frame.appendChild(video);
+    return { frame, video };
+  }
+
+  function createSquarePlaceholder(text, { squareSize = 0 } = {}) {
+    const frame = createSquareFrame({ squareSize });
+    const placeholder = document.createElement('div');
+    placeholder.className = 'xtrata-square-placeholder';
+    placeholder.textContent = text;
+    frame.appendChild(placeholder);
+    return frame;
+  }
+
+  function renderSquareAssetInto(container, { id, url, meta = {}, surface = 'preview', squareSize = 0, controls = false } = {}) {
+    if (!container || !url) return;
+    const kind = meta?.kind || mediaKindFromContentType(meta?.contentType || '') || inferKindFromUrl(url) || 'unknown';
+    container.replaceChildren();
+    if (kind === 'image' || kind === 'unknown') {
+      const { frame } = createSquareFramedImage(url, {
+        alt: `Xtrata inscription #${id}`,
+        meta,
+        surface,
+        squareSize,
+        onError: () => {
+          container.replaceChildren(createSquarePlaceholder(`XTRATA #${id}\nIFRAME`, { squareSize }));
+          const iframeFrame = createSquareFrame({ squareSize });
+          iframeFrame.replaceChildren(createXtrataIframe(url, surface.startsWith('board') ? 'xtrata-board-frame' : 'xtrata-panel-frame'));
+          container.replaceChildren(iframeFrame);
+        }
+      });
+      container.appendChild(frame);
+      return;
+    }
+    if (kind === 'video') {
+      const { frame, video } = createSquareFramedVideo(url, { surface, squareSize, controls, className: surface.startsWith('board') ? 'xtrata-board-media video' : 'xtrata-panel-media video' });
+      container.appendChild(frame);
+      if (!controls) video.play?.().catch(() => {});
+      return;
+    }
+    if (kind === 'audio') {
+      container.appendChild(createSquarePlaceholder(`XTRATA #${id}\nAUDIO`, { squareSize }));
+      return;
+    }
+    const frame = createSquareFrame({ squareSize });
+    frame.appendChild(createXtrataIframe(url, surface.startsWith('board') ? 'xtrata-board-frame' : 'xtrata-panel-frame'));
+    container.appendChild(frame);
+  }
+
+  async function renderXtrataMiniPreview(container, id, { surface = 'wallet preview' } = {}) {
+    const clean = normalizeInscriptionId(id);
+    if (!container || clean === null) return;
+    const token = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    container.dataset.previewToken = token;
+    const runtimeUrl = defaultXtrataInscriptionUrl(clean);
+    container.innerHTML = `
+      <div class="xpm-inscription-preview-frame"><div class="xtrata-square-placeholder">Loading #${esc(clean)}</div></div>
+      <div class="xpm-inscription-preview-meta"><strong>Inscription preview</strong>Trying Xtrata chunks first, then runtime fallback.<br><span class="mono">${esc(runtimeUrl)}</span></div>
+    `;
+    const frameHost = container.querySelector('.xpm-inscription-preview-frame');
+    const metaHost = container.querySelector('.xpm-inscription-preview-meta');
+    let asset = null;
+    try {
+      asset = await resolveXtrataInscription(clean, { surface, force: false });
+    } catch (error) {
+      addXtrataLog('warn', 'Mini preview reconstruction failed.', { inscriptionId: clean, error: error.message });
+    }
+    if (container.dataset.previewToken !== token) return;
+    if (asset?.ok) {
+      renderSquareAssetInto(frameHost, { id: clean, url: asset.url, meta: asset.meta, surface, squareSize: 0, controls: false });
+      metaHost.innerHTML = `<strong>Inscription preview</strong>Chunk reconstruction ready.<br>${esc(xtrataMetaLine(asset.meta, clean))}`;
+      return;
+    }
+    const meta = await probeXtrataUrl(runtimeUrl).catch(error => ({ ok: false, kind: inferKindFromUrl(runtimeUrl), contentType: '', reason: error.message }));
+    if (container.dataset.previewToken !== token) return;
+    renderSquareAssetInto(frameHost, { id: clean, url: runtimeUrl, meta, surface: `${surface} runtime`, squareSize: 0, controls: false });
+    metaHost.innerHTML = `<strong>Inscription preview</strong>Runtime fallback preview.<br>${esc(xtrataMetaLine(meta, clean))}`;
+  }
+
+  let xtrataDebugEntries = [];
+  const XTRATA_DEBUG_LOG_LIMIT = 180;
+  const xtrataReconstructCache = new Map();
+
+  function trimXtrataLogText(value, max = 220) {
+    const text = String(value ?? '');
+    return text.length > max ? `${text.slice(0, max - 3)}...` : text;
+  }
+
+  function safeXtrataLogValue(value, depth = 0) {
+    if (value === null || value === undefined) return value;
+    if (typeof value === 'string') return trimXtrataLogText(value, 220);
+    if (typeof value === 'number' || typeof value === 'boolean') return value;
+    if (typeof value === 'bigint') return value.toString();
+    if (value instanceof Uint8Array) return `[Uint8Array ${value.length} bytes]`;
+    if (Array.isArray(value)) {
+      if (depth > 1) return `[${value.length} items]`;
+      return value.slice(0, 18).map(item => safeXtrataLogValue(item, depth + 1));
+    }
+    if (typeof value === 'object') {
+      if (depth > 2) return '[object]';
+      const output = {};
+      Object.keys(value).slice(0, 22).forEach(key => {
+        try { output[key] = safeXtrataLogValue(value[key], depth + 1); }
+        catch (error) { output[key] = '[unreadable]'; }
+      });
+      return output;
+    }
+    return trimXtrataLogText(value, 220);
+  }
+
+  function renderXtrataDebugLog() {
+    const body = document.getElementById('xpm-xtrata-log-body');
+    if (!body) return;
+    if (!xtrataDebugEntries.length) {
+      body.innerHTML = '<div class="xpm-xtrata-log-empty">No Xtrata reconstruction attempts yet.</div>';
+      return;
+    }
+    body.innerHTML = xtrataDebugEntries.map(entry => `
+      <div class="xpm-xtrata-log-row">
+        <div class="xpm-xtrata-log-time">${esc(entry.time)}</div>
+        <div class="xpm-xtrata-log-level ${esc(entry.level)}">${esc(entry.level)}</div>
+        <div class="xpm-xtrata-log-message">
+          ${esc(entry.message)}
+          ${entry.details ? `<div class="xpm-xtrata-log-details">${esc(entry.details)}</div>` : ''}
+        </div>
+      </div>
+    `).join('');
+    body.scrollTop = body.scrollHeight;
+  }
+
+  function addXtrataLog(level, message, details = null) {
+    const normalizedLevel = ['ok', 'warn', 'bad'].includes(level) ? level : 'info';
+    let detailsText = '';
+    try { detailsText = details ? trimXtrataLogText(JSON.stringify(safeXtrataLogValue(details)), 900) : ''; }
+    catch (error) { detailsText = trimXtrataLogText(String(details), 900); }
+    const entry = {
+      time: new Date().toLocaleTimeString([], { hour12: false }),
+      level: normalizedLevel,
+      message: trimXtrataLogText(message, 260),
+      details: detailsText
+    };
+    xtrataDebugEntries.push(entry);
+    if (xtrataDebugEntries.length > XTRATA_DEBUG_LOG_LIMIT) xtrataDebugEntries = xtrataDebugEntries.slice(-XTRATA_DEBUG_LOG_LIMIT);
+    try {
+      const method = normalizedLevel === 'bad' ? 'error' : normalizedLevel === 'warn' ? 'warn' : 'info';
+      console[method]('[xtrata-reconstruct]', entry.message, details ? safeXtrataLogValue(details) : '');
+    } catch (error) {}
+    renderXtrataDebugLog();
+  }
+
+  function getStoredXtrataDebugConfig() {
+    try {
+      const parsed = JSON.parse(window.localStorage.getItem(XTRATA_DEBUG_CONFIG_KEY) || '{}');
+      return { ...XTRATA_DEFAULT_DEBUG_CONFIG, ...parsed };
+    } catch (error) {
+      return { ...XTRATA_DEFAULT_DEBUG_CONFIG };
+    }
+  }
+
+  function getXtrataDebugConfig() {
+    const stored = getStoredXtrataDebugConfig();
+    const read = id => String(document.getElementById(id)?.value || '').trim();
+    const config = {
+      ...stored,
+      apiBase: read('xpm-xtrata-api-base') || stored.apiBase,
+      runtimeOrigin: read('xpm-xtrata-runtime-origin') || stored.runtimeOrigin,
+      contractAddress: read('xpm-xtrata-contract-address') || stored.contractAddress,
+      contractName: read('xpm-xtrata-contract-name') || stored.contractName,
+      v1ContractName: read('xpm-xtrata-v1-contract-name') || stored.v1ContractName,
+      chunkBatchSize: Number(read('xpm-xtrata-batch-size') || stored.chunkBatchSize || 50),
+      maxAutoChunks: Number(read('xpm-xtrata-max-chunks') || stored.maxAutoChunks || 420)
+    };
+    config.apiBase = config.apiBase.replace(/\/+$/, '');
+    config.runtimeOrigin = config.runtimeOrigin.replace(/\/+$/, '');
+    config.chunkBatchSize = Math.max(1, Math.min(50, Math.floor(config.chunkBatchSize || 50)));
+    config.maxAutoChunks = Math.max(1, Math.min(1000, Math.floor(config.maxAutoChunks || 420)));
+    return config;
+  }
+
+  function saveXtrataDebugConfigFromUi() {
+    const config = getXtrataDebugConfig();
+    window.localStorage.setItem(XTRATA_DEBUG_CONFIG_KEY, JSON.stringify(config));
+    addXtrataLog('ok', 'Saved Xtrata reconstruction settings.', config);
+    return config;
+  }
+
+  function hydrateXtrataDebugInputs() {
+    const config = getStoredXtrataDebugConfig();
+    const set = (id, value) => { const el = document.getElementById(id); if (el) el.value = value ?? ''; };
+    set('xpm-xtrata-api-base', config.apiBase);
+    set('xpm-xtrata-runtime-origin', config.runtimeOrigin);
+    set('xpm-xtrata-contract-address', config.contractAddress);
+    set('xpm-xtrata-contract-name', config.contractName);
+    set('xpm-xtrata-v1-contract-name', config.v1ContractName);
+    set('xpm-xtrata-batch-size', config.chunkBatchSize);
+    set('xpm-xtrata-max-chunks', config.maxAutoChunks);
+  }
+
+  function hexBytes(hex) {
+    const clean = String(hex || '').replace(/^0x/i, '').replace(/[^0-9a-f]/gi, '');
+    const out = new Uint8Array(Math.floor(clean.length / 2));
+    for (let i = 0; i < out.length; i += 1) out[i] = parseInt(clean.slice(i * 2, i * 2 + 2), 16);
+    return out;
+  }
+
+  function bytesToHex(bytes) {
+    return Array.from(bytes || []).map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+
+  function readU32(bytes, offset) {
+    return (((bytes[offset] || 0) << 24) >>> 0) + ((bytes[offset + 1] || 0) << 16) + ((bytes[offset + 2] || 0) << 8) + (bytes[offset + 3] || 0);
+  }
+
+  function readU128Big(bytes, offset) {
+    let value = 0n;
+    for (let i = 0; i < 16; i += 1) value = (value << 8n) + BigInt(bytes[offset + i] || 0);
+    return value;
+  }
+
+  function textFromBytes(bytes) {
+    try { return new TextDecoder().decode(bytes); }
+    catch (error) { return Array.from(bytes).map(b => String.fromCharCode(b)).join(''); }
+  }
+
+  function asciiKey(bytes, offset) {
+    const len = bytes[offset] || 0;
+    const start = offset + 1;
+    const end = start + len;
+    return { key: textFromBytes(bytes.slice(start, end)), next: end };
+  }
+
+  function uintCV(value) {
+    let n = BigInt(Math.max(0, Math.floor(Number(value || 0))));
+    const bytes = new Uint8Array(17);
+    bytes[0] = 0x01;
+    for (let i = 16; i >= 1; i -= 1) { bytes[i] = Number(n & 0xffn); n >>= 8n; }
+    return `0x${bytesToHex(bytes)}`;
+  }
+
+  function listUintCV(values) {
+    const items = values.map(value => hexBytes(uintCV(value)));
+    const total = 1 + 4 + items.reduce((sum, item) => sum + item.length, 0);
+    const bytes = new Uint8Array(total);
+    bytes[0] = 0x0b;
+    const len = items.length;
+    bytes[1] = (len >>> 24) & 0xff;
+    bytes[2] = (len >>> 16) & 0xff;
+    bytes[3] = (len >>> 8) & 0xff;
+    bytes[4] = len & 0xff;
+    let offset = 5;
+    items.forEach(item => { bytes.set(item, offset); offset += item.length; });
+    return `0x${bytesToHex(bytes)}`;
+  }
+
+  function parseClarityCVFromHex(hex) {
+    const bytes = hexBytes(hex);
+    function parseAt(offset) {
+      const type = bytes[offset];
+      if (type === 0x00 || type === 0x01) {
+        const value = readU128Big(bytes, offset + 1);
+        return { value: { type: type === 0x00 ? 'int' : 'uint', value }, next: offset + 17 };
+      }
+      if (type === 0x02) {
+        const len = readU32(bytes, offset + 1);
+        const start = offset + 5;
+        return { value: { type: 'buffer', bytes: bytes.slice(start, start + len), hex: `0x${bytesToHex(bytes.slice(start, start + len))}` }, next: start + len };
+      }
+      if (type === 0x03 || type === 0x04) return { value: { type: 'bool', value: type === 0x03 }, next: offset + 1 };
+      if (type === 0x07 || type === 0x08) {
+        const inner = parseAt(offset + 1);
+        return { value: { type: type === 0x07 ? 'response-ok' : 'response-err', value: inner.value }, next: inner.next };
+      }
+      if (type === 0x09) return { value: { type: 'none', value: null }, next: offset + 1 };
+      if (type === 0x0a) {
+        const inner = parseAt(offset + 1);
+        return { value: { type: 'some', value: inner.value }, next: inner.next };
+      }
+      if (type === 0x0b) {
+        const len = readU32(bytes, offset + 1);
+        let cursor = offset + 5;
+        const list = [];
+        for (let i = 0; i < len; i += 1) {
+          const item = parseAt(cursor);
+          list.push(item.value);
+          cursor = item.next;
+        }
+        return { value: { type: 'list', value: list }, next: cursor };
+      }
+      if (type === 0x0c) {
+        const count = readU32(bytes, offset + 1);
+        let cursor = offset + 5;
+        const tuple = {};
+        for (let i = 0; i < count; i += 1) {
+          const keyResult = asciiKey(bytes, cursor);
+          cursor = keyResult.next;
+          const parsed = parseAt(cursor);
+          tuple[keyResult.key] = parsed.value;
+          cursor = parsed.next;
+        }
+        return { value: { type: 'tuple', value: tuple }, next: cursor };
+      }
+      if (type === 0x0d || type === 0x0e) {
+        const len = readU32(bytes, offset + 1);
+        const start = offset + 5;
+        return { value: { type: type === 0x0d ? 'string-ascii' : 'string-utf8', value: textFromBytes(bytes.slice(start, start + len)) }, next: start + len };
+      }
+      return { value: { type: `unknown-0x${(type || 0).toString(16)}`, rawHex: `0x${bytesToHex(bytes.slice(offset))}` }, next: bytes.length };
+    }
+    return parseAt(0).value;
+  }
+
+  function unwrapClarityValue(cv) {
+    let value = cv;
+    let safety = 0;
+    while (value && (value.type === 'response-ok' || value.type === 'some') && safety < 6) {
+      value = value.value;
+      safety += 1;
+    }
+    return value;
+  }
+
+  function clarityValueToJs(cv) {
+    if (!cv) return null;
+    const value = unwrapClarityValue(cv);
+    if (!value) return null;
+    if (value.type === 'uint' || value.type === 'int') return Number(value.value);
+    if (value.type === 'bool') return Boolean(value.value);
+    if (value.type === 'string-ascii' || value.type === 'string-utf8') return value.value;
+    if (value.type === 'buffer') return value.bytes;
+    if (value.type === 'list') return value.value.map(clarityValueToJs);
+    if (value.type === 'tuple') {
+      const out = {};
+      Object.keys(value.value).forEach(key => { out[key] = clarityValueToJs(value.value[key]); });
+      return out;
+    }
+    return value;
+  }
+
+  function clarityField(obj, names) {
+    if (!obj || typeof obj !== 'object') return undefined;
+    for (const name of names) {
+      if (Object.prototype.hasOwnProperty.call(obj, name)) return obj[name];
+    }
+    const lower = Object.fromEntries(Object.keys(obj).map(k => [k.toLowerCase(), obj[k]]));
+    for (const name of names) {
+      const found = lower[String(name).toLowerCase()];
+      if (found !== undefined) return found;
+    }
+    return undefined;
+  }
+
+  async function callXtrataReadOnly(contractAddress, contractName, functionName, argsHex, { surface = 'xtrata' } = {}) {
+    const config = getXtrataDebugConfig();
+    const endpoint = `${config.apiBase}/v2/contracts/call-read/${encodeURIComponent(contractAddress)}/${encodeURIComponent(contractName)}/${encodeURIComponent(functionName)}`;
+    addXtrataLog('info', `read-only ${functionName}()`, { surface, endpoint, contractAddress, contractName, args: argsHex });
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({ sender: XTRATA_READONLY_SENDER, arguments: argsHex })
+    });
+    const text = await response.text();
+    let json = null;
+    try { json = text ? JSON.parse(text) : null; } catch (error) {}
+    if (!response.ok) {
+      addXtrataLog('warn', `read-only ${functionName} HTTP ${response.status}`, { body: text });
+      throw new Error(`${functionName} HTTP ${response.status}`);
+    }
+    if (!json?.okay) {
+      addXtrataLog('warn', `read-only ${functionName} returned not okay`, json || text);
+      throw new Error(`${functionName} returned not okay`);
+    }
+    const parsed = parseClarityCVFromHex(json.result || '0x');
+    addXtrataLog('ok', `read-only ${functionName} parsed`, { type: parsed?.type, js: clarityValueToJs(parsed) });
+    return parsed;
+  }
+
+  function xtrataContractCandidateList() {
+    const config = getXtrataDebugConfig();
+    const names = [config.contractName, config.v1ContractName, 'xtrata-v2-1', 'xtrata-v2', 'xtrata-inscriptions-v2', 'xtrata-inscriptions', 'xtrata']
+      .filter(Boolean)
+      .filter((value, index, arr) => arr.indexOf(value) === index);
+    return names.map(name => ({ address: config.contractAddress, name })).filter(item => item.address && item.name);
+  }
+
+  function findChunkCount(metaJs) {
+    const raw = clarityField(metaJs, ['chunk-count', 'chunk_count', 'chunks', 'num-chunks', 'num_chunks', 'total-chunks', 'total_chunks']);
+    const n = Number(raw);
+    return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
+  }
+
+  function findMimeType(metaJs) {
+    const raw = clarityField(metaJs, ['mime-type', 'mime_type', 'mime', 'content-type', 'content_type', 'type']);
+    return raw ? String(raw) : 'application/octet-stream';
+  }
+
+  function findTotalSize(metaJs) {
+    const raw = clarityField(metaJs, ['size', 'total-size', 'total_size', 'byte-size', 'byte_size', 'content-length', 'content_length']);
+    const n = Number(raw);
+    return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
+  }
+
+  function extractBufferFromChunkValue(value) {
+    const unwrapped = unwrapClarityValue(value);
+    if (!unwrapped) return null;
+    if (unwrapped.type === 'buffer') return unwrapped.bytes;
+    if (unwrapped.type === 'tuple') {
+      const fields = unwrapped.value;
+      const candidates = ['chunk', 'data', 'bytes', 'content', 'payload', 'value'];
+      for (const name of candidates) {
+        if (fields[name]) {
+          const buf = extractBufferFromChunkValue(fields[name]);
+          if (buf) return buf;
+        }
+      }
+    }
+    return null;
+  }
+
+  function extractChunksFromBatchCV(cv, requestedIndexes) {
+    const unwrapped = unwrapClarityValue(cv);
+    if (!unwrapped) return [];
+    const output = [];
+    if (unwrapped.type === 'list') {
+      unwrapped.value.forEach((item, position) => {
+        const buf = extractBufferFromChunkValue(item);
+        if (buf && buf.length) output.push({ index: requestedIndexes[position] ?? position, bytes: buf });
+      });
+    } else {
+      const buf = extractBufferFromChunkValue(unwrapped);
+      if (buf && buf.length) output.push({ index: requestedIndexes[0] ?? 0, bytes: buf });
+    }
+    return output;
+  }
+
+  async function callChunkBatch(candidate, id, indexes, surface) {
+    const args = [uintCV(id), listUintCV(indexes)];
+    try {
+      return await callXtrataReadOnly(candidate.address, candidate.name, 'get-chunk-batch', args, { surface });
+    } catch (firstError) {
+      addXtrataLog('warn', 'get-chunk-batch(list) failed; trying start/count signature.', { contract: `${candidate.address}.${candidate.name}`, error: firstError.message });
+      return callXtrataReadOnly(candidate.address, candidate.name, 'get-chunk-batch', [uintCV(id), uintCV(indexes[0] || 0), uintCV(indexes.length)], { surface });
+    }
+  }
+
+  async function reconstructFromContractCandidate(candidate, id, { surface = 'panel', force = false } = {}) {
+    const cacheKey = `${candidate.address}.${candidate.name}#${id}`;
+    if (!force && xtrataReconstructCache.has(cacheKey)) return xtrataReconstructCache.get(cacheKey);
+
+    addXtrataLog('info', 'Starting contract reconstruction attempt.', { surface, inscriptionId: id, contract: `${candidate.address}.${candidate.name}` });
+    try { await callXtrataReadOnly(candidate.address, candidate.name, 'inscription-exists', [uintCV(id)], { surface }); }
+    catch (error) { addXtrataLog('warn', 'inscription-exists not available or failed; continuing.', { contract: candidate.name, error: error.message }); }
+    try { await callXtrataReadOnly(candidate.address, candidate.name, 'is-inscription-sealed', [uintCV(id)], { surface }); }
+    catch (error) { addXtrataLog('warn', 'is-inscription-sealed not available or failed; continuing.', { contract: candidate.name, error: error.message }); }
+
+    const metaCV = await callXtrataReadOnly(candidate.address, candidate.name, 'get-inscription-meta', [uintCV(id)], { surface });
+    const metaJs = clarityValueToJs(metaCV) || {};
+    const mimeType = findMimeType(metaJs);
+    const totalSize = findTotalSize(metaJs);
+    const declaredChunkCount = findChunkCount(metaJs);
+    const config = getXtrataDebugConfig();
+    const maxChunks = declaredChunkCount || config.maxAutoChunks;
+    const batchSize = config.chunkBatchSize || 50;
+    const chunks = [];
+
+    addXtrataLog('info', 'Metadata extracted; fetching chunks.', {
+      inscriptionId: id,
+      contract: candidate.name,
+      mimeType,
+      totalSize,
+      declaredChunkCount,
+      batchSize,
+      maxChunks
+    });
+
+    for (let start = 0; start < maxChunks; start += batchSize) {
+      const remaining = declaredChunkCount ? Math.min(batchSize, declaredChunkCount - start) : batchSize;
+      if (remaining <= 0) break;
+      const indexes = Array.from({ length: remaining }, (_, offset) => start + offset);
+      let batchCV = null;
+      try {
+        batchCV = await callChunkBatch(candidate, id, indexes, surface);
+      } catch (error) {
+        addXtrataLog(start === 0 ? 'bad' : 'warn', 'Chunk batch request failed.', { start, count: remaining, contract: candidate.name, error: error.message });
+        if (start === 0) throw error;
+        break;
+      }
+      const batchChunks = extractChunksFromBatchCV(batchCV, indexes);
+      addXtrataLog(batchChunks.length ? 'ok' : 'warn', 'Chunk batch decoded.', { start, requested: indexes.length, decoded: batchChunks.length, bytes: batchChunks.reduce((sum, item) => sum + item.bytes.length, 0) });
+      if (!batchChunks.length && !declaredChunkCount) break;
+      chunks.push(...batchChunks);
+      if (!declaredChunkCount && batchChunks.length < indexes.length) break;
+    }
+
+    if (!chunks.length) throw new Error('No chunk bytes were returned by the contract.');
+    chunks.sort((a, b) => a.index - b.index);
+    const totalBytes = chunks.reduce((sum, chunk) => sum + chunk.bytes.length, 0);
+    const bytes = new Uint8Array(totalBytes);
+    let offset = 0;
+    chunks.forEach(chunk => { bytes.set(chunk.bytes, offset); offset += chunk.bytes.length; });
+    const blob = new Blob([bytes], { type: mimeType || 'application/octet-stream' });
+    const objectUrl = URL.createObjectURL(blob);
+    const asset = {
+      ok: true,
+      url: objectUrl,
+      meta: {
+        ok: true,
+        status: 200,
+        source: 'contract-chunks',
+        contentType: mimeType,
+        kind: mediaKindFromContentType(mimeType),
+        size: String(totalBytes),
+        chunks: chunks.length,
+        declaredChunkCount,
+        contract: `${candidate.address}.${candidate.name}`,
+        reason: 'Reconstructed from Xtrata contract chunks.'
+      }
+    };
+    xtrataReconstructCache.set(cacheKey, asset);
+    addXtrataLog('ok', 'Reconstruction complete.', asset.meta);
+    return asset;
+  }
+
+  async function resolveXtrataInscription(id, { surface = 'panel', force = false } = {}) {
+    const clean = normalizeInscriptionId(id);
+    if (clean === null) return null;
+    const candidates = xtrataContractCandidateList();
+    if (!candidates.length) {
+      addXtrataLog('warn', 'No Xtrata contract configured; skipping chunk reconstruction.', getXtrataDebugConfig());
+      return null;
+    }
+    let lastError = null;
+    for (const candidate of candidates) {
+      try {
+        return await reconstructFromContractCandidate(candidate, clean, { surface, force });
+      } catch (error) {
+        lastError = error;
+        addXtrataLog('warn', 'Contract reconstruction candidate failed.', { inscriptionId: clean, contract: `${candidate.address}.${candidate.name}`, error: error.message });
+      }
+    }
+    addXtrataLog('bad', 'All contract reconstruction candidates failed; runtime URL fallback will be used.', { inscriptionId: clean, lastError: lastError?.message || '' });
+    return null;
+  }
+
+  async function copyXtrataDebugLog() {
+    const text = xtrataDebugEntries.length
+      ? xtrataDebugEntries.map(entry => `${entry.time} ${entry.level.toUpperCase()} ${entry.message}${entry.details ? ` ${entry.details}` : ''}`).join('\n')
+      : 'No Xtrata reconstruction attempts yet.';
+    try { await navigator.clipboard.writeText(text); addXtrataLog('ok', 'Copied Xtrata reconstruction log.'); }
+    catch (error) { addXtrataLog('bad', 'Could not copy Xtrata reconstruction log.', { message: error.message }); }
+  }
+
   function xtrataMetaLine(meta, id) {
     const bits = [`Xtrata #${id}`];
     if (meta?.contentType) bits.push(String(meta.contentType).split(';')[0]);
     if (meta?.size) bits.push(`${Number(meta.size).toLocaleString()} bytes`);
+    if (meta?.chunks) bits.push(`${Number(meta.chunks).toLocaleString()} chunks`);
+    if (meta?.source) bits.push(String(meta.source));
     if (meta?.cache) bits.push(`cache ${meta.cache}`);
     return bits.join(' · ');
   }
@@ -2087,25 +2880,7 @@
     const labelPrefix = `Xtrata #${id} · `;
 
     if (kind === 'image' || kind === 'unknown') {
-      const img = document.createElement('img');
-      img.className = 'xtrata-panel-media image';
-      img.alt = `Xtrata inscription #${id}`;
-      img.decoding = 'async';
-      img.loading = 'eager';
-      img.referrerPolicy = 'no-referrer';
-      if ('fetchPriority' in img) img.fetchPriority = 'high';
-      img.onload = () => {
-        if (token !== xtrataPanelRequestToken) return;
-        applyPanelImageScaling(img, labelPrefix);
-      };
-      img.onerror = () => {
-        if (token !== xtrataPanelRequestToken) return;
-        wrap.replaceChildren(createXtrataIframe(url, 'xtrata-panel-frame'));
-        if (mediaMetaEl) mediaMetaEl.textContent = `${labelPrefix}iframe fallback`;
-      };
-      img.src = url;
-      wrap.appendChild(img);
-
+      renderSquareAssetInto(wrap, { id, url, meta, surface: `panel inscription #${id}`, controls: true });
       if (kind === 'unknown') {
         probeXtrataUrl(url).then(nextMeta => {
           if (token !== xtrataPanelRequestToken) return;
@@ -2120,14 +2895,7 @@
     }
 
     if (kind === 'video') {
-      const video = document.createElement('video');
-      video.className = 'xtrata-panel-media video';
-      video.src = url;
-      video.controls = true;
-      video.loop = true;
-      video.playsInline = true;
-      video.preload = 'metadata';
-      wrap.appendChild(video);
+      renderSquareAssetInto(wrap, { id, url, meta, surface: `panel video #${id}`, controls: true });
       if (mediaMetaEl) mediaMetaEl.textContent = xtrataMetaLine(meta, id);
       return;
     }
@@ -2171,6 +2939,13 @@
     loading.className = 'xtrata-panel-loading';
     loading.innerHTML = `<strong>Loading on-chain display</strong><span>Xtrata inscription #${esc(id)}</span>`;
     mediaInner.replaceChildren(loading);
+
+    resolveXtrataInscription(id, { surface: 'panel' }).then(asset => {
+      if (token !== xtrataPanelRequestToken || !asset?.ok) return;
+      renderXtrataPanelElement({ id, url: asset.url, meta: asset.meta, token });
+    }).catch(error => {
+      addXtrataLog('warn', 'Panel reconstruction failed before runtime fallback completed.', { inscriptionId: id, error: error.message });
+    });
 
     const inferred = inferKindFromUrl(url);
     if (inferred !== 'unknown') {
@@ -2812,49 +3587,27 @@
 
     const id = normalizeInscriptionId(resolved?.inscriptionId);
     const kind = meta?.kind || inferKindFromUrl(url) || 'unknown';
-    const renderKey = `${id}|${url}|${kind}|${meta?.contentType || ''}`;
+    const renderKey = `${id}|${url}|${kind}|${meta?.contentType || ''}|square-v1`;
     if (block.xtrataRenderKey === renderKey) return;
     block.xtrataRenderKey = renderKey;
 
     const root = block.xtrataRoot;
     root.replaceChildren();
+    const squareSize = Math.max(1, Math.min(block.w * u, block.h * u));
 
     const addLabel = () => {
-      const label = document.createElementNS(XHTMLNS, 'div');
-      label.setAttribute('class', 'xtrata-board-placeholder');
-      label.textContent = id === null ? 'XTRATA' : `XTRATA #${id}`;
-      root.appendChild(label);
+      root.appendChild(createSquarePlaceholder(id === null ? 'XTRATA' : `XTRATA #${id}`, { squareSize }));
     };
 
-    if (kind === 'image' || kind === 'unknown') {
-      const img = document.createElementNS(XHTMLNS, 'img');
-      img.setAttribute('class', 'xtrata-board-media image');
-      img.setAttribute('alt', `Xtrata inscription #${id}`);
-      img.setAttribute('decoding', 'async');
-      img.setAttribute('loading', 'lazy');
-      img.setAttribute('referrerpolicy', 'no-referrer');
-      img.addEventListener('error', () => {
-        if (block.xtrataRenderKey !== renderKey) return;
-        root.replaceChildren(createXtrataIframe(url, 'xtrata-board-frame'));
+    if (kind === 'image' || kind === 'unknown' || kind === 'video') {
+      renderSquareAssetInto(root, {
+        id,
+        url,
+        meta,
+        surface: `board slot ${block.id}`,
+        squareSize,
+        controls: false
       });
-      img.setAttribute('src', url);
-      root.appendChild(img);
-      return;
-    }
-
-    if (kind === 'video') {
-      const video = document.createElementNS(XHTMLNS, 'video');
-      video.setAttribute('class', 'xtrata-board-media');
-      video.setAttribute('src', url);
-      video.setAttribute('muted', '');
-      video.setAttribute('loop', '');
-      video.setAttribute('playsinline', '');
-      video.setAttribute('preload', 'metadata');
-      video.autoplay = true;
-      video.muted = true;
-      video.loop = true;
-      root.appendChild(video);
-      video.play?.().catch(() => {});
       return;
     }
 
@@ -2863,7 +3616,9 @@
       return;
     }
 
-    root.appendChild(createXtrataIframe(url, 'xtrata-board-frame'));
+    const frame = createSquareFrame({ squareSize });
+    frame.appendChild(createXtrataIframe(url, 'xtrata-board-frame'));
+    root.appendChild(frame);
   }
 
   function applyBlockInscriptionDisplay(block, resolved, url) {
@@ -2879,6 +3634,15 @@
     if (block.xtrataRenderKey !== initialKey && !xtrataBoardRenderCache.has(`${id}|${url}`)) {
       renderBlockXtrataContent(block, resolved, url, { kind: inferKindFromUrl(url) });
     }
+
+    resolveXtrataInscription(id, { surface: `board slot ${block.id}` }).then(asset => {
+      if (!asset?.ok || !block.el.classList.contains('programmed-xtrata')) return;
+      const current = XBoardProgrammingModule.resolveSlot(block.id);
+      if (current?.inscriptionId !== resolved.inscriptionId) return;
+      renderBlockXtrataContent(block, resolved, asset.url, asset.meta);
+    }).catch(error => {
+      addXtrataLog('warn', 'Board reconstruction failed before runtime fallback completed.', { slotId: block.id, inscriptionId: id, error: error.message });
+    });
 
     const cacheKey = `${id}|${url}`;
     if (xtrataBoardRenderCache.has(cacheKey)) {
@@ -2916,7 +3680,7 @@
     const XBOARD_CONTROL_PRINCIPAL = 'SP2CWY47KCSYT6VZDV8CZ1WSBA5JASPHDP95ADB96';
     const STX_TO_USTX = 1000000;
     const OWNER_UPDATE_FEE_USTX = 100000;
-    const PUBLIC_TAKEOVER_START_USTX = 10000;
+    const PUBLIC_TAKEOVER_START_USTX = 1;
     const PUBLIC_TAKEOVER_WARNING_USTX = 10 * STX_TO_USTX;
     const DEFAULT_CONFIG = {
       controlPrincipal: XBOARD_CONTROL_PRINCIPAL,
@@ -3111,7 +3875,7 @@
     }
 
     function slotInstructions(slotId) {
-      return state.transactions.map(normaliseTx).filter(tx => tx.parsed.ok && tx.parsed.slotId === slotId);
+      return allResolverTransactions().map(normaliseTx).filter(tx => tx.parsed.ok && tx.parsed.slotId === slotId);
     }
 
     function publicWinner(slotId) {
@@ -3333,12 +4097,29 @@
       'openSTXTransfer'
     ];
     const WALLET_LOG_LIMIT = 70;
+    const STACKS_CONNECT_MODULE_URL = 'https://esm.sh/@stacks/connect?bundle';
+    const XBOARD_STACKS_NETWORK = 'mainnet';
     let lastWalletPayload = null;
     let walletLogEntries = [];
     let hasLoggedWalletEnvironment = false;
-    let inscriptionPreviewToken = 0;
-    let inscriptionPreviewTimer = 0;
-    let lastInscriptionPreviewKey = '';
+    let walletRequestInFlight = false;
+    let stacksConnectModulePromise = null;
+    let stacksConnectRequestFn = null;
+
+    const HIRO_MAINNET_API_BASE = 'https://api.mainnet.hiro.so';
+    const CHAIN_SYNC_LIMIT = 50;
+    const CHAIN_SYNC_REFRESH_MS = 45 * 1000;
+    let indexedTransactions = [];
+    let indexerSyncTimer = null;
+    let indexerSyncInFlight = false;
+    let indexerStatus = {
+      state: 'warn',
+      message: 'Chain indexer has not synced yet.',
+      count: 0,
+      scanned: 0,
+      lastSync: 0,
+      endpoint: ''
+    };
 
     function trimWalletLogText(value, max = 180) {
       const text = String(value ?? '');
@@ -3456,11 +4237,17 @@
         path: window.location.pathname || '/',
         hasWalletBridgeToken: Boolean(params?.get('walletBridgeToken')),
         hasRuntimeShimFlag: Boolean(window.__xtrataRuntimeWalletShimInstalled),
+        protocol: window.location.protocol || '',
+        isLocalFile: window.location.protocol === 'file:',
         hasStacksProviderRequest: Boolean(window.StacksProvider && typeof window.StacksProvider.request === 'function'),
         hasStacksAliasRequest: Boolean(window.stacks && typeof window.stacks.request === 'function'),
+        hasStacksConnectRequest: Boolean(stacksConnectRequestFn),
         hasOpener: Boolean(window.opener && window.opener !== window),
         hasParentFrame: Boolean(window.parent && window.parent !== window),
-        origin: window.location.origin || '(opaque)'
+        origin: window.location.origin || '(opaque)',
+        stacksConnectModuleUrl: STACKS_CONNECT_MODULE_URL,
+        localDevServerCommand: isLocalFileOrigin() ? localDevServerCommand() : '',
+        localDevServerUrl: isLocalFileOrigin() ? localDevServerUrl() : ''
       };
     }
 
@@ -3471,8 +4258,216 @@
         amountUstx: payload?.amount || '',
         amountStx: payload?.amount ? stxFromUstx(payload.amount) : '',
         memo: payload?.memo || '',
-        network: payload?.network || ''
+        network: payload?.network || '',
+        address: payload?.address || ''
       };
+    }
+
+
+
+    function isLocalFileOrigin() {
+      return window.location.protocol === 'file:';
+    }
+
+    function decodedLocalPath() {
+      try {
+        return decodeURIComponent(window.location.pathname || '');
+      } catch (error) {
+        return window.location.pathname || '';
+      }
+    }
+
+    function localDevDirectory() {
+      const path = decodedLocalPath();
+      if (!path || !path.includes('/')) return '.';
+      return path.slice(0, path.lastIndexOf('/')) || '/';
+    }
+
+    function localDevFileName() {
+      const path = decodedLocalPath();
+      const name = path.split('/').filter(Boolean).pop();
+      return name || 'x-board.html';
+    }
+
+    function localDevServerCommand() {
+      return `cd "${localDevDirectory()}" && python3 -m http.server 8787`;
+    }
+
+    function localDevServerUrl() {
+      return `http://localhost:8787/${encodeURIComponent(localDevFileName())}`;
+    }
+
+    function originHelpHtml() {
+      if (!isLocalFileOrigin()) return '';
+      const command = localDevServerCommand();
+      const url = localDevServerUrl();
+      return `
+        <div class="xpm-origin-warning">
+          <strong>Local file mode blocks wallet detection</strong>
+          This page is open as <code>file://</code>. Chrome wallet extensions often do not inject their Stacks providers into local files, so Stacks Connect can show an install-wallet panel even when Leather or Xverse is installed. For wallet testing, serve this folder locally, then open the localhost URL.
+          <div style="margin-top:7px;"><code>${esc(command)}</code></div>
+          <div style="margin-top:5px;"><code>${esc(url)}</code></div>
+          <div class="xpm-origin-actions">
+            <button class="xpm-btn secondary" type="button" data-xpm-copy="local-command">Copy server command</button>
+            <button class="xpm-btn secondary" type="button" data-xpm-copy="local-url">Copy localhost URL</button>
+          </div>
+        </div>
+      `;
+    }
+
+    function chainInboundEndpoint(limit = CHAIN_SYNC_LIMIT) {
+      return `${HIRO_MAINNET_API_BASE}/extended/v1/address/${encodeURIComponent(XBOARD_CONTROL_PRINCIPAL)}/stx_inbound?limit=${encodeURIComponent(String(limit))}&offset=0&unanchored=false`;
+    }
+
+    function decodeStacksMemo(rawMemo) {
+      const raw = String(rawMemo ?? '').trim();
+      if (!raw) return '';
+      if (!/^0x[0-9a-f]*$/i.test(raw)) return raw.replace(/ /g, '').trim();
+
+      const hex = raw.slice(2);
+      const bytes = [];
+      for (let i = 0; i + 1 < hex.length; i += 2) {
+        const byte = Number.parseInt(hex.slice(i, i + 2), 16);
+        if (!Number.isFinite(byte) || byte === 0) break;
+        bytes.push(byte);
+      }
+      if (!bytes.length) return '';
+
+      try {
+        return new TextDecoder('utf-8').decode(new Uint8Array(bytes)).replace(/ /g, '').trim();
+      } catch (error) {
+        return String.fromCharCode(...bytes).replace(/ /g, '').trim();
+      }
+    }
+
+    function normalizeIndexerTransfer(row) {
+      const memo = decodeStacksMemo(row?.memo);
+      return {
+        txid: String(row?.tx_id || row?.txid || '').trim(),
+        sender: normalizeAddr(row?.sender || row?.sender_address || row?.from || ''),
+        recipient: XBOARD_CONTROL_PRINCIPAL,
+        amountUstx: txAmount({ amountUstx: row?.amount }),
+        memo,
+        blockHeight: Number(row?.block_height || row?.blockHeight || 0),
+        txIndex: Number(row?.tx_index || row?.txIndex || 0),
+        confirmed: Boolean(row?.block_height || row?.blockHeight),
+        source: 'chain',
+        transferType: String(row?.transfer_type || '')
+      };
+    }
+
+    function txDedupKey(tx) {
+      const id = String(tx?.txid || tx?.tx_id || '').trim();
+      if (id) return `tx:${id}`;
+      return `shape:${txKey(tx)}`;
+    }
+
+    function allResolverTransactions() {
+      const out = [];
+      const seen = new Set();
+      const add = tx => {
+        if (!tx) return;
+        const tagged = { source: tx.source || 'local', ...tx };
+        const key = txDedupKey(tagged);
+        if (seen.has(key)) return;
+        seen.add(key);
+        out.push(tagged);
+      };
+      state.transactions.forEach(tx => add({ source: 'local', ...tx }));
+      indexedTransactions.forEach(add);
+      return out;
+    }
+
+    function formatSyncTime(ts) {
+      if (!ts) return 'not yet';
+      try { return new Date(ts).toLocaleTimeString([], { hour12: false }); }
+      catch (error) { return 'recently'; }
+    }
+
+    function indexerStatusHtml() {
+      const cls = indexerStatus.state === 'ok' ? 'ok' : indexerStatus.state === 'bad' ? 'bad' : 'warn';
+      const endpoint = indexerStatus.endpoint ? `<br><span class="mono">${esc(indexerStatus.endpoint)}</span>` : '';
+      return `<div class="xpm-chain-status ${cls}"><strong>Chain sync:</strong> ${esc(indexerStatus.message)}<br>Valid XBoard memos loaded: ${esc(indexerStatus.count)} from ${esc(indexerStatus.scanned)} inbound transfer(s). Last sync: ${esc(formatSyncTime(indexerStatus.lastSync))}.${endpoint}</div>`;
+    }
+
+    async function syncChainInstructions({ manual = false } = {}) {
+      if (indexerSyncInFlight) {
+        if (manual) addWalletLog('warn', 'Chain indexer sync is already running.');
+        return indexedTransactions;
+      }
+
+      const endpoint = chainInboundEndpoint();
+      indexerSyncInFlight = true;
+      indexerStatus = {
+        ...indexerStatus,
+        state: 'warn',
+        message: manual ? 'Syncing chain memos now...' : 'Syncing chain memos...',
+        endpoint
+      };
+      render();
+
+      try {
+        const response = await fetch(endpoint, {
+          method: 'GET',
+          headers: { 'Accept': 'application/json' },
+          cache: 'no-store'
+        });
+        if (!response.ok) throw new Error(`Hiro inbound transfer request failed: HTTP ${response.status}`);
+        const json = await response.json();
+        const rows = Array.isArray(json?.results) ? json.results : [];
+        const normalized = rows.map(normalizeIndexerTransfer);
+        const validXboard = normalized.filter(tx => parseMemo(tx.memo).ok);
+
+        indexedTransactions = validXboard;
+        indexerStatus = {
+          state: 'ok',
+          message: validXboard.length
+            ? `Synced ${validXboard.length} confirmed XBoard memo transfer${validXboard.length === 1 ? '' : 's'} from mainnet.`
+            : 'Synced mainnet successfully, but found no valid XBoard memos in the latest inbound transfers.',
+          count: validXboard.length,
+          scanned: rows.length,
+          lastSync: Date.now(),
+          endpoint
+        };
+
+        if (manual || validXboard.length) {
+          addWalletLog(validXboard.length ? 'ok' : 'warn', 'Chain indexer sync complete.', {
+            validXboardMemos: validXboard.length,
+            inboundTransfersScanned: rows.length,
+            endpoint
+          });
+        }
+
+        applyVisuals();
+        render();
+        if (activeBlock) renderSlotInfo(activeBlock);
+        return indexedTransactions;
+      } catch (error) {
+        indexerStatus = {
+          state: 'bad',
+          message: walletErrorText(error),
+          count: indexedTransactions.length,
+          scanned: 0,
+          lastSync: Date.now(),
+          endpoint
+        };
+        addWalletLog('bad', 'Chain indexer sync failed.', walletErrorDebug(error));
+        render();
+        return indexedTransactions;
+      } finally {
+        indexerSyncInFlight = false;
+      }
+    }
+
+    function startChainIndexer() {
+      syncChainInstructions({ manual: false }).catch(() => null);
+      if (indexerSyncTimer) window.clearInterval(indexerSyncTimer);
+      indexerSyncTimer = window.setInterval(() => {
+        syncChainInstructions({ manual: false }).catch(() => null);
+      }, CHAIN_SYNC_REFRESH_MS);
+      window.addEventListener('beforeunload', () => {
+        if (indexerSyncTimer) window.clearInterval(indexerSyncTimer);
+      });
     }
 
     async function copyWalletLog() {
@@ -3485,147 +4480,6 @@
       } catch (error) {
         addWalletLog('bad', 'Could not copy wallet diagnostics log.', walletErrorDebug(error));
       }
-    }
-
-    function setInscriptionPreviewEmpty(message) {
-      if (!ui?.inscriptionPreviewFull || !ui?.inscriptionPreviewSlot) return;
-      const makeEmpty = () => {
-        const el = document.createElement('div');
-        el.className = 'xpm-inscription-preview-empty';
-        el.textContent = message;
-        return el;
-      };
-      ui.inscriptionPreviewFull.replaceChildren(makeEmpty());
-      ui.inscriptionPreviewSlot.replaceChildren(makeEmpty());
-      if (ui.inscriptionPreviewMeta) ui.inscriptionPreviewMeta.textContent = message;
-    }
-
-    function inscriptionPreviewMetaText(id, slotId, slotWidth, slotHeight, meta = null) {
-      const bits = [`Xtrata #${id}`, `slot #${slotId}`, `${slotWidth}x${slotHeight} slot crop`];
-      const contentType = String(meta?.contentType || '').split(';')[0].trim();
-      if (contentType) bits.push(contentType);
-      if (meta?.size) bits.push(`${Number(meta.size).toLocaleString()} bytes`);
-      return bits.join(' · ');
-    }
-
-    function createInscriptionPreviewAudio(id, url, mode) {
-      const card = document.createElement('div');
-      card.className = 'xpm-inscription-preview-audio';
-      const strong = document.createElement('strong');
-      strong.textContent = mode === 'slot' ? `AUDIO #${id}` : `Xtrata audio #${id}`;
-      card.appendChild(strong);
-      if (mode === 'full') {
-        const audio = document.createElement('audio');
-        audio.controls = true;
-        audio.preload = 'metadata';
-        audio.src = url;
-        card.appendChild(audio);
-      }
-      return card;
-    }
-
-    function renderInscriptionPreviewMedia(stage, kind, url, id, mode, token) {
-      if (!stage || token !== inscriptionPreviewToken) return;
-      stage.replaceChildren();
-
-      if (kind === 'video') {
-        const video = document.createElement('video');
-        video.className = 'xpm-inscription-preview-media video';
-        video.src = url;
-        video.controls = mode === 'full';
-        video.loop = true;
-        video.muted = mode === 'slot';
-        video.playsInline = true;
-        video.preload = 'metadata';
-        if (mode === 'slot') video.autoplay = true;
-        stage.appendChild(video);
-        if (mode === 'slot') video.play?.().catch(() => {});
-        return;
-      }
-
-      if (kind === 'audio') {
-        stage.appendChild(createInscriptionPreviewAudio(id, url, mode));
-        return;
-      }
-
-      if (kind === 'image' || kind === 'unknown') {
-        const img = document.createElement('img');
-        img.className = 'xpm-inscription-preview-media image';
-        img.alt = `Xtrata inscription #${id}`;
-        img.decoding = 'async';
-        img.loading = 'eager';
-        img.referrerPolicy = 'no-referrer';
-        if ('fetchPriority' in img) img.fetchPriority = mode === 'full' ? 'high' : 'auto';
-        img.onerror = () => {
-          if (token !== inscriptionPreviewToken) return;
-          stage.replaceChildren(createXtrataIframe(url, 'xpm-inscription-preview-frame'));
-        };
-        img.src = url;
-        stage.appendChild(img);
-        return;
-      }
-
-      stage.appendChild(createXtrataIframe(url, 'xpm-inscription-preview-frame'));
-    }
-
-    function renderInscriptionPreview({ force = false } = {}) {
-      if (!ui?.drawer?.classList.contains('visible')) return;
-      const id = normalizeInscriptionId(ui.inscriptionInput.value);
-      const slotId = selectedSlotInputValue();
-      const block = blocks[slotId];
-
-      if (id === null) {
-        lastInscriptionPreviewKey = '';
-        inscriptionPreviewToken += 1;
-        setInscriptionPreviewEmpty('Enter a valid inscription ID.');
-        return;
-      }
-
-      if (!block) {
-        lastInscriptionPreviewKey = '';
-        inscriptionPreviewToken += 1;
-        setInscriptionPreviewEmpty('Select a valid slot.');
-        return;
-      }
-
-      const slotWidth = Math.max(1, Math.round((block.w || 1) * u));
-      const slotHeight = Math.max(1, Math.round((block.h || 1) * u));
-      const url = inscriptionUrl(id);
-      const key = `${id}|${url}|${slotId}|${slotWidth}x${slotHeight}`;
-      if (!force && key === lastInscriptionPreviewKey) return;
-      lastInscriptionPreviewKey = key;
-
-      const token = ++inscriptionPreviewToken;
-      ui.inscriptionPreviewSlot.style.aspectRatio = `${slotWidth} / ${slotHeight}`;
-      ui.inscriptionPreviewSlotLabel.textContent = `Slot #${slotId} view (${slotWidth}x${slotHeight})`;
-      ui.inscriptionPreviewMeta.textContent = `${inscriptionPreviewMetaText(id, slotId, slotWidth, slotHeight)} · loading`;
-
-      const inferred = inferKindFromUrl(url);
-      renderInscriptionPreviewMedia(ui.inscriptionPreviewFull, inferred === 'unknown' ? 'unknown' : inferred, url, id, 'full', token);
-      renderInscriptionPreviewMedia(ui.inscriptionPreviewSlot, inferred === 'unknown' ? 'unknown' : inferred, url, id, 'slot', token);
-
-      probeXtrataUrl(url).then(meta => {
-        if (token !== inscriptionPreviewToken) return;
-        const kind = meta?.kind || inferred || 'unknown';
-        ui.inscriptionPreviewMeta.textContent = `${inscriptionPreviewMetaText(id, slotId, slotWidth, slotHeight, meta)} · ${meta?.ok ? 'ready' : trimWalletLogText(meta?.reason || 'probe unavailable', 120)}`;
-        renderInscriptionPreviewMedia(ui.inscriptionPreviewFull, kind, url, id, 'full', token);
-        renderInscriptionPreviewMedia(ui.inscriptionPreviewSlot, kind, url, id, 'slot', token);
-      }).catch(error => {
-        if (token !== inscriptionPreviewToken) return;
-        ui.inscriptionPreviewMeta.textContent = `${inscriptionPreviewMetaText(id, slotId, slotWidth, slotHeight)} · probe failed`;
-        renderInscriptionPreviewMedia(ui.inscriptionPreviewFull, 'unknown', url, id, 'full', token);
-        renderInscriptionPreviewMedia(ui.inscriptionPreviewSlot, 'unknown', url, id, 'slot', token);
-        console.warn('XBoard inscription preview probe failed:', error);
-      });
-    }
-
-    function scheduleInscriptionPreview(delay = 120, force = false) {
-      if (!ui?.drawer?.classList.contains('visible')) return;
-      if (inscriptionPreviewTimer) window.clearTimeout(inscriptionPreviewTimer);
-      inscriptionPreviewTimer = window.setTimeout(() => {
-        inscriptionPreviewTimer = 0;
-        renderInscriptionPreview({ force });
-      }, Math.max(0, delay));
     }
 
     function hasXtrataRuntimeWalletBridge() {
@@ -3726,32 +4580,265 @@
       return lower.includes('argument') || lower.includes('parameter') || lower.includes('object');
     }
 
+    function walletNetworkMismatch(error) {
+      const lower = String(error?.message || error || '').toLowerCase();
+      return lower.includes('mismatch') && lower.includes('network');
+    }
+
+    function normalizeWalletAddressEntry(entry) {
+      if (!entry) return null;
+      if (typeof entry === 'string') return { address: entry, symbol: '', raw: entry };
+      if (typeof entry !== 'object') return null;
+      const address = entry.address || entry.stxAddress || entry.addr || entry.value || '';
+      if (!address) return null;
+      return {
+        address: String(address),
+        symbol: String(entry.symbol || entry.type || entry.blockchain || ''),
+        raw: entry
+      };
+    }
+
+    function addressListFromWalletResult(result) {
+      const root = result?.result || result || {};
+      const direct = root.addresses || root.accounts || root.stx || [];
+      const nested = root.addresses?.stx || root.stx?.addresses || [];
+      const list = [];
+      [direct, nested].forEach(value => {
+        if (Array.isArray(value)) list.push(...value);
+      });
+      if (root.address && !list.length) list.push(root);
+      return list.map(normalizeWalletAddressEntry).filter(Boolean);
+    }
+
+    function pickMainnetStxAddress(result) {
+      const entries = addressListFromWalletResult(result);
+      return entries.find(entry => /^SP/i.test(entry.address) && (!entry.symbol || /stx/i.test(entry.symbol))) ||
+        entries.find(entry => /^SP/i.test(entry.address)) ||
+        entries.find(entry => /stx/i.test(entry.symbol)) ||
+        null;
+    }
+
+    function walletRequestObject(method, params) {
+      return { method, params };
+    }
+
     async function requestWalletProvider(provider, method, params) {
       try {
-        return await provider.request(method, params);
-      } catch (error) {
-        if (walletUserCancelled(error)) throw error;
-        if (!walletRequestArgError(error)) throw error;
-        addWalletLog('warn', 'Wallet rejected positional request format; retrying object request format.', {
+        return await provider.request(walletRequestObject(method, params));
+      } catch (objectError) {
+        if (walletUserCancelled(objectError)) throw objectError;
+        if (!walletRequestArgError(objectError) && !walletMethodUnsupported(objectError)) throw objectError;
+        addWalletLog('warn', 'Wallet rejected object request format; retrying positional request format.', {
           provider: providerLabel(provider),
           method,
-          error: walletErrorDebug(error)
+          error: walletErrorDebug(objectError)
         });
-        return provider.request({ method, params });
+        return provider.request(method, params);
       }
     }
 
-    function createWalletPayload(amountUstx, memo) {
+    async function requestInjectedMainnetAddress(provider) {
+      const attempts = [
+        ['stx_getAddresses', { network: XBOARD_STACKS_NETWORK }],
+        ['getAddresses', { network: XBOARD_STACKS_NETWORK }],
+        ['stx_getAccounts', { network: XBOARD_STACKS_NETWORK }]
+      ];
+      let lastError = null;
+      for (const [method, params] of attempts) {
+        try {
+          const result = await requestWalletProvider(provider, method, params);
+          const selected = pickMainnetStxAddress(result);
+          if (selected?.address) {
+            addWalletLog('ok', 'Wallet returned a mainnet STX address for preflight.', {
+              provider: providerLabel(provider),
+              method,
+              address: selected.address
+            });
+            return selected.address;
+          }
+          addWalletLog('warn', 'Wallet address preflight returned no SP mainnet STX address.', {
+            provider: providerLabel(provider),
+            method,
+            result: walletLogValue(result)
+          });
+        } catch (error) {
+          lastError = error;
+          if (walletUserCancelled(error)) throw error;
+          if (walletNetworkMismatch(error)) throw error;
+          if (!walletMethodUnsupported(error) && !walletRequestArgError(error)) {
+            addWalletLog('warn', 'Wallet address preflight failed.', {
+              provider: providerLabel(provider),
+              method,
+              error: walletErrorDebug(error)
+            });
+          }
+        }
+      }
+      if (lastError) {
+        addWalletLog('warn', 'Mainnet address preflight could not complete; continuing to transfer request.', {
+          provider: providerLabel(provider),
+          error: walletErrorDebug(lastError)
+        });
+      }
+      return '';
+    }
+
+    function createWalletPayload(amountUstx, memo, expectedSender = '') {
       const amount = Math.max(0, Math.floor(Number(amountUstx || 0)));
       if (!amount) throw new Error('Transfer amount must be greater than zero.');
       const recipient = normalizeAddr(state.config.controlPrincipal);
       if (!recipient) throw new Error('Control principal is missing.');
+
+      // Keep the transfer request deliberately minimal. Earlier builds tried to
+      // pre-select / hint the sender address, but that can create stale-session
+      // or active-network mismatch problems in wallet selectors. The wallet
+      // should choose the signing account; XBoard validates owner/public rules
+      // from the confirmed transaction later.
       return {
         recipient,
         amount: String(amount),
         memo: String(memo || '').trim(),
-        network: 'mainnet'
+        network: XBOARD_STACKS_NETWORK
       };
+    }
+
+    function isLikelyModuleLoadError(error) {
+      const lower = String(error?.message || error || '').toLowerCase();
+      return lower.includes('failed to fetch') || lower.includes('loading chunk') || lower.includes('network') || lower.includes('cors') || lower.includes('module');
+    }
+
+
+
+    function walletOriginUnsupported(error) {
+      const lower = String(error?.message || error || '').toLowerCase();
+      return lower.includes('local file') || lower.includes('file://') || lower.includes('localhost') || lower.includes('hosted origin');
+    }
+
+    function getStacksConnectRequestFromModule(mod) {
+      const request = mod?.request || mod?.default?.request || mod?.StacksConnect?.request;
+      return typeof request === 'function' ? request : null;
+    }
+
+    function preloadStacksConnect({ log = false } = {}) {
+      if (stacksConnectRequestFn) return Promise.resolve(stacksConnectRequestFn);
+      if (!stacksConnectModulePromise) {
+        stacksConnectModulePromise = import(STACKS_CONNECT_MODULE_URL)
+          .then(mod => {
+            const request = getStacksConnectRequestFromModule(mod);
+            if (!request) throw new Error('Stacks Connect loaded but did not expose a request() function.');
+            stacksConnectRequestFn = request;
+            if (log) addWalletLog('ok', 'Official Stacks Connect helper loaded.', { moduleUrl: STACKS_CONNECT_MODULE_URL });
+            return request;
+          })
+          .catch(error => {
+            stacksConnectModulePromise = null;
+            stacksConnectRequestFn = null;
+            if (log) addWalletLog('warn', 'Could not load official Stacks Connect helper.', {
+              moduleUrl: STACKS_CONNECT_MODULE_URL,
+              error: walletErrorDebug(error),
+              likelyModuleLoadError: isLikelyModuleLoadError(error)
+            });
+            throw error;
+          });
+      }
+      return stacksConnectModulePromise;
+    }
+
+    async function requestStacksConnectMainnetAddress(request, payload) {
+      const connectParams = { network: XBOARD_STACKS_NETWORK };
+      if (payload.address) connectParams.address = payload.address;
+      const connectOptions = {
+        forceWalletSelect: true,
+        persistWalletSelect: true,
+        enableOverrides: true,
+        enableLocalStorage: true
+      };
+
+      const attempts = [
+        () => request(connectOptions, 'getAddresses', connectParams),
+        () => request('getAddresses', { ...connectParams, forceWalletSelect: true, enableOverrides: true, enableLocalStorage: true }),
+        () => request(connectOptions, 'stx_getAddresses', connectParams),
+        () => request('stx_getAddresses', { ...connectParams, forceWalletSelect: true, enableOverrides: true, enableLocalStorage: true })
+      ];
+
+      let lastError = null;
+      for (const attempt of attempts) {
+        try {
+          const result = await attempt();
+          const selected = pickMainnetStxAddress(result);
+          if (selected?.address) {
+            addWalletLog('ok', 'Stacks Connect selected a mainnet STX address.', { address: selected.address });
+            return selected.address;
+          }
+          addWalletLog('warn', 'Stacks Connect address preflight returned no SP mainnet STX address.', walletLogValue(result));
+        } catch (error) {
+          lastError = error;
+          if (walletUserCancelled(error)) throw error;
+          if (walletNetworkMismatch(error)) throw error;
+          if (!walletRequestArgError(error) && !walletMethodUnsupported(error)) {
+            addWalletLog('warn', 'Stacks Connect address preflight attempt failed.', walletErrorDebug(error));
+          }
+        }
+      }
+      if (lastError) throw lastError;
+      return '';
+    }
+
+    function stacksConnectTransferParams(payload) {
+      return {
+        recipient: payload.recipient,
+        amount: payload.amount,
+        memo: payload.memo,
+        network: XBOARD_STACKS_NETWORK
+      };
+    }
+
+    async function requestStacksConnectTransfer(request, params) {
+      const requestOptions = {
+        forceWalletSelect: true,
+        persistWalletSelect: false,
+        enableOverrides: true,
+        enableLocalStorage: false
+      };
+
+      try {
+        // Use a single Stacks Connect call for wallet selection + transfer.
+        // This keeps the transfer inside the original click gesture and avoids
+        // opening a separate getAddresses request before the actual send.
+        return await request(requestOptions, 'stx_transferStx', params);
+      } catch (optionsError) {
+        if (walletUserCancelled(optionsError)) throw optionsError;
+        if (!walletRequestArgError(optionsError) && !walletMethodUnsupported(optionsError)) throw optionsError;
+        addWalletLog('warn', 'Stacks Connect options-first transfer signature was not accepted; retrying simple signature.', walletErrorDebug(optionsError));
+        return request('stx_transferStx', params);
+      }
+    }
+
+    async function openViaStacksConnect(payload) {
+      addWalletLog('info', 'Trying official Stacks Connect one-step transfer on mainnet.', {
+        moduleUrl: STACKS_CONNECT_MODULE_URL,
+        bridge: runtimeBridgeSnapshot()
+      });
+
+      if (isLocalFileOrigin()) {
+        addWalletLog('warn', 'This is running from file://. Wallets may work if file URL access is enabled, but localhost is still more reliable.', runtimeBridgeSnapshot());
+      }
+
+      const request = await preloadStacksConnect({ log: true });
+      const params = stacksConnectTransferParams(payload);
+
+      addWalletLog('info', 'Submitting Stacks Connect transfer with mainnet params.', params);
+      try {
+        return await requestStacksConnectTransfer(request, params);
+      } catch (error) {
+        if (walletNetworkMismatch(error)) {
+          addWalletLog('bad', 'Wallet reported a network mismatch even though XBoard sent network: mainnet. Try switching the wallet to Mainnet, then disconnecting/reconnecting this site in the wallet permissions before retrying.', {
+            error: walletErrorDebug(error),
+            params
+          });
+        }
+        throw error;
+      }
     }
 
     async function openViaInjectedWallet(payload) {
@@ -3763,13 +4850,14 @@
       let lastError = null;
       for (const provider of providers) {
         const label = providerLabel(provider);
+        const transferPayload = { ...payload, network: XBOARD_STACKS_NETWORK };
         for (const method of WALLET_TRANSFER_METHODS) {
           try {
-            addWalletLog('info', 'Trying direct wallet provider method.', { provider: label, method });
-            return await requestWalletProvider(provider, method, payload);
+            addWalletLog('info', 'Trying direct wallet provider method with explicit mainnet payload.', { provider: label, method, payload: transferPayload });
+            return await requestWalletProvider(provider, method, transferPayload);
           } catch (error) {
             lastError = error;
-            if (walletUserCancelled(error)) throw error;
+            if (walletUserCancelled(error) || walletNetworkMismatch(error)) throw error;
             if (walletMethodUnsupported(error) || walletRequestArgError(error)) {
               addWalletLog('warn', 'Wallet provider method was not accepted.', {
                 provider: label,
@@ -3802,20 +4890,36 @@
     }
 
     async function openWalletTransfer(payload) {
-      try {
-        const result = await openViaXtrataRuntimeBridge(payload);
-        addWalletLog('ok', 'Xtrata runtime wallet bridge accepted the request.');
-        return result;
-      } catch (error) {
-        if (walletUserCancelled(error)) throw error;
-        addWalletLog('warn', 'Xtrata runtime wallet bridge path did not complete.', walletErrorDebug(error));
-        if (hasXtrataRuntimeWalletBridge()) {
+      if (hasXtrataRuntimeWalletBridge()) {
+        try {
+          const result = await openViaXtrataRuntimeBridge(payload);
+          addWalletLog('ok', 'Xtrata runtime wallet bridge accepted the request.');
+          return result;
+        } catch (error) {
+          if (walletUserCancelled(error)) throw error;
+          addWalletLog('warn', 'Xtrata runtime wallet bridge path did not complete.', walletErrorDebug(error));
           const lower = String(error?.message || error || '').toLowerCase();
           if (!lower.includes('bridge') && !walletMethodUnsupported(error) && !walletRequestArgError(error)) {
             throw error;
           }
         }
+      } else {
+        addWalletLog('info', 'No Xtrata runtime wallet bridge detected; using browser wallet path.', runtimeBridgeSnapshot());
       }
+
+      try {
+        const result = await openViaStacksConnect(payload);
+        addWalletLog('ok', 'Official Stacks Connect wallet selector accepted the request.');
+        return result;
+      } catch (error) {
+        if (walletUserCancelled(error)) throw error;
+        addWalletLog('warn', 'Official Stacks Connect path did not complete.', walletErrorDebug(error));
+        if (!isLikelyModuleLoadError(error) && !walletOriginUnsupported(error) && !walletMethodUnsupported(error) && !walletRequestArgError(error)) {
+          // If Stacks Connect loaded and produced a real wallet error, do not hide it behind the raw-provider fallback.
+          throw error;
+        }
+      }
+
       try {
         const result = await openViaInjectedWallet(payload);
         addWalletLog('ok', 'Direct browser wallet provider accepted the request.');
@@ -3831,7 +4935,11 @@
           throw error;
         }
       }
-      throw new Error('No installed Stacks wallet was available to XBoard. See Wallet diagnostics below for bridge/provider details. If you are viewing inside Xtrata, reload the page and try again; otherwise use the manual fallback values.');
+
+      const fileHint = window.location.protocol === 'file:'
+        ? ' You are currently opening this as a local file; browser wallets often do not inject providers into file:// pages. Try serving the file from http://localhost or testing it from a hosted Xtrata page.'
+        : '';
+      throw new Error(`No Stacks wallet path was available to XBoard.${fileHint} If this is open as file://, run a local server and open ${localDevServerUrl()}. See Wallet diagnostics below, or use the manual fallback values.`);
     }
 
     function txIdFromWalletResult(result) {
@@ -3877,15 +4985,26 @@
         <div class="xpm-wallet-warning">
           ${ownerMode
             ? 'Owner rule: the wallet that signs this transfer must be the current slot owner and must send exactly 0.1 STX. Xtrata will ask Leather/Xverse to open the transfer; the wallet may ask you to unlock first.'
-            : 'Public rule: this only affects display when the Web2 media for the slot is unlinked or broken. The amount must be the exact required price: 0.01 STX first, then double the current holder amount. Xtrata will ask Leather/Xverse to open or unlock if available.'}
+            : 'Public rule: this only affects display when the Web2 media for the slot is unlinked or broken. The amount must be the exact required price: 0.000001 STX first, then double the current holder amount. Xtrata will ask Leather/Xverse to open or unlock if available.'}
         </div>
       ` + (ownerMode ? '' : publicTakeoverRiskWarningHtml(amountUstx));
+    }
+
+    function hydrateGeneratedInscriptionPreview() {
+      if (!ui?.preview) return;
+      const target = ui.preview.querySelector('[data-xpm-inscription-preview]');
+      if (!target) return;
+      const id = normalizeInscriptionId(target.getAttribute('data-xpm-inscription-preview'));
+      if (id === null) return;
+      renderXtrataMiniPreview(target, id, { surface: `transaction preview #${id}` }).catch(error => {
+        addXtrataLog('warn', 'Generated transaction preview failed.', { inscriptionId: id, error: error.message });
+      });
     }
 
     function renderWalletRequestPreview(kind, memo, sender, amountUstx, extraHtml = '') {
       let payload = null;
       try {
-        payload = createWalletPayload(amountUstx, memo);
+        payload = createWalletPayload(amountUstx, memo, sender);
         lastWalletPayload = payload;
       } catch (error) {
         lastWalletPayload = null;
@@ -3895,11 +5014,12 @@
         walletRuleWarningHtml(kind, amountUstx) +
         (payload ? walletManualHtml(payload) : '') +
         extraHtml;
+      hydrateGeneratedInscriptionPreview();
     }
 
     function logWalletPreview(kind, memo, sender, amountUstx) {
       try {
-        const payload = createWalletPayload(amountUstx, memo);
+        const payload = createWalletPayload(amountUstx, memo, sender);
         addWalletLog('info', 'Previewed wallet transfer payload.', walletPayloadDebug(payload, {
           kind,
           expectedSender: sender || 'Selected in wallet',
@@ -3917,6 +5037,11 @@
     }
 
     async function requestWalletInstruction(kind, action, amountUstx, expectedSender) {
+      if (walletRequestInFlight) {
+        addWalletLog('warn', 'A wallet request is already in progress. Close or finish the current wallet prompt before opening another.');
+        return;
+      }
+
       const memo = currentMemo(action);
       const parsed = parseMemo(memo);
       if (!parsed.ok) {
@@ -3932,7 +5057,7 @@
 
       let payload;
       try {
-        payload = createWalletPayload(amountUstx, memo);
+        payload = createWalletPayload(amountUstx, memo, expectedSender);
       } catch (error) {
         addWalletLog('bad', 'Wallet request stopped before opening because payload creation failed.', {
           kind,
@@ -3965,6 +5090,7 @@
         '<div class="xpm-wallet-result">Opening wallet through Xtrata. Your wallet may ask you to unlock before showing the transfer. Review the recipient, amount, and memo before sending.</div>'
       );
 
+      walletRequestInFlight = true;
       try {
         addWalletLog('info', 'Opening wallet transfer request.');
         const result = await openWalletTransfer(payload);
@@ -3979,6 +5105,7 @@
           amountUstx,
           `<div class="xpm-wallet-result ok">Wallet request submitted${txid ? `: <span class="mono">${esc(txid)}</span>` : '.'} The board display changes after the resolver sees a confirmed transaction that follows the rules.</div>`
         );
+        window.setTimeout(() => syncChainInstructions({ manual: false }).catch(() => null), 12000);
       } catch (error) {
         addWalletLog(walletUserCancelled(error) ? 'warn' : 'bad', walletUserCancelled(error)
           ? 'Wallet request was cancelled or rejected by the user.'
@@ -3990,31 +5117,41 @@
           memo,
           expectedSender || 'Selected in wallet',
           amountUstx,
-          `<div class="xpm-wallet-result bad">${esc(walletErrorText(error))} Use the manual fallback values if your wallet supports STX transfers with memos.</div>`
+          `<div class="xpm-wallet-result bad">${esc(walletNetworkMismatch(error) ? 'Network mismatch: XBoard is requesting Stacks mainnet. Switch the active wallet account/network to mainnet, or disconnect/reconnect the wallet to this app, then retry.' : walletErrorText(error))} Use the manual fallback values if your wallet supports STX transfers with memos.</div>`
         );
+      } finally {
+        walletRequestInFlight = false;
+      }
+    }
+
+    async function copyTextToClipboard(value, label = 'value') {
+      try {
+        await navigator.clipboard.writeText(String(value || ''));
+        if (ui?.preview) ui.preview.insertAdjacentHTML('beforeend', `<div class="xpm-wallet-result ok">Copied ${esc(label)}.</div>`);
+        addWalletLog('ok', `Copied ${label}.`);
+      } catch (error) {
+        if (ui?.preview) ui.preview.insertAdjacentHTML('beforeend', `<div class="xpm-wallet-result bad">Copy failed. Select the value manually.</div>`);
+        addWalletLog('bad', `Could not copy ${label}.`, walletErrorDebug(error));
       }
     }
 
     async function copyLastWalletField(field) {
+      if (field === 'local-command') return copyTextToClipboard(localDevServerCommand(), 'server command');
+      if (field === 'local-url') return copyTextToClipboard(localDevServerUrl(), 'localhost URL');
       if (!lastWalletPayload) return;
       const value = field === 'recipient'
         ? lastWalletPayload.recipient
         : field === 'amount'
           ? lastWalletPayload.amount
           : lastWalletPayload.memo;
-      try {
-        await navigator.clipboard.writeText(value);
-        ui.preview.insertAdjacentHTML('beforeend', `<div class="xpm-wallet-result ok">Copied ${esc(field)}.</div>`);
-      } catch (error) {
-        ui.preview.insertAdjacentHTML('beforeend', `<div class="xpm-wallet-result bad">Copy failed. Select the value manually.</div>`);
-      }
+      return copyTextToClipboard(value, field);
     }
 
     function previewHtml(kind, memo, sender, amountUstx) {
       const parsed = parseMemo(memo);
       const valid = parsed.ok;
       const inscriptionLine = parsed.inscriptionId !== undefined
-        ? `<div class="xpm-preview-row"><div class="xpm-preview-key">Display</div><div class="xpm-preview-val">${esc(inscriptionUrl(parsed.inscriptionId))}</div></div><div class="xpm-preview-row"><div class="xpm-preview-key">Compact</div><div class="xpm-preview-val">${esc(compactInscriptionUrl(parsed.inscriptionId))}</div></div>`
+        ? `<div class="xpm-preview-row"><div class="xpm-preview-key">Display</div><div class="xpm-preview-val">${esc(inscriptionUrl(parsed.inscriptionId))}</div></div><div class="xpm-preview-row"><div class="xpm-preview-key">Compact</div><div class="xpm-preview-val">${esc(compactInscriptionUrl(parsed.inscriptionId))}</div></div><div class="xpm-inscription-preview-card" data-xpm-inscription-preview="${esc(parsed.inscriptionId)}"><div class="xpm-inscription-preview-frame"><div class="xtrata-square-placeholder">Preview #${esc(parsed.inscriptionId)}</div></div><div class="xpm-inscription-preview-meta"><strong>Inscription preview</strong>Preview will load after this transaction preview renders.</div></div>`
         : '';
 
       return `
@@ -4031,6 +5168,7 @@
 
     function renderPreview(kind, memo, sender, amountUstx) {
       ui.preview.innerHTML = previewHtml(kind, memo, sender, amountUstx);
+      hydrateGeneratedInscriptionPreview();
     }
 
     function currentPublicSuggestedAmount(slotId) {
@@ -4039,8 +5177,8 @@
     }
 
     function renderTransactionTable(slotId) {
-      const rows = state.transactions.slice().reverse().map(tx => {
-        const n = normaliseTx(tx);
+      const txs = allResolverTransactions().map(normaliseTx).sort(sortOwner);
+      const rows = txs.map(n => {
         const parsed = n.parsed;
         const forCurrent = parsed.ok && parsed.slotId === slotId;
         const owner = parsed.ok ? ownerCandidate(n, parsed.slotId) : { ok: false, reason: parsed.reason };
@@ -4051,10 +5189,15 @@
             ? '<span class="xpm-badge public">temporary</span>'
             : '<span class="xpm-badge placeholder">ignored</span>';
         const reason = owner.ok ? owner.reason : pub.ok ? pub.reason : (parsed.ok ? `${owner.reason} / ${pub.reason}` : parsed.reason);
+        const source = n.source === 'chain' ? 'chain' : 'local';
+        const explorer = n.txid && source === 'chain'
+          ? `<br><a href="https://explorer.hiro.so/txid/${esc(n.txid)}?chain=mainnet" target="_blank" rel="noopener noreferrer">Explorer</a>`
+          : '';
 
         return `
           <tr class="${forCurrent ? '' : 'xpm-muted'}">
             <td>${esc(parsed.ok ? `#${parsed.slotId}` : '?')}</td>
+            <td>${esc(source)}${explorer}</td>
             <td>${esc(n.memo)}</td>
             <td>${esc(stxFromUstx(n.amountUstx))}</td>
             <td>${badge}</td>
@@ -4064,9 +5207,10 @@
       }).join('');
 
       return `
+        ${indexerStatusHtml()}
         <table class="xpm-table">
-          <thead><tr><th>Slot</th><th>Memo</th><th>STX</th><th>Use</th><th>Why</th></tr></thead>
-          <tbody>${rows || '<tr><td colspan="5" class="xpm-muted">No local simulated instructions yet.</td></tr>'}</tbody>
+          <thead><tr><th>Slot</th><th>Source</th><th>Memo</th><th>STX</th><th>Use</th><th>Why</th></tr></thead>
+          <tbody>${rows || '<tr><td colspan="6" class="xpm-muted">No local or chain instructions loaded yet.</td></tr>'}</tbody>
         </table>
       `;
     }
@@ -4133,16 +5277,18 @@
           </div>
         </div>
         <div class="xpm-help">${esc(resolved.reason)}</div>
+        ${indexerStatusHtml()}
         ${publicOpen && suggestedPublicUstx >= PUBLIC_TAKEOVER_WARNING_USTX ? publicTakeoverRiskWarningHtml(suggestedPublicUstx) : ''}
         ${resolved.inscriptionId !== undefined ? `<div class="xpm-help" style="margin-top:7px;">Resolved URL: <span class="mono">${esc(inscriptionUrl(resolved.inscriptionId))}</span></div>` : ''}
       `;
+
+      if (ui.originHelp) ui.originHelp.innerHTML = originHelpHtml();
 
       ui.txTable.innerHTML = renderTransactionTable(slotId);
       ui.configControl.value = XBOARD_CONTROL_PRINCIPAL;
       ui.configOwnerMin.value = stxValForInput(OWNER_UPDATE_FEE_USTX);
       ui.configPublicMin.value = stxValForInput(PUBLIC_TAKEOVER_START_USTX);
       ui.configInscriptionUrl.value = state.config.inscriptionUrlTemplate;
-      scheduleInscriptionPreview(0);
     }
 
     let activeTipButton = null;
@@ -4264,7 +5410,7 @@
       ui.close.addEventListener('click', closeDrawer);
       ui.footerCloseBtn.addEventListener('click', closeDrawer);
       ui.backdrop.addEventListener('click', closeDrawer);
-      ui.preview.addEventListener('click', event => {
+      ui.drawer.addEventListener('click', event => {
         const button = event.target.closest?.('[data-xpm-copy]');
         if (!button) return;
         event.preventDefault();
@@ -4275,9 +5421,6 @@
         walletLogEntries = [];
         renderWalletLog();
       });
-      ui.refreshInscriptionPreviewBtn.addEventListener('click', () => renderInscriptionPreview({ force: true }));
-      ui.inscriptionInput.addEventListener('input', () => scheduleInscriptionPreview(180, true));
-      ui.inscriptionInput.addEventListener('change', () => scheduleInscriptionPreview(0, true));
 
       document.querySelectorAll('.xpm-tab').forEach(tabBtn => {
         tabBtn.addEventListener('click', () => switchTab(tabBtn.dataset.tab));
@@ -4291,10 +5434,6 @@
           selectSlot(block);
           openDrawer();
         } else render();
-      });
-      ui.slotInput.addEventListener('input', () => {
-        selectedSlotId = selectedSlotInputValue();
-        render();
       });
 
       ui.ownerPresetMin.addEventListener('click', () => {
@@ -4314,7 +5453,6 @@
         const kind = 'Owner inscription';
         const memo = currentMemo('SET');
         const sender = ui.ownerSenderInput.value || getOwnerAddress(selectedSlotInputValue()) || 'Selected in wallet';
-        renderInscriptionPreview({ force: true });
         renderWalletRequestPreview(kind, memo, sender, getFormAmountsUstx().owner);
         logWalletPreview(kind, memo, sender, getFormAmountsUstx().owner);
       });
@@ -4341,7 +5479,6 @@
         const kind = 'Temporary public takeover';
         const memo = currentMemo('SET');
         const sender = ui.publicSenderInput.value || 'Selected in wallet';
-        renderInscriptionPreview({ force: true });
         renderWalletRequestPreview(kind, memo, sender, getFormAmountsUstx().public);
         logWalletPreview(kind, memo, sender, getFormAmountsUstx().public);
       });
@@ -4375,8 +5512,26 @@
         render();
       });
 
+      ui.syncChainBtn.addEventListener('click', () => {
+        syncChainInstructions({ manual: true }).catch(() => null);
+      });
+      ui.saveXtrataDebugBtn?.addEventListener('click', () => saveXtrataDebugConfigFromUi());
+      ui.testXtrataReconstructBtn?.addEventListener('click', () => {
+        const id = normalizeInscriptionId(ui.inscriptionInput.value || 0);
+        addXtrataLog('info', 'Manual reconstruction test requested.', { inscriptionId: id, slotId: selectedSlotInputValue() });
+        resolveXtrataInscription(id, { surface: 'manual test', force: true }).then(asset => {
+          if (asset?.ok) addXtrataLog('ok', 'Manual reconstruction test produced a renderable asset.', asset.meta);
+          else addXtrataLog('warn', 'Manual reconstruction test did not produce an asset. Runtime fallback may still work.', { inscriptionId: id });
+        }).catch(error => addXtrataLog('bad', 'Manual reconstruction test failed.', { inscriptionId: id, error: error.message }));
+      });
+      ui.copyXtrataLogBtn?.addEventListener('click', () => copyXtrataDebugLog());
+      ui.clearXtrataLogBtn?.addEventListener('click', () => {
+        xtrataDebugEntries = [];
+        renderXtrataDebugLog();
+      });
+
       ui.clearTxBtn.addEventListener('click', () => {
-        if (!window.confirm('Clear all local simulated instructions?')) return;
+        if (!window.confirm('Clear local simulated instructions? Chain-indexed memos will remain and can be refreshed from mainnet.')) return;
         state.transactions = [];
         saveState();
         applyVisuals();
@@ -4438,7 +5593,7 @@
               <div class="xpm-intro" aria-label="Slot programming overview">
                 <div class="xpm-mode-card"><strong>Web2 fallback</strong><span>Current board media displays when it loads.</span></div>
               <div class="xpm-mode-card"><strong>Owner control</strong><span>Slot owner can point to an inscription or force Web2 with a fixed 0.1 STX memo transfer.</span></div>
-              <div class="xpm-mode-card"><strong>Public takeover</strong><span>If Web2 media dies, a temporary takeover starts at 0.01 STX and then doubles exactly.</span></div>
+              <div class="xpm-mode-card"><strong>Public takeover</strong><span>If Web2 media dies, a temporary takeover starts at the smallest possible STX amount and then doubles exactly.</span></div>
             </div>
 
             <div class="xpm-section">
@@ -4450,8 +5605,9 @@
               <div class="xpm-section-title"><span class="xpm-section-heading">Program slot <button class="xpm-tip" type="button" data-tip="XBoard prepares a Stacks transfer request with the memo. Your wallet opens separately and you choose whether to send it." aria-label="Program slot help">?</button></span></div>
               <div class="xpm-panel">
                 <div class="xpm-wallet-warning">
-                  XBoard does not connect to or remember your wallet. Xtrata asks Leather/Xverse to open a prepared transfer, and your wallet may ask you to unlock before review. Owner updates only count if the transaction is sent from the current slot owner wallet.
+                  XBoard does not connect to or remember your wallet. It first tries the Xtrata runtime bridge, then the official Stacks Connect wallet selector, then any directly injected browser provider. Your wallet may ask you to unlock before review. Owner updates only count if the transaction is sent from the current slot owner wallet.
                 </div>
+                <div id="xpm-origin-help"></div>
                 <div class="xpm-grid">
                   <div class="xpm-field">
                     <label for="xpm-slot">Slot <button class="xpm-tip" type="button" data-tip="Board slot number you are programming. Clicking a slot selects it." aria-label="Slot field help">?</button></label>
@@ -4504,35 +5660,11 @@
                         <button type="button" class="xpm-preset-pill" id="xpm-preset-public-sug">Required</button>
                       </label>
                       <input id="xpm-public-amount" type="number" min="0" step="0.000001" readonly>
-                      <div class="xpm-field-help">Starts at 0.01 STX. Each later takeover must pay exactly double the current temporary holder.</div>
+                      <div class="xpm-field-help">Starts at 0.000001 STX. Each later takeover must pay exactly double the current temporary holder.</div>
                     </div>
                     <div class="xpm-actions" style="margin-top:auto;">
                       <button class="xpm-btn secondary" id="xpm-preview-public" type="button">Preview TX</button>
                       <button class="xpm-btn" id="xpm-add-public" type="button">Open Wallet</button>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="xpm-inscription-preview" id="xpm-inscription-preview">
-                  <div class="xpm-inscription-preview-head">
-                    <div>
-                      <div class="xpm-preview-title">Inscription preview</div>
-                      <div class="xpm-inscription-preview-meta" id="xpm-inscription-preview-meta">Inscription preview is loading.</div>
-                    </div>
-                    <button class="xpm-btn secondary" id="xpm-refresh-inscription-preview" type="button">Refresh Preview</button>
-                  </div>
-                  <div class="xpm-inscription-preview-grid">
-                    <div class="xpm-inscription-preview-pane">
-                      <div class="xpm-preview-key">Full item</div>
-                      <div class="xpm-inscription-preview-stage full" id="xpm-inscription-preview-full">
-                        <div class="xpm-inscription-preview-empty">Enter an inscription ID.</div>
-                      </div>
-                    </div>
-                    <div class="xpm-inscription-preview-pane">
-                      <div class="xpm-preview-key" id="xpm-inscription-preview-slot-label">Slot view</div>
-                      <div class="xpm-inscription-preview-stage slot" id="xpm-inscription-preview-slot">
-                        <div class="xpm-inscription-preview-empty">Select a slot.</div>
-                      </div>
                     </div>
                   </div>
                 </div>
@@ -4593,7 +5725,55 @@
               <div class="xpm-panel">
                 <div id="xpm-tx-table"></div>
                 <div class="xpm-actions">
-                  <button class="xpm-btn danger full" id="xpm-clear-tx" type="button">Clear Local Simulation</button>
+                  <button class="xpm-btn" id="xpm-sync-chain" type="button">Sync Chain Now</button>
+                  <button class="xpm-btn danger" id="xpm-clear-tx" type="button">Clear Local Simulation</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="xpm-section">
+              <div class="xpm-section-title"><span class="xpm-section-heading">Xtrata Chunk Debug <button class="xpm-tip" type="button" data-tip="Debugs the Xtrata reconstruction path: read metadata, request chunk batches, concatenate bytes, create a Blob, and render by MIME type." aria-label="Xtrata chunk debug help">?</button></span></div>
+              <div class="xpm-panel">
+                <div class="xpm-help">v1.16 tries to reconstruct inscriptions from Xtrata contract chunks first, then falls back to the runtime URL. These settings are deliberately visible so we can correct contract names/endpoints without touching the board code.</div>
+                <div class="xpm-grid" style="margin-top:10px;">
+                  <div class="xpm-field">
+                    <label for="xpm-xtrata-api-base">Stacks API Base</label>
+                    <input id="xpm-xtrata-api-base" placeholder="https://api.mainnet.hiro.so">
+                  </div>
+                  <div class="xpm-field">
+                    <label for="xpm-xtrata-runtime-origin">Runtime Origin</label>
+                    <input id="xpm-xtrata-runtime-origin" placeholder="https://xtrata.xyz">
+                  </div>
+                  <div class="xpm-field">
+                    <label for="xpm-xtrata-contract-address">Contract Address</label>
+                    <input id="xpm-xtrata-contract-address" placeholder="SP...">
+                  </div>
+                  <div class="xpm-field">
+                    <label for="xpm-xtrata-contract-name">Primary Contract Name</label>
+                    <input id="xpm-xtrata-contract-name" placeholder="xtrata-v2">
+                  </div>
+                  <div class="xpm-field">
+                    <label for="xpm-xtrata-v1-contract-name">V1 Fallback Contract</label>
+                    <input id="xpm-xtrata-v1-contract-name" placeholder="xtrata-v1">
+                  </div>
+                  <div class="xpm-field">
+                    <label for="xpm-xtrata-batch-size">Batch Size</label>
+                    <input id="xpm-xtrata-batch-size" type="number" min="1" max="50" step="1">
+                  </div>
+                  <div class="xpm-field">
+                    <label for="xpm-xtrata-max-chunks">Max Auto Chunks</label>
+                    <input id="xpm-xtrata-max-chunks" type="number" min="1" max="1000" step="1">
+                  </div>
+                </div>
+                <div class="xpm-actions">
+                  <button class="xpm-btn" id="xpm-save-xtrata-debug" type="button">Save Xtrata Settings</button>
+                  <button class="xpm-btn" id="xpm-test-xtrata-reconstruct" type="button">Test Selected Inscription</button>
+                  <button class="xpm-btn secondary" id="xpm-copy-xtrata-log" type="button">Copy Chunk Log</button>
+                  <button class="xpm-btn secondary" id="xpm-clear-xtrata-log" type="button">Clear Chunk Log</button>
+                </div>
+                <div class="xpm-xtrata-log">
+                  <div class="xpm-preview-title">Chunk / batch / reconstruct log</div>
+                  <div class="xpm-xtrata-log-body" id="xpm-xtrata-log-body"><div class="xpm-xtrata-log-empty">No Xtrata reconstruction attempts yet.</div></div>
                 </div>
               </div>
             </div>
@@ -4650,21 +5830,22 @@
         addOwnerClearBtn: drawer.querySelector('#xpm-add-owner-clear'),
         previewPublicBtn: drawer.querySelector('#xpm-preview-public'),
         addPublicBtn: drawer.querySelector('#xpm-add-public'),
-        inscriptionPreviewMeta: drawer.querySelector('#xpm-inscription-preview-meta'),
-        inscriptionPreviewFull: drawer.querySelector('#xpm-inscription-preview-full'),
-        inscriptionPreviewSlot: drawer.querySelector('#xpm-inscription-preview-slot'),
-        inscriptionPreviewSlotLabel: drawer.querySelector('#xpm-inscription-preview-slot-label'),
-        refreshInscriptionPreviewBtn: drawer.querySelector('#xpm-refresh-inscription-preview'),
         preview: drawer.querySelector('#xpm-preview'),
         walletLogBody: drawer.querySelector('#xpm-wallet-log-body'),
+        originHelp: drawer.querySelector('#xpm-origin-help'),
         copyWalletLogBtn: drawer.querySelector('#xpm-copy-wallet-log'),
         clearWalletLogBtn: drawer.querySelector('#xpm-clear-wallet-log'),
         txTable: drawer.querySelector('#xpm-tx-table'),
+        syncChainBtn: drawer.querySelector('#xpm-sync-chain'),
         clearTxBtn: drawer.querySelector('#xpm-clear-tx'),
         configControl: drawer.querySelector('#xpm-config-control'),
         configOwnerMin: drawer.querySelector('#xpm-config-owner-min'),
         configPublicMin: drawer.querySelector('#xpm-config-public-min'),
         configInscriptionUrl: drawer.querySelector('#xpm-config-inscription-url'),
+        saveXtrataDebugBtn: drawer.querySelector('#xpm-save-xtrata-debug'),
+        testXtrataReconstructBtn: drawer.querySelector('#xpm-test-xtrata-reconstruct'),
+        copyXtrataLogBtn: drawer.querySelector('#xpm-copy-xtrata-log'),
+        clearXtrataLogBtn: drawer.querySelector('#xpm-clear-xtrata-log'),
         saveConfigBtn: drawer.querySelector('#xpm-save-config'),
         jsonBox: drawer.querySelector('#xpm-json'),
         exportBtn: drawer.querySelector('#xpm-export'),
@@ -4696,15 +5877,22 @@
 
     function init() {
       buildUi();
+      hydrateXtrataDebugInputs();
+      renderXtrataDebugLog();
       blocks.forEach(createOverlay);
       bindEvents();
       bindFloatingTips();
+      preloadStacksConnect({ log: false }).catch(() => null);
+      startChainIndexer();
       applyVisuals();
       render();
 
       window.XBoardProgrammingModuleAPI = {
         open: openDrawer, close: closeDrawer, refresh, setTransactions, getResolvedState,
-        parseMemo, resolveSlot, exportState: () => JSON.parse(JSON.stringify(state))
+        syncChainInstructions, parseMemo, resolveSlot, exportState: () => JSON.parse(JSON.stringify(state)),
+        testXtrataReconstruct: id => resolveXtrataInscription(normalizeInscriptionId(id), { surface: 'api test', force: true }),
+        getXtrataDebugLog: () => xtrataDebugEntries.slice(),
+        getIndexedTransactions: () => indexedTransactions.slice()
       };
     }
 
