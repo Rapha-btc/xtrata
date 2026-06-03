@@ -2033,8 +2033,9 @@
     }
 
     body.explorer-mode .wallet-layout {
+      --explorer-preview-size: clamp(420px, min(32vw, calc(100vh - 280px)), 620px);
       max-width: 100%;
-      grid-template-columns: minmax(0, 560px) minmax(280px, 320px);
+      grid-template-columns: minmax(0, 560px) minmax(320px, var(--explorer-preview-size));
       gap: 18px;
       justify-content: center;
     }
@@ -2292,7 +2293,7 @@
     @media (min-width: 981px) and (max-width: 1366px) and (hover: hover) and (pointer: fine) {
       body.explorer-mode .wallet-layout {
         display: grid;
-        grid-template-columns: minmax(0, 540px) minmax(260px, 300px);
+        grid-template-columns: minmax(0, 540px) minmax(300px, min(38vw, 440px));
         gap: 16px;
       }
 
