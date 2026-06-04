@@ -6998,7 +6998,7 @@
         <div class="xpm-wallet-warning">
           ${ownerMode
             ? 'Owner rule: the wallet that signs this transfer must be the current slot owner and must send exactly 0.1 STX. Xtrata will ask Leather/Xverse to open the transfer; the wallet may ask you to unlock first.'
-            : 'Public rule: this only affects display when the Web2 media for the slot is unlinked or broken. The amount must be the exact required price: 0.000001 STX first, then double the current holder amount. Xtrata will ask Leather/Xverse to open or unlock if available.'}
+            : 'Public rule: this only affects display when the Web2 media for the slot is unlinked or broken. The amount must be the exact required price: 0.01 STX first, then double the current holder amount. Xtrata will ask Leather/Xverse to open or unlock if available.'}
         </div>
       ` + (ownerMode ? '' : publicTakeoverRiskWarningHtml(amountUstx));
     }
@@ -7683,7 +7683,7 @@
                         <label for="xpm-owner-amount">Update fee (STX) 
                           <button type="button" class="xpm-preset-pill" id="xpm-preset-owner-min">Fixed</button>
                         </label>
-                        <input id="xpm-owner-amount" type="number" min="0" step="0.000001" readonly>
+                        <input id="xpm-owner-amount" type="number" min="0" step="0.01" readonly>
                         <div class="xpm-field-help">Every owner action sends exactly 0.1 STX to the XBoard address.</div>
                       </div>
                       <div class="xpm-field">
@@ -7710,8 +7710,8 @@
                       <label for="xpm-public-amount">Takeover amount (STX)
                         <button type="button" class="xpm-preset-pill" id="xpm-preset-public-sug">Required</button>
                       </label>
-                      <input id="xpm-public-amount" type="number" min="0" step="0.000001" readonly>
-                      <div class="xpm-field-help">Starts at 0.000001 STX. Each later takeover must pay exactly double the current temporary holder.</div>
+                      <input id="xpm-public-amount" type="number" min="0" step="0.01" readonly>
+                      <div class="xpm-field-help">Starts at 0.01 STX. Each later takeover must pay exactly double the current temporary holder.</div>
                     </div>
                     <div class="xpm-actions" style="margin-top:auto;">
                       <button class="xpm-btn secondary" id="xpm-preview-public" type="button">Preview TX</button>
@@ -7781,11 +7781,11 @@
                 <div class="xpm-grid">
                   <div class="xpm-field">
                     <label for="xpm-config-owner-min">Owner update fee (STX)</label>
-                    <input id="xpm-config-owner-min" type="number" min="0" step="0.000001" readonly>
+                    <input id="xpm-config-owner-min" type="number" min="0" step="0.01" readonly>
                   </div>
                   <div class="xpm-field">
                     <label for="xpm-config-public-min">Public start price (STX)</label>
-                    <input id="xpm-config-public-min" type="number" min="0" step="0.000001" readonly>
+                    <input id="xpm-config-public-min" type="number" min="0" step="0.01" readonly>
                   </div>
                   <div class="xpm-field full">
                     <label for="xpm-config-inscription-url">Inscription URL template</label>
