@@ -7268,7 +7268,7 @@
         <div class="xpm-wallet-warning">
           ${ownerMode
             ? 'Owner rule: the wallet that signs this transfer must be the current slot owner and must send exactly 0.1 STX. Xtrata will ask Leather/Xverse to open the transfer; the wallet may ask you to unlock first.'
-            : 'Public rule: this only affects display when the Web2 media for the slot is unlinked or broken. The amount must be the exact required price: 0.000001 STX first, then double the current holder amount. Xtrata will ask Leather/Xverse to open or unlock if available.'}
+            : 'Public rule: this only affects display when the Web2 media for the slot is unlinked or broken. The amount must be the exact required price: 0.01 STX first, then double the current holder amount. Xtrata will ask Leather/Xverse to open or unlock if available.'}
         </div>
       ` + (ownerMode ? '' : publicTakeoverRiskWarningHtml(amountUstx));
     }
@@ -7984,7 +7984,7 @@
                         <button type="button" class="xpm-preset-pill" id="xpm-preset-public-sug">Required</button>
                       </label>
                       <input id="xpm-public-amount" type="number" min="0" step="0.000001" readonly>
-                      <div class="xpm-field-help">Starts at 0.000001 STX. Each later takeover must pay exactly double the current temporary holder.</div>
+                      <div class="xpm-field-help">Starts at 0.01 STX. Each later takeover must pay exactly double the current temporary holder.</div>
                     </div>
                     <div class="xpm-actions" style="margin-top:auto;">
                       <button class="xpm-btn secondary" id="xpm-preview-public" type="button">Preview TX</button>
