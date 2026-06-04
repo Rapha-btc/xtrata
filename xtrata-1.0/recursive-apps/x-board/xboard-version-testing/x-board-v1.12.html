@@ -1,0 +1,4901 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>XBoard - Web2 to On-chain Transition</title>
+<style>
+  :root {
+    --bg: #050505;
+    --cell: #EB4899;
+    --cell-hover: #f472b6;
+    --line: #050505;
+    --line-w: 2.5;
+    --panel: rgba(10, 10, 10, 0.95);
+    --pink: #ec4899;
+    --pink-soft: #fce7f3;
+    --muted: #9ca3af;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    overflow: hidden;
+    background: radial-gradient(circle at 50% 50%, #14060f 0%, var(--bg) 62%);
+    color: #fff;
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+
+  body { min-height: 100vh; min-height: 100dvh; }
+
+  #stage {
+    position: fixed;
+    inset: 0;
+    padding: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  #grid {
+    width: 100%;
+    height: 100%;
+    display: block;
+    max-width: none;
+    touch-action: none;
+    filter: drop-shadow(0 0 30px rgba(236, 72, 153, 0.16));
+  }
+
+  .slot-group {
+    cursor: crosshair;
+    transition: transform 0.65s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.25s ease;
+    will-change: transform;
+  }
+
+  .cell {
+    fill: var(--cell);
+    stroke: var(--line);
+    stroke-width: var(--line-w);
+    transition: fill 0.18s ease, stroke 0.18s ease, filter 0.18s ease;
+  }
+
+  .slot-group:hover .cell {
+    fill: var(--cell-hover);
+    filter: drop-shadow(0 0 5px rgba(236, 72, 153, 0.45));
+  }
+
+  .slot-image {
+    opacity: 0;
+    transition: opacity 0.35s ease;
+    pointer-events: none;
+    image-rendering: crisp-edges;
+    image-rendering: pixelated;
+  }
+
+  .slot-xtrata-layer {
+    display: none;
+    pointer-events: none;
+  }
+
+  .slot-group.programmed-xtrata .slot-image,
+  .slot-group.programmed-xtrata .slot-placeholder {
+    opacity: 0 !important;
+  }
+
+  .slot-xtrata-foreign {
+    overflow: hidden;
+    pointer-events: none;
+  }
+
+  .xtrata-board-root {
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    background: rgba(0, 0, 0, 0.72);
+    color: #fce7f3;
+    font: 800 9px/1.15 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  }
+
+  .xtrata-board-media,
+  .xtrata-board-frame {
+    width: 100%;
+    height: 100%;
+    display: block;
+    border: 0;
+    background: #000;
+    object-fit: cover;
+  }
+
+  .xtrata-board-media.image {
+    object-fit: cover;
+    image-rendering: crisp-edges;
+    image-rendering: pixelated;
+  }
+
+  .xtrata-board-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px;
+    text-align: center;
+    background: radial-gradient(circle at 50% 40%, rgba(236, 72, 153, 0.22), rgba(0, 0, 0, 0.84) 70%);
+    color: #fce7f3;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .slot-group.active .cell {
+    stroke: #fff;
+    stroke-width: 4;
+    filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.9));
+  }
+
+  .slot-group.dead-og-hidden .cell {
+    fill: #070107;
+    stroke: rgba(236, 72, 153, 0.9);
+    stroke-dasharray: 7 5;
+    filter: drop-shadow(0 0 5px rgba(236, 72, 153, 0.35));
+  }
+
+  .slot-placeholder {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+  }
+
+  .slot-group.dead-og-hidden .slot-placeholder {
+    opacity: 1;
+  }
+
+  .slot-placeholder-bg {
+    fill: rgba(5, 5, 5, 0.82);
+    stroke: #ec4899;
+    stroke-width: 1.55;
+    stroke-dasharray: 7 5;
+    vector-effect: non-scaling-stroke;
+  }
+
+  .slot-placeholder-inner {
+    fill: none;
+    stroke: rgba(252, 231, 243, 0.52);
+    stroke-width: 0.8;
+    stroke-dasharray: 2 4;
+    vector-effect: non-scaling-stroke;
+  }
+
+  .placeholder-copy {
+    fill: #fce7f3;
+    text-anchor: middle;
+    dominant-baseline: middle;
+    font-weight: 950;
+    letter-spacing: 0.05em;
+    paint-order: stroke;
+    stroke: rgba(5, 5, 5, 0.72);
+    stroke-width: 2;
+    stroke-linejoin: round;
+  }
+
+  .placeholder-subcopy {
+    fill: #f9a8d4;
+    text-anchor: middle;
+    dominant-baseline: middle;
+    font-weight: 900;
+    letter-spacing: 0.03em;
+    paint-order: stroke;
+    stroke: rgba(5, 5, 5, 0.72);
+    stroke-width: 1.5;
+    stroke-linejoin: round;
+  }
+
+  .placeholder-microcopy {
+    fill: rgba(252, 231, 243, 0.78);
+    text-anchor: middle;
+    dominant-baseline: middle;
+    font-weight: 850;
+    letter-spacing: 0.02em;
+    paint-order: stroke;
+    stroke: rgba(5, 5, 5, 0.72);
+    stroke-width: 1.1;
+    stroke-linejoin: round;
+  }
+
+  .placeholder-tiny-mark {
+    fill: none;
+    stroke: rgba(249, 168, 212, 0.9);
+    stroke-width: 1.2;
+    stroke-linecap: round;
+    vector-effect: non-scaling-stroke;
+  }
+
+  .placeholder-tiny-dot {
+    fill: rgba(249, 168, 212, 0.84);
+  }
+
+  #info-panel {
+    position: fixed;
+    right: 18px;
+    bottom: 18px;
+    width: min(360px, calc(100vw - 36px));
+    max-height: min(78vh, 720px);
+    overflow-y: auto;
+    background: var(--panel);
+    border: 1px solid rgba(236, 72, 153, 0.42);
+    border-radius: 14px;
+    padding: 18px;
+    box-shadow: 0 14px 34px rgba(0, 0, 0, 0.82), 0 0 22px rgba(236, 72, 153, 0.14);
+    backdrop-filter: blur(12px);
+    transform: translateY(calc(100% + 24px));
+    transition: transform 0.36s cubic-bezier(0.22, 1, 0.36, 1);
+    z-index: 20;
+    pointer-events: none;
+  }
+
+  #info-panel.visible {
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+
+  .panel-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 14px;
+    padding-bottom: 10px;
+    margin-bottom: 12px;
+    border-bottom: 1px solid rgba(236, 72, 153, 0.32);
+  }
+
+  .slot-title {
+    margin: 0;
+    color: var(--pink);
+    font-size: 19px;
+    line-height: 1.1;
+    letter-spacing: 0.01em;
+  }
+
+  #programmable-title {
+    display: block;
+    margin-top: 4px;
+    color: #d1d5db;
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  #close-panel {
+    appearance: none;
+    border: 0;
+    background: transparent;
+    color: #8b8b8b;
+    font-size: 26px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0 0 0 8px;
+  }
+
+  #close-panel:hover { color: #fff; }
+
+  @keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  #media-container {
+    position: relative;
+    display: none;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    margin: 0 0 12px;
+    overflow: hidden;
+    align-items: center;
+    justify-content: center;
+    padding: 10px;
+    background:
+      linear-gradient(45deg, rgba(255, 255, 255, 0.035) 25%, transparent 25%),
+      linear-gradient(-45deg, rgba(255, 255, 255, 0.035) 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, rgba(255, 255, 255, 0.035) 75%),
+      linear-gradient(-45deg, transparent 75%, rgba(255, 255, 255, 0.035) 75%),
+      rgba(0, 0, 0, 0.45);
+    background-position: 0 0, 0 6px, 6px -6px, -6px 0;
+    background-size: 12px 12px;
+    border: 1px solid rgba(236, 72, 153, 0.22);
+    border-radius: 10px;
+  }
+
+  #media-container.loading {
+    background: linear-gradient(90deg, rgba(255,255,255,0.03) 25%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.03) 75%);
+    background-size: 400% 100%;
+    animation: shimmer 1.5s infinite ease-in-out;
+  }
+
+  #media-container.visible { display: flex; }
+
+  #media-inner {
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    transition: opacity 0.3s;
+  }
+  
+  #media-container.loading #media-inner {
+    opacity: 0;
+  }
+
+  #programmable-img {
+    display: block;
+    flex: 0 0 auto;
+    width: auto;
+    height: auto;
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    transform: translateZ(0);
+  }
+
+  #programmable-img.pixel-perfect {
+    image-rendering: crisp-edges;
+    image-rendering: pixelated;
+  }
+
+  #media-container.inscription {
+    padding: 0;
+  }
+
+  .xtrata-panel-wrap {
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    background: #000;
+  }
+
+  .xtrata-panel-media,
+  .xtrata-panel-frame {
+    width: 100%;
+    height: 100%;
+    display: block;
+    border: 0;
+    background: #000;
+  }
+
+  .xtrata-panel-media.image {
+    flex: 0 0 auto;
+    width: auto;
+    height: auto;
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    image-rendering: crisp-edges;
+    image-rendering: pixelated;
+  }
+
+  .xtrata-panel-media.video {
+    object-fit: contain;
+  }
+
+  .xtrata-panel-audio-card,
+  .xtrata-panel-loading,
+  .xtrata-panel-error {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 18px;
+    text-align: center;
+    background: radial-gradient(circle at 50% 35%, rgba(236, 72, 153, 0.18), rgba(0, 0, 0, 0.9) 72%);
+    color: #fce7f3;
+    font-size: 12px;
+    line-height: 1.35;
+  }
+
+  .xtrata-panel-audio-card strong,
+  .xtrata-panel-loading strong,
+  .xtrata-panel-error strong {
+    color: #f472b6;
+    font-size: 10px;
+    font-weight: 950;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+  }
+
+  .xtrata-panel-audio-card audio {
+    width: min(100%, 280px);
+  }
+
+  #media-meta {
+    position: absolute;
+    left: 8px;
+    bottom: 7px;
+    max-width: calc(100% - 16px);
+    padding: 4px 6px;
+    border-radius: 999px;
+    background: rgba(5, 5, 5, 0.72);
+    color: rgba(252, 231, 243, 0.82);
+    font: 800 9px/1.15 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    pointer-events: none;
+  }
+
+  #media-meta:empty { display: none; }
+
+  #media-container.loading #media-meta {
+    display: block;
+  }
+
+  .info-label {
+    margin-top: 12px;
+    margin-bottom: 4px;
+    color: var(--muted);
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+  }
+
+  .info-value {
+    color: var(--pink-soft);
+    font-size: 12px;
+    line-height: 1.4;
+    word-break: break-word;
+  }
+
+  .mono {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  }
+
+  .market-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 6px;
+  }
+
+  .market-card {
+    border: 1px solid rgba(236, 72, 153, 0.22);
+    background: rgba(0, 0, 0, 0.45);
+    border-radius: 8px;
+    padding: 8px;
+  }
+
+  .market-card.full { grid-column: 1 / -1; }
+
+  .mini-label {
+    color: #6b7280;
+    font-size: 9px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+  }
+
+  .mini-value {
+    margin-top: 2px;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 800;
+  }
+
+  .ok { color: #86efac; }
+  .warn { color: #facc15; }
+  .bad { color: #fca5a5; }
+  .muted { color: #a1a1aa; }
+
+  .link-button {
+    display: none;
+    width: 100%;
+    margin-top: 12px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    text-align: center;
+    text-decoration: none;
+    font-size: 11px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .link-button.visible { display: block; }
+
+  #programmable-link {
+    color: #fff;
+    background: linear-gradient(90deg, #db2777, #9333ea);
+    box-shadow: 0 8px 18px rgba(236, 72, 153, 0.15);
+  }
+
+  #explorer-link {
+    color: #d4d4d8;
+    background: #09090b;
+    border: 1px solid #3f3f46;
+    padding: 8px 10px;
+    font-size: 10px;
+  }
+
+  .health-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 8px;
+    border-radius: 999px;
+    border: 1px solid rgba(236, 72, 153, 0.3);
+    background: rgba(0, 0, 0, 0.4);
+    font-size: 10px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .unlinked-card {
+    display: none;
+    margin-top: 12px;
+    padding: 11px 12px;
+    border-radius: 12px;
+    border: 1px dashed rgba(236, 72, 153, 0.72);
+    background: linear-gradient(180deg, rgba(236, 72, 153, 0.13), rgba(0, 0, 0, 0.46));
+    color: #fce7f3;
+    font-size: 11px;
+    line-height: 1.42;
+  }
+
+  .unlinked-card.visible { display: block; }
+
+  .unlinked-card strong {
+    display: block;
+    margin-bottom: 4px;
+    color: #f472b6;
+    font-size: 10px;
+    font-weight: 950;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .transition-note {
+    margin-top: 12px;
+    border: 1px solid rgba(236, 72, 153, 0.22);
+    border-radius: 10px;
+    background: rgba(0, 0, 0, 0.32);
+    overflow: hidden;
+  }
+
+  .transition-note summary {
+    cursor: pointer;
+    list-style: none;
+    padding: 9px 11px;
+    color: #f9a8d4;
+    font-size: 10px;
+    font-weight: 950;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    user-select: none;
+  }
+
+  .transition-note summary::-webkit-details-marker { display: none; }
+
+  .transition-note summary::after {
+    content: '+';
+    float: right;
+    color: #a1a1aa;
+    font-size: 13px;
+    line-height: 1;
+  }
+
+  .transition-note[open] summary::after { content: '−'; }
+
+  .transition-note-body {
+    padding: 0 11px 11px;
+    color: #d4d4d8;
+    font-size: 11px;
+    line-height: 1.45;
+  }
+
+  .transition-note-body p {
+    margin: 7px 0 0;
+  }
+
+  .transition-note-body strong {
+    color: #fce7f3;
+  }
+
+  .info-value a,
+  .unlinked-card a,
+  .transition-note-body a {
+    color: #f9a8d4;
+    text-decoration: underline;
+    text-decoration-style: dotted;
+    text-underline-offset: 2px;
+  }
+
+  .info-value a:hover,
+  .unlinked-card a:hover,
+  .transition-note-body a:hover {
+    color: #fce7f3;
+  }
+
+  .slot-placeholder-link,
+  .slot-placeholder-link * {
+    pointer-events: auto;
+    cursor: pointer;
+  }
+
+  #loading-note {
+    position: fixed;
+    left: 14px;
+    bottom: 12px;
+    z-index: 5;
+    color: rgba(252, 231, 243, 0.62);
+    font: 700 10px/1.2 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.25s ease;
+  }
+
+  #loading-note.visible { opacity: 1; }
+
+  @media (max-width: 760px) {
+    #stage { padding: 8px; }
+    #info-panel {
+      left: 10px;
+      right: 10px;
+      bottom: 10px;
+      width: auto;
+      max-height: 72vh;
+      padding: 15px;
+    }
+  }
+
+  /* XBoard programming module (XPM) */
+  #xpm-open {
+    position: fixed;
+    right: 18px;
+    top: 18px;
+    z-index: 45;
+    appearance: none;
+    border: 1px solid rgba(236, 72, 153, 0.52);
+    background: rgba(5, 5, 5, 0.78);
+    color: #fce7f3;
+    border-radius: 999px;
+    padding: 11px 15px;
+    font-size: 10px;
+    font-weight: 950;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.58), 0 0 22px rgba(236, 72, 153, 0.15);
+    backdrop-filter: blur(10px);
+    cursor: pointer;
+  }
+
+  #xpm-open:hover {
+    border-color: rgba(252, 231, 243, 0.9);
+    color: #fff;
+  }
+
+  #xpm-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    display: none;
+    background: rgba(0, 0, 0, 0.42);
+  }
+
+  #xpm-backdrop.visible { display: block; }
+
+  #xpm-drawer {
+    position: fixed;
+    top: 0;
+    right: 0;
+    z-index: 70;
+    width: min(660px, 100vw);
+    height: 100vh;
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    background: rgba(7, 7, 10, 0.98);
+    border-left: 1px solid rgba(236, 72, 153, 0.38);
+    box-shadow: -18px 0 50px rgba(0, 0, 0, 0.78);
+    transform: translateX(calc(100% + 4px));
+    transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+    color: #fff;
+    backdrop-filter: blur(16px);
+  }
+
+  #xpm-drawer.visible { transform: translateX(0); }
+
+  .xpm-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 18px;
+    border-bottom: 1px solid rgba(236, 72, 153, 0.28);
+    flex-shrink: 0;
+  }
+
+  .xpm-kicker {
+    color: #fce7f3;
+    font-size: 9px;
+    font-weight: 950;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    opacity: 0.78;
+    margin-bottom: 5px;
+  }
+
+  .xpm-title {
+    margin: 0;
+    color: #f472b6;
+    font-size: 17px;
+    line-height: 1.15;
+    letter-spacing: 0.01em;
+  }
+
+  .xpm-subtitle {
+    margin-top: 5px;
+    color: #a1a1aa;
+    font-size: 11px;
+    line-height: 1.35;
+  }
+
+  #xpm-close {
+    appearance: none;
+    border: 0;
+    background: transparent;
+    color: #a1a1aa;
+    font-size: 28px;
+    line-height: 1;
+    cursor: pointer;
+  }
+
+  #xpm-close:hover { color: #fff; }
+
+  .xpm-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 18px 22px;
+  }
+
+  /* Sticky mobile footer close */
+  .xpm-footer {
+    display: none;
+    position: sticky;
+    bottom: 0;
+    padding: 12px;
+    background: rgba(7, 7, 10, 0.98);
+    border-top: 1px solid rgba(236, 72, 153, 0.28);
+    z-index: 10;
+    backdrop-filter: blur(16px);
+    margin: auto -18px -22px -18px; 
+  }
+
+  .xpm-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid rgba(236,72,153,0.28);
+    padding-bottom: 12px;
+  }
+  
+  .xpm-tab {
+    background: transparent;
+    border: 1px solid transparent;
+    color: #a1a1aa;
+    padding: 8px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    transition: all 0.2s ease;
+  }
+  
+  .xpm-tab:hover {
+    background: rgba(255,255,255,0.05);
+    color: #fce7f3;
+  }
+  
+  .xpm-tab.active {
+    background: rgba(236, 72, 153, 0.15);
+    border-color: rgba(236, 72, 153, 0.4);
+    color: #fff;
+  }
+
+  .xpm-tab-content { display: none; }
+  .xpm-tab-content.active { display: block; }
+
+  .xpm-section {
+    margin-bottom: 14px;
+    border: 1px solid rgba(236, 72, 153, 0.2);
+    background: rgba(0, 0, 0, 0.32);
+    border-radius: 14px;
+    overflow: hidden;
+  }
+
+  .xpm-section-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 11px 13px;
+    color: #f9a8d4;
+    font-size: 10px;
+    font-weight: 950;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .xpm-section-heading {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    min-width: 0;
+  }
+
+  .xpm-panel {
+    padding: 0 13px 13px;
+  }
+
+  .xpm-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 9px;
+  }
+
+  .xpm-field {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    margin-bottom: 10px;
+  }
+
+  .xpm-field.full,
+  .xpm-grid .full { grid-column: 1 / -1; }
+
+  .xpm-field label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #a1a1aa;
+    font-size: 9px;
+    font-weight: 950;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .xpm-field input,
+  .xpm-field textarea {
+    width: 100%;
+    border: 1px solid rgba(236, 72, 153, 0.26);
+    background: rgba(5, 5, 5, 0.78);
+    color: #fce7f3;
+    border-radius: 9px;
+    padding: 9px 10px;
+    font: 700 12px/1.35 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    outline: none;
+  }
+
+  .xpm-field textarea {
+    min-height: 86px;
+    resize: vertical;
+  }
+
+  .xpm-field input:focus,
+  .xpm-field textarea:focus {
+    border-color: rgba(252, 231, 243, 0.68);
+    box-shadow: 0 0 0 3px rgba(236, 72, 153, 0.12);
+  }
+
+  .xpm-field input[readonly] {
+    border-style: dashed;
+    color: #d4d4d8;
+    background: rgba(5, 5, 5, 0.56);
+    cursor: default;
+  }
+
+  .xpm-preset-pill { 
+    background: rgba(255,255,255,0.08); 
+    border: 1px solid rgba(255,255,255,0.15);
+    color:#d4d4d8; 
+    font-size:9px; 
+    padding:3px 6px; 
+    border-radius:4px; 
+    cursor:pointer; 
+    margin-left: 4px;
+  }
+  .xpm-preset-pill:hover { 
+    background: rgba(236, 72, 153, 0.25); 
+    border-color: rgba(236, 72, 153, 0.5);
+    color: #fff;
+  }
+
+  .xpm-help {
+    color: #a1a1aa;
+    font-size: 11px;
+    line-height: 1.45;
+  }
+
+  .xpm-status-card {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 11px;
+  }
+
+  .xpm-chip {
+    min-width: 0;
+    border: 1px solid rgba(236, 72, 153, 0.18);
+    background: rgba(0, 0, 0, 0.42);
+    border-radius: 10px;
+    padding: 9px;
+  }
+
+  .xpm-chip-label {
+    color: #71717a;
+    font-size: 8px;
+    font-weight: 950;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .xpm-chip-value {
+    margin-top: 3px;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 850;
+    word-break: break-word;
+  }
+
+  .xpm-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 10px;
+  }
+
+  .xpm-actions .full { grid-column: 1 / -1; }
+
+  .xpm-btn {
+    appearance: none;
+    border: 1px solid rgba(236, 72, 153, 0.34);
+    background: rgba(236, 72, 153, 0.14);
+    color: #fce7f3;
+    border-radius: 10px;
+    padding: 9px 10px;
+    font-size: 10px;
+    font-weight: 950;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    cursor: pointer;
+  }
+
+  .xpm-btn:hover {
+    border-color: rgba(252, 231, 243, 0.8);
+    background: rgba(236, 72, 153, 0.22);
+    color: #fff;
+  }
+
+  .xpm-btn.secondary {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.18);
+    color: #d4d4d8;
+  }
+
+  .xpm-btn.danger {
+    background: rgba(127, 29, 29, 0.22);
+    border-color: rgba(248, 113, 113, 0.34);
+    color: #fecaca;
+  }
+
+  .xpm-intro {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 9px;
+    margin-bottom: 14px;
+  }
+
+  .xpm-mode-card {
+    border: 1px solid rgba(236, 72, 153, 0.2);
+    background: linear-gradient(180deg, rgba(236, 72, 153, 0.08), rgba(0, 0, 0, 0.38));
+    border-radius: 13px;
+    padding: 11px;
+  }
+
+  .xpm-mode-card strong {
+    display: block;
+    color: #fce7f3;
+    font-size: 10px;
+    font-weight: 950;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 5px;
+  }
+
+  .xpm-mode-card span {
+    display: block;
+    color: #a1a1aa;
+    font-size: 11px;
+    line-height: 1.38;
+  }
+
+  .xpm-tip {
+    position: relative;
+    flex: 0 0 auto;
+    appearance: none;
+    width: 17px;
+    height: 17px;
+    border-radius: 999px;
+    border: 1px solid rgba(252, 231, 243, 0.42);
+    background: rgba(255, 255, 255, 0.05);
+    color: #fce7f3;
+    font-size: 10px;
+    font-weight: 950;
+    line-height: 15px;
+    text-align: center;
+    cursor: help;
+    padding: 0;
+  }
+
+  .xpm-tip.is-active,
+  .xpm-tip:focus-visible {
+    border-color: rgba(252, 231, 243, 0.86);
+    background: rgba(236, 72, 153, 0.2);
+    color: #fff;
+    outline: none;
+  }
+
+  .xpm-floating-tip {
+    position: fixed;
+    left: 0;
+    top: 0;
+    z-index: 240;
+    width: 320px;
+    max-width: calc(100vw - 24px);
+    max-height: calc(100vh - 24px);
+    overflow: hidden;
+    padding: 10px 11px;
+    border-radius: 11px;
+    border: 1px solid rgba(236, 72, 153, 0.4);
+    background: rgba(5, 5, 7, 0.985);
+    color: #fce7f3;
+    box-shadow: 0 14px 30px rgba(0, 0, 0, 0.72), 0 0 22px rgba(236, 72, 153, 0.16);
+    font-size: 11px;
+    font-weight: 750;
+    line-height: 1.4;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: translateY(-3px) scale(0.985);
+    transition: opacity 0.14s ease, transform 0.14s ease, visibility 0.14s ease;
+  }
+
+  .xpm-floating-tip.visible {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0) scale(1);
+  }
+  .xpm-floating-tip.measuring { transition: none; }
+
+  .xpm-rule-list {
+    display: grid;
+    gap: 7px;
+    margin: 10px 0 0;
+  }
+
+  .xpm-rule {
+    display: grid;
+    grid-template-columns: 22px 1fr;
+    gap: 8px;
+    align-items: start;
+    color: #d4d4d8;
+    font-size: 11px;
+    line-height: 1.38;
+  }
+
+  .xpm-rule-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 999px;
+    background: rgba(236, 72, 153, 0.18);
+    color: #fce7f3;
+    font-size: 10px;
+    font-weight: 950;
+  }
+
+  .xpm-choice-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .xpm-choice {
+    border: 1px solid rgba(236, 72, 153, 0.18);
+    background: rgba(255, 255, 255, 0.035);
+    border-radius: 13px;
+    padding: 11px;
+  }
+  .xpm-choice.full { grid-column: 1 / -1; }
+
+  .xpm-choice-title {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 8px;
+    color: #fce7f3;
+    font-size: 10px;
+    font-weight: 950;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .xpm-field-help {
+    color: #71717a;
+    font-size: 10px;
+    line-height: 1.35;
+    margin-top: -2px;
+  }
+
+  .xpm-preview {
+    padding: 10px;
+    border-radius: 10px;
+    border: 1px dashed rgba(236, 72, 153, 0.36);
+    background: rgba(0, 0, 0, 0.52);
+    color: #fce7f3;
+    font: 750 11px/1.45 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .xpm-preview-title {
+    color: #f9a8d4;
+    font-size: 9px;
+    font-weight: 950;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    margin-bottom: 7px;
+  }
+
+  .xpm-preview-row {
+    display: grid;
+    grid-template-columns: 82px 1fr;
+    gap: 8px;
+    margin-top: 4px;
+  }
+
+  .xpm-wallet-warning,
+  .xpm-wallet-result,
+  .xpm-wallet-manual {
+    margin-top: 10px;
+    padding: 10px;
+    border-radius: 10px;
+    border: 1px solid rgba(250, 204, 21, 0.34);
+    background: rgba(113, 63, 18, 0.18);
+    color: #fef3c7;
+    font-size: 11px;
+    line-height: 1.42;
+  }
+
+  .xpm-wallet-result.ok {
+    border-color: rgba(134, 239, 172, 0.34);
+    background: rgba(22, 101, 52, 0.18);
+    color: #bbf7d0;
+  }
+
+  .xpm-wallet-result.bad {
+    border-color: rgba(248, 113, 113, 0.34);
+    background: rgba(127, 29, 29, 0.2);
+    color: #fecaca;
+  }
+
+  .xpm-wallet-manual {
+    border-color: rgba(236, 72, 153, 0.28);
+    background: rgba(0, 0, 0, 0.38);
+    color: #d4d4d8;
+  }
+
+  .xpm-wallet-log {
+    margin-top: 10px;
+    padding: 10px;
+    border-radius: 10px;
+    border: 1px solid rgba(59, 130, 246, 0.28);
+    background: rgba(2, 6, 23, 0.58);
+    color: #cbd5e1;
+    font: 700 10px/1.42 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  }
+
+  .xpm-wallet-log-body {
+    display: grid;
+    gap: 5px;
+    max-height: 158px;
+    overflow: auto;
+    padding-right: 2px;
+  }
+
+  .xpm-wallet-log-empty { color: #71717a; }
+
+  .xpm-wallet-log-row {
+    display: grid;
+    grid-template-columns: 68px 48px 1fr;
+    gap: 7px;
+    align-items: baseline;
+    padding-bottom: 5px;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+  }
+
+  .xpm-wallet-log-row:last-child {
+    border-bottom: 0;
+    padding-bottom: 0;
+  }
+
+  .xpm-wallet-log-time { color: #94a3b8; }
+  .xpm-wallet-log-level { color: #93c5fd; text-transform: uppercase; }
+  .xpm-wallet-log-level.ok { color: #86efac; }
+  .xpm-wallet-log-level.warn { color: #facc15; }
+  .xpm-wallet-log-level.bad { color: #fca5a5; }
+  .xpm-wallet-log-message { color: #e5e7eb; word-break: break-word; }
+  .xpm-wallet-log-details { color: #94a3b8; margin-top: 2px; }
+
+
+
+  .xpm-origin-warning {
+    margin-top: 10px;
+    padding: 10px;
+    border-radius: 10px;
+    border: 1px solid rgba(248, 113, 113, 0.42);
+    background: rgba(127, 29, 29, 0.2);
+    color: #fecaca;
+    font-size: 11px;
+    line-height: 1.42;
+  }
+
+  .xpm-origin-warning strong {
+    display: block;
+    margin-bottom: 5px;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 950;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .xpm-origin-warning code {
+    color: #fff;
+    font-size: 10px;
+    word-break: break-all;
+  }
+
+  .xpm-origin-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px;
+    margin-top: 9px;
+  }
+
+  .xpm-wallet-log-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px;
+    margin-top: 9px;
+  }
+
+  .xpm-copy-actions {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 7px;
+    margin-top: 9px;
+  }
+
+  .xpm-preview .xpm-btn {
+    padding: 7px 8px;
+    font-size: 9px;
+  }
+
+  .xpm-preview-key {
+    color: #71717a;
+    font-size: 9px;
+    font-weight: 950;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+  }
+
+  .xpm-preview-val { color: #fce7f3; min-width: 0; }
+  .xpm-valid { color: #86efac; }
+  .xpm-invalid { color: #fca5a5; }
+
+  .xpm-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 8px;
+    border-radius: 999px;
+    border: 1px solid rgba(236, 72, 153, 0.32);
+    background: rgba(236, 72, 153, 0.11);
+    color: #fce7f3;
+    font-size: 9px;
+    font-weight: 950;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .xpm-badge.owner { border-color: rgba(134, 239, 172, 0.42); color: #bbf7d0; background: rgba(22, 101, 52, 0.18); }
+  .xpm-badge.public { border-color: rgba(250, 204, 21, 0.42); color: #fef08a; background: rgba(113, 63, 18, 0.2); }
+  .xpm-badge.web2 { border-color: rgba(147, 197, 253, 0.36); color: #bfdbfe; background: rgba(30, 64, 175, 0.18); }
+  .xpm-badge.placeholder { border-color: rgba(248, 113, 113, 0.36); color: #fecaca; background: rgba(127, 29, 29, 0.18); }
+
+  .xpm-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 10px;
+  }
+
+  .xpm-table th, .xpm-table td {
+    padding: 7px 6px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    text-align: left;
+    vertical-align: top;
+  }
+
+  .xpm-table th {
+    color: #a1a1aa;
+    font-size: 8px;
+    font-weight: 950;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .xpm-muted { color: #a1a1aa; }
+  .xpm-table td:nth-child(2) { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+
+  .xpm-slot-overlay { display: none; pointer-events: none; }
+  .xpm-slot-overlay-bg { fill: rgba(7, 7, 10, 0.92); stroke: rgba(252, 231, 243, 0.92); stroke-width: 1.4; vector-effect: non-scaling-stroke; }
+  .xpm-slot-overlay.owner .xpm-slot-overlay-bg { stroke: rgba(134, 239, 172, 0.95); }
+  .xpm-slot-overlay.public .xpm-slot-overlay-bg { stroke: rgba(250, 204, 21, 0.95); stroke-dasharray: 5 4; }
+  .xpm-slot-overlay-main { fill: #fff; text-anchor: middle; dominant-baseline: middle; font-weight: 950; letter-spacing: 0.03em; paint-order: stroke; stroke: rgba(5, 5, 5, 0.78); stroke-width: 2; stroke-linejoin: round; }
+  .xpm-slot-overlay-sub { fill: #f9a8d4; text-anchor: middle; dominant-baseline: middle; font-weight: 900; letter-spacing: 0.04em; paint-order: stroke; stroke: rgba(5, 5, 5, 0.78); stroke-width: 1.5; stroke-linejoin: round; }
+
+  @media (max-width: 760px) {
+    #xpm-open {
+      top: 10px;
+      right: 10px;
+      padding: 9px 11px;
+      font-size: 9px;
+    }
+    #xpm-drawer { width: 100vw; }
+    .xpm-grid, .xpm-actions, .xpm-status-card { grid-template-columns: 1fr; }
+    .xpm-intro, .xpm-choice-grid { grid-template-columns: 1fr; }
+    .xpm-footer { display: block; }
+  }
+
+</style>
+</head>
+<body>
+  <main id="stage" aria-label="XBoard slot board">
+    <svg id="grid" viewBox="0 0 1244 912" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="StacksBoard slots"></svg>
+  </main>
+
+  <div id="loading-note" class="visible">Loading XBoard</div>
+
+  <aside id="info-panel" aria-live="polite">
+    <div class="panel-head">
+      <div>
+        <h2 class="slot-title">Slot #<span id="slot-id">--</span></h2>
+        <span id="programmable-title"></span>
+      </div>
+      <button id="close-panel" type="button" aria-label="Close slot information">&times;</button>
+    </div>
+
+    <div id="media-container">
+      <div id="media-inner">
+        <img id="programmable-img" src="" alt="Slot media" decoding="async" loading="eager" fetchpriority="high" referrerpolicy="no-referrer">
+      </div>
+      <div id="media-meta" aria-live="polite"></div>
+    </div>
+
+    <div class="info-label">Description / Message</div>
+    <div class="info-value" id="programmable-desc">Select a slot to view its metadata.</div>
+
+    <div class="info-label">Blockchain Owner</div>
+    <div class="info-value mono" id="slot-owner">--</div>
+
+    <div class="info-label">Market Status</div>
+    <div id="slot-repr" class="info-value">--</div>
+
+    <div class="info-label">Web2 Media Status</div>
+    <div id="og-status" class="info-value">Checking...</div>
+
+    <div id="unlinked-card" class="unlinked-card"></div>
+
+    <a id="programmable-link" class="link-button" href="#" target="_blank" rel="noopener noreferrer">Visit Current Link</a>
+    <a id="explorer-link" class="link-button visible" href="#" target="_blank" rel="noopener noreferrer">View On Stacks Explorer</a>
+
+    <details id="transition-note" class="transition-note">
+      <summary>About this transition</summary>
+      <div class="transition-note-body">
+        <p><strong>Xboard is a transitional display of the original <a href="https://www.stacksboard.art/" target="_blank" rel="noopener noreferrer">StacksBoard</a>.</strong> StacksBoard was a pioneering OG experiment, but like many early on-chain projects its live presentation still relies on too much Web2 infrastructure.</p>
+        <p>This version keeps the original <a href="https://www.stacksboard.art/" target="_blank" rel="noopener noreferrer">StacksBoard</a> holder map visible while testing the next step: a more on-chain board where display content comes from Stacks-chain inscriptions rather than loose external media links.</p>
+      </div>
+    </details>
+
+    <details id="holder-note" class="transition-note">
+      <summary>Who made this?</summary>
+      <div class="transition-note-body">
+        <p><strong>Xboard is an independent holder-made experiment.</strong> I am not the creator of the original <a href="https://www.stacksboard.art/" target="_blank" rel="noopener noreferrer">StacksBoard</a> project. I am a holder of real estate on the original board, and this is my attempt to help make that real estate useful and visible again.</p>
+      </div>
+    </details>
+  </aside>
+
+<script>
+(() => {
+  'use strict';
+
+  const VIEW_W = 1244;
+  const VIEW_H = 912;
+  const COLS = 48;
+  const GRID_W = 990;
+  const u = GRID_W / COLS;
+  const unit = u / 3;
+
+  const SVGNS = 'http://www.w3.org/2000/svg';
+  const XHTMLNS = 'http://www.w3.org/1999/xhtml';
+  const XTRATA_RUNTIME_ORIGIN = 'https://xtrata.xyz';
+  const CONTRACT_ADDR = 'SPGAKH27HF1T170QET72C727873H911BKNMPF8YB';
+  const CONTRACT_NAME = 'stacks-board-slot';
+  const GRAPHQL_ENDPOINT = 'https://www.stacksboard.art/api/graphql';
+  const STACKSBOARD_URL = 'https://www.stacksboard.art/';
+  const REFRESH_MS = 5 * 60 * 1000;
+
+  const OG_VIEW_ACTIVE = true;
+  const HIDE_DEAD_OG_LINKS = true;
+
+  const bands = [
+    [ 0, 4, 4], [ 4, 3,12], [ 7, 4, 4],
+    [11, 3, 6],
+    [14, 4, 4],
+    [18, 3, 16 / 3],
+    [21, 2, 3], [23, 2, 3], [25, 2, 2], [27, 2, 2], [29, 2, 2], [31, 1, 1],
+    [32, 1, 1], [33, 1, 1], [34, 1, 1]
+  ];
+
+  const svg = document.getElementById('grid');
+  const loadingNote = document.getElementById('loading-note');
+  const infoPanel = document.getElementById('info-panel');
+  const slotIdEl = document.getElementById('slot-id');
+  const slotOwnerEl = document.getElementById('slot-owner');
+  const slotReprEl = document.getElementById('slot-repr');
+  const explorerLink = document.getElementById('explorer-link');
+  const progTitleEl = document.getElementById('programmable-title');
+  const progDescEl = document.getElementById('programmable-desc');
+  let progImgEl = document.getElementById('programmable-img');
+  const mediaContainer = document.getElementById('media-container');
+  const mediaInner = document.getElementById('media-inner');
+  const mediaMetaEl = document.getElementById('media-meta');
+  const progLinkBtn = document.getElementById('programmable-link');
+  const ogStatusEl = document.getElementById('og-status');
+  const unlinkedCardEl = document.getElementById('unlinked-card');
+
+  const blocks = [];
+  const stxBoardDb = Object.create(null);
+  const defs = document.createElementNS(SVGNS, 'defs');
+  svg.appendChild(defs);
+  
+  let activeBlock = null;
+  let refreshTimer = null;
+
+  const previewImageCache = new Map();
+  const previewWarmQueue = [];
+  const previewWarmQueued = new Set();
+  let previewWarmActive = 0;
+  let previewRequestToken = 0;
+  let initialPreviewWarmStarted = false;
+  const PREVIEW_WARM_CONCURRENCY = 3;
+  const PREVIEW_IDLE_WARM_LIMIT = 36;
+
+  const xtrataProbeCache = new Map();
+  const xtrataBoardRenderCache = new Map();
+  const imageHealthCache = new Map();
+  let xtrataPanelRequestToken = 0;
+  let ogHydrateToken = 0;
+  const IMAGE_HEALTH_CONCURRENCY = 10;
+
+  function normalizeInscriptionId(value) {
+    const n = Number(value);
+    if (!Number.isInteger(n) || n < 0) return null;
+    return n;
+  }
+
+  function defaultXtrataInscriptionUrl(id, compact = false) {
+    const clean = normalizeInscriptionId(id);
+    if (clean === null) return '';
+    return `${XTRATA_RUNTIME_ORIGIN}${compact ? '/i' : '/inscription'}/${clean}`;
+  }
+
+  function mediaKindFromContentType(contentType) {
+    const type = String(contentType || '').split(';')[0].trim().toLowerCase();
+    if (!type) return 'unknown';
+    if (type.startsWith('image/')) return 'image';
+    if (type.startsWith('video/')) return 'video';
+    if (type.startsWith('audio/')) return 'audio';
+    if (type === 'text/html' || type === 'application/xhtml+xml') return 'html';
+    if (type.startsWith('text/') || type.includes('json') || type.includes('xml') || type.includes('svg')) return 'iframe';
+    return 'iframe';
+  }
+
+  function inferKindFromUrl(url) {
+    const clean = String(url || '').split('?')[0].toLowerCase();
+    if (/\.(png|jpe?g|gif|webp|avif|svg)$/i.test(clean)) return 'image';
+    if (/\.(mp4|webm|mov|m4v)$/i.test(clean)) return 'video';
+    if (/\.(mp3|wav|ogg|m4a|flac)$/i.test(clean)) return 'audio';
+    if (/\.(html?|xhtml)$/i.test(clean)) return 'html';
+    return 'unknown';
+  }
+
+  function probeXtrataUrl(url) {
+    const src = String(url || '').trim();
+    if (!src) return Promise.resolve({ ok: false, status: 0, contentType: '', kind: 'unknown', reason: 'No inscription URL.' });
+
+    const cached = xtrataProbeCache.get(src);
+    if (cached) return cached;
+
+    const promise = fetch(src, {
+      method: 'HEAD',
+      mode: 'cors',
+      cache: 'force-cache',
+      referrerPolicy: 'no-referrer'
+    }).then(response => {
+      const contentType = response.headers.get('content-type') || '';
+      return {
+        ok: response.ok,
+        status: response.status,
+        contentType,
+        kind: mediaKindFromContentType(contentType),
+        size: response.headers.get('content-length') || '',
+        cache: response.headers.get('x-xtrata-runtime-cache') || '',
+        readBatch: response.headers.get('x-xtrata-runtime-read-batch-size') || '',
+        reason: response.ok ? 'Runtime metadata loaded.' : `Runtime returned HTTP ${response.status}.`
+      };
+    }).catch(error => ({
+      ok: false,
+      status: 0,
+      contentType: '',
+      kind: inferKindFromUrl(src),
+      size: '',
+      cache: '',
+      readBatch: '',
+      reason: `Could not probe content type: ${error.message}`
+    }));
+
+    xtrataProbeCache.set(src, promise);
+    return promise;
+  }
+
+  const bg = document.createElementNS(SVGNS, 'rect');
+  bg.setAttribute('x', 0);
+  bg.setAttribute('y', 0);
+  bg.setAttribute('width', VIEW_W);
+  bg.setAttribute('height', VIEW_H);
+  bg.setAttribute('fill', 'transparent');
+  svg.appendChild(bg);
+
+  function esc(value) {
+    return String(value ?? '').replace(/[&<>'"]/g, ch => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+    }[ch]));
+  }
+
+  function withHttps(url) {
+    const raw = String(url || '').trim();
+    if (!raw) return '';
+    if (/^https?:\/\//i.test(raw)) return raw;
+    if (raw.startsWith('//')) return `https:${raw}`;
+    return `https://${raw}`;
+  }
+
+  function formatStacksBoardSalePrice(value) {
+    const n = Number(value || 0);
+    if (!Number.isFinite(n) || n <= 0) return '0';
+    return n.toLocaleString(undefined, { maximumFractionDigits: 6 });
+  }
+
+  function normalizeImageUrl(url) {
+    let imgUrl = String(url || '').trim();
+    if (!imgUrl) return '';
+    if (imgUrl.startsWith('ipfs://')) imgUrl = imgUrl.replace('ipfs://', 'https://ipfs.io/ipfs/');
+    if (imgUrl.startsWith('//')) imgUrl = `https:${imgUrl}`;
+    return imgUrl;
+  }
+
+  function getSlotImageUrl(dbData) {
+    if (!dbData) return '';
+    let imgUrl = dbData.imgixImageUrl || dbData.imageUrl || '';
+    if (dbData.imageUrl && (dbData.isGif || String(dbData.imageUrl).toLowerCase().includes('.gif'))) {
+      imgUrl = dbData.imageUrl;
+    }
+    return normalizeImageUrl(imgUrl);
+  }
+
+  function getSlotPreviewImageUrl(dbData) {
+    if (!dbData) return '';
+    let imgUrl = dbData.imageUrl || dbData.imgixImageUrl || '';
+    if (dbData.imageUrl && (dbData.isGif || String(dbData.imageUrl).toLowerCase().includes('.gif'))) {
+      imgUrl = dbData.imageUrl;
+    }
+    return normalizeImageUrl(imgUrl);
+  }
+
+  function hasPlaceholderUrlHint(url) {
+    const lower = String(url || '').toLowerCase();
+    const hints = [
+      'placeholder', 'no-image', 'no_image', 'image-not-found', 'imagenotfound',
+      'missing-image', 'missing_image', 'not-found', 'notfound', 'default-image',
+      'default_image', 'broken-image', 'broken_image', 'spacer.gif', 'blank.gif'
+    ];
+    return hints.some(hint => lower.includes(hint));
+  }
+
+  function hasSuspiciousHostHint(url) {
+    const lower = String(url || '').toLowerCase();
+    const hints = ['ifh.cc', 'imagehosting', 'image-hosting'];
+    return hints.some(hint => lower.includes(hint));
+  }
+
+  function isDeadOgState(state) {
+    return state === 'missing' || state === 'broken' || state === 'timeout' || state === 'placeholder' || state === 'suspect';
+  }
+
+  function healthLabel(state) {
+    return ({
+      ok: 'Live Web2 media',
+      suspect: 'Unlinked: suspect Web2 host',
+      placeholder: 'Unlinked: placeholder media',
+      broken: 'Unlinked: broken Web2 media',
+      timeout: 'Unlinked: Web2 media timeout',
+      missing: 'Unlinked: no image',
+      unknown: 'Checking Web2 media'
+    })[state] || 'Checking image';
+  }
+
+  function healthClass(state) {
+    if (state === 'ok') return 'ok';
+    if (state === 'suspect' || state === 'placeholder' || state === 'timeout') return 'warn';
+    if (state === 'broken') return 'bad';
+    return 'muted';
+  }
+
+  async function runLimited(items, limit, worker) {
+    const list = Array.isArray(items) ? items : [];
+    const concurrency = Math.max(1, Math.min(Number(limit) || 1, list.length || 1));
+    let index = 0;
+
+    await Promise.all(Array.from({ length: concurrency }, async () => {
+      while (index < list.length) {
+        const item = list[index];
+        index += 1;
+        await worker(item);
+      }
+    }));
+  }
+
+  function checkImageHealth(url) {
+    const key = normalizeImageUrl(url);
+    if (!key) return Promise.resolve({ state: 'missing', reason: 'No image URL is set for this slot.' });
+
+    const cached = imageHealthCache.get(key);
+    if (cached) return cached;
+
+    if (hasPlaceholderUrlHint(key)) {
+      const result = Promise.resolve({ state: 'placeholder', reason: 'The image URL looks like a placeholder or missing-image asset.' });
+      imageHealthCache.set(key, result);
+      return result;
+    }
+
+    const promise = new Promise(resolve => {
+      const testImg = new Image();
+      let settled = false;
+      const finish = result => {
+        if (settled) return;
+        settled = true;
+        window.clearTimeout(timeoutId);
+        testImg.onload = null;
+        testImg.onerror = null;
+        resolve(result);
+      };
+
+      const timeoutId = window.setTimeout(() => {
+        finish({ state: 'timeout', reason: 'The image did not finish loading quickly enough.' });
+      }, 8500);
+
+      testImg.onload = () => {
+        const w = testImg.naturalWidth || 0;
+        const h = testImg.naturalHeight || 0;
+        rememberLoadedPreview(key, testImg);
+
+        if (w < 8 || h < 8) {
+          finish({ state: 'broken', reason: `Loaded image is too small to be a valid board image (${w}×${h}).` });
+          return;
+        }
+
+        if (hasSuspiciousHostHint(key)) {
+          finish({ state: 'suspect', reason: 'Loaded from a host known to return visible dead-link placeholder tiles.' });
+          return;
+        }
+
+        finish({ state: 'ok', reason: `Image loaded successfully (${w}×${h}).` });
+      };
+
+      testImg.onerror = () => {
+        finish({ state: 'broken', reason: 'The browser could not load this image.' });
+      };
+
+      testImg.referrerPolicy = 'no-referrer';
+      testImg.decoding = 'async';
+      testImg.src = key;
+    });
+
+    imageHealthCache.set(key, promise);
+    return promise;
+  }
+
+  function rememberLoadedPreview(url, img) {
+    const key = normalizeImageUrl(url);
+    if (!key || !img) return null;
+
+    const entry = {
+      status: 'loaded',
+      url: key,
+      naturalW: img.naturalWidth || 0,
+      naturalH: img.naturalHeight || 0,
+      loadedAt: Date.now()
+    };
+
+    previewImageCache.set(key, entry);
+    return entry;
+  }
+
+  function loadPreviewImage(url, fetchPriority = 'auto') {
+    const key = normalizeImageUrl(url);
+    if (!key) return Promise.reject(new Error('No preview URL supplied.'));
+
+    const cached = previewImageCache.get(key);
+    if (cached?.status === 'loaded') return Promise.resolve(cached);
+    if (cached?.status === 'loading' && cached.promise) return cached.promise;
+
+    const img = new Image();
+    img.decoding = 'async';
+    img.referrerPolicy = 'no-referrer';
+    if ('fetchPriority' in img) img.fetchPriority = fetchPriority;
+
+    const promise = new Promise((resolve, reject) => {
+      img.onload = () => {
+        const finish = () => {
+          const entry = rememberLoadedPreview(key, img);
+          resolve(entry);
+        };
+        if (typeof img.decode === 'function') {
+          img.decode().catch(() => null).then(finish);
+        } else {
+          finish();
+        }
+      };
+
+      img.onerror = () => {
+        const entry = { status: 'failed', url: key, failedAt: Date.now() };
+        previewImageCache.set(key, entry);
+        reject(new Error(`Preview image failed: ${key}`));
+      };
+    });
+
+    previewImageCache.set(key, { status: 'loading', url: key, promise, image: img });
+    img.src = key;
+    return promise;
+  }
+
+  function whenIdle(fn) {
+    if ('requestIdleCallback' in window) {
+      window.requestIdleCallback(fn, { timeout: 2500 });
+    } else {
+      window.setTimeout(fn, 80);
+    }
+  }
+
+  function queuePreviewWarm(url, priority = 'low') {
+    const key = normalizeImageUrl(url);
+    if (!key) return;
+
+    const cached = previewImageCache.get(key);
+    if (cached?.status === 'loaded' || cached?.status === 'loading' || previewWarmQueued.has(key)) return;
+
+    const job = { url: key, priority };
+    if (priority === 'high') previewWarmQueue.unshift(job);
+    else previewWarmQueue.push(job);
+
+    previewWarmQueued.add(key);
+    pumpPreviewWarmQueue();
+  }
+
+  function pumpPreviewWarmQueue() {
+    while (previewWarmActive < PREVIEW_WARM_CONCURRENCY && previewWarmQueue.length) {
+      const job = previewWarmQueue.shift();
+      previewWarmQueued.delete(job.url);
+      previewWarmActive += 1;
+
+      const run = () => {
+        loadPreviewImage(job.url, job.priority === 'high' ? 'high' : 'low')
+          .catch(() => null)
+          .finally(() => {
+            previewWarmActive -= 1;
+            pumpPreviewWarmQueue();
+          });
+      };
+
+      if (job.priority === 'low') whenIdle(run);
+      else run();
+    }
+  }
+
+  function getPreviewSources(block, dbData) {
+    const previewUrl = getSlotPreviewImageUrl(dbData);
+    const boardUrl = block?.ogImageUrl || getSlotImageUrl(dbData);
+    const primaryUrl = normalizeImageUrl(previewUrl || boardUrl);
+    const fastUrl = normalizeImageUrl(boardUrl || previewUrl);
+    return { primaryUrl, fastUrl };
+  }
+
+  function warmPreviewForBlock(block, priority = 'low') {
+    if (!block) return;
+    const dbData = stxBoardDb[block.id];
+    if (!dbData) return;
+
+    const { primaryUrl, fastUrl } = getPreviewSources(block, dbData);
+    if (fastUrl) queuePreviewWarm(fastUrl, priority);
+    if (primaryUrl && primaryUrl !== fastUrl) queuePreviewWarm(primaryUrl, priority);
+  }
+
+  function warmNearbyPreviews(slotId) {
+    const offsets = [1, -1, 2, -2, 3, -3];
+    offsets.forEach(offset => {
+      const block = blocks[slotId + offset];
+      if (block && (block.ogState === 'ok' || block.ogState === 'unknown')) {
+        warmPreviewForBlock(block, 'low');
+      }
+    });
+  }
+
+  function warmInitialPreviewCache() {
+    if (initialPreviewWarmStarted) return;
+    initialPreviewWarmStarted = true;
+
+    let warmed = 0;
+    blocks.forEach(block => {
+      if (warmed >= PREVIEW_IDLE_WARM_LIMIT) return;
+      if (block.ogState !== 'ok') return;
+      warmPreviewForBlock(block, 'low');
+      warmed += 1;
+    });
+  }
+
+  function sameImageUrl(a, b) {
+    if (!a || !b) return false;
+    return normalizeImageUrl(a) === normalizeImageUrl(b);
+  }
+
+  function bindPreviewImageEvents(img) {
+    if (!img || img.dataset.previewEventsBound === '1') return;
+    img.dataset.previewEventsBound = '1';
+
+    img.addEventListener('load', () => {
+      rememberLoadedPreview(img.currentSrc || img.src, img);
+      if (mediaInner.contains(img) && !mediaContainer.classList.contains('inscription')) {
+        applyPreviewImageScaling();
+      }
+    });
+
+    img.addEventListener('error', () => {
+      const fallbackSrc = img.dataset.fallbackSrc || '';
+      const currentSrc = img.currentSrc || img.src || '';
+
+      if (fallbackSrc && !sameImageUrl(currentSrc, fallbackSrc)) {
+        if (mediaMetaEl) mediaMetaEl.textContent = 'Preview failed · using fallback media';
+        const token = previewRequestToken;
+        setPreviewImageSrc(fallbackSrc, '', 'Preview failed · using fallback media', { token, loading: true });
+        return;
+      }
+
+      resetPreviewImageScaling();
+      mediaContainer.classList.remove('visible', 'loading');
+    });
+  }
+
+  function ensurePreviewImageElement() {
+    if (progImgEl && mediaInner.contains(progImgEl)) return progImgEl;
+
+    mediaInner.replaceChildren();
+    const img = document.createElement('img');
+    img.id = 'programmable-img';
+    img.alt = 'Slot media';
+    img.decoding = 'async';
+    img.loading = 'eager';
+    img.referrerPolicy = 'no-referrer';
+    if ('fetchPriority' in img) img.fetchPriority = 'high';
+    bindPreviewImageEvents(img);
+    mediaInner.appendChild(img);
+    progImgEl = img;
+    return progImgEl;
+  }
+
+  function clearPanelMedia() {
+    xtrataPanelRequestToken += 1;
+    previewRequestToken += 1;
+    mediaContainer.classList.remove('visible', 'loading', 'inscription');
+    if (mediaMetaEl) mediaMetaEl.textContent = '';
+    const img = ensurePreviewImageElement();
+    resetPreviewImageScaling();
+    img.removeAttribute('src');
+  }
+
+  function applyPanelImageScaling(img, labelPrefix = '') {
+    const naturalW = img.naturalWidth || 0;
+    const naturalH = img.naturalHeight || 0;
+    const rect = mediaInner.getBoundingClientRect();
+
+    if (!naturalW || !naturalH || !rect.width || !rect.height) return;
+
+    const availableW = Math.max(1, rect.width);
+    const availableH = Math.max(1, rect.height);
+    const fitScale = Math.min(availableW / naturalW, availableH / naturalH);
+    const integerScale = Math.floor(fitScale);
+
+    if (integerScale >= 1) {
+      img.style.width = `${naturalW * integerScale}px`;
+      img.style.height = `${naturalH * integerScale}px`;
+      img.style.maxWidth = 'none';
+      img.style.maxHeight = 'none';
+      if (mediaMetaEl) {
+        mediaMetaEl.textContent = `${labelPrefix}image ${naturalW}×${naturalH} · ${integerScale}× integer scale`;
+      }
+      return;
+    }
+
+    img.style.width = 'auto';
+    img.style.height = 'auto';
+    img.style.maxWidth = '100%';
+    img.style.maxHeight = '100%';
+    if (mediaMetaEl) mediaMetaEl.textContent = `${labelPrefix}image ${naturalW}×${naturalH} · fitted down to panel`;
+  }
+
+  function xtrataMetaLine(meta, id) {
+    const bits = [`Xtrata #${id}`];
+    if (meta?.contentType) bits.push(String(meta.contentType).split(';')[0]);
+    if (meta?.size) bits.push(`${Number(meta.size).toLocaleString()} bytes`);
+    if (meta?.cache) bits.push(`cache ${meta.cache}`);
+    return bits.join(' · ');
+  }
+
+  function createXtrataIframe(url, className) {
+    const iframe = document.createElement('iframe');
+    iframe.className = className;
+    iframe.src = url;
+    iframe.loading = 'eager';
+    iframe.referrerPolicy = 'no-referrer';
+    iframe.sandbox = 'allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox';
+    return iframe;
+  }
+
+  function renderXtrataPanelElement({ id, url, meta, token }) {
+    if (token !== xtrataPanelRequestToken) return;
+
+    const kind = meta?.kind || inferKindFromUrl(url) || 'unknown';
+    const wrap = document.createElement('div');
+    wrap.className = 'xtrata-panel-wrap';
+    mediaInner.replaceChildren(wrap);
+    mediaContainer.classList.add('visible', 'inscription');
+    mediaContainer.classList.toggle('loading', false);
+
+    const labelPrefix = `Xtrata #${id} · `;
+
+    if (kind === 'image' || kind === 'unknown') {
+      const img = document.createElement('img');
+      img.className = 'xtrata-panel-media image';
+      img.alt = `Xtrata inscription #${id}`;
+      img.decoding = 'async';
+      img.loading = 'eager';
+      img.referrerPolicy = 'no-referrer';
+      if ('fetchPriority' in img) img.fetchPriority = 'high';
+      img.onload = () => {
+        if (token !== xtrataPanelRequestToken) return;
+        applyPanelImageScaling(img, labelPrefix);
+      };
+      img.onerror = () => {
+        if (token !== xtrataPanelRequestToken) return;
+        wrap.replaceChildren(createXtrataIframe(url, 'xtrata-panel-frame'));
+        if (mediaMetaEl) mediaMetaEl.textContent = `${labelPrefix}iframe fallback`;
+      };
+      img.src = url;
+      wrap.appendChild(img);
+
+      if (kind === 'unknown') {
+        probeXtrataUrl(url).then(nextMeta => {
+          if (token !== xtrataPanelRequestToken) return;
+          if (nextMeta.kind && nextMeta.kind !== 'unknown' && nextMeta.kind !== 'image') {
+            renderXtrataPanelElement({ id, url, meta: nextMeta, token });
+          } else if (mediaMetaEl && nextMeta.contentType) {
+            mediaMetaEl.textContent = xtrataMetaLine(nextMeta, id);
+          }
+        });
+      }
+      return;
+    }
+
+    if (kind === 'video') {
+      const video = document.createElement('video');
+      video.className = 'xtrata-panel-media video';
+      video.src = url;
+      video.controls = true;
+      video.loop = true;
+      video.playsInline = true;
+      video.preload = 'metadata';
+      wrap.appendChild(video);
+      if (mediaMetaEl) mediaMetaEl.textContent = xtrataMetaLine(meta, id);
+      return;
+    }
+
+    if (kind === 'audio') {
+      const card = document.createElement('div');
+      card.className = 'xtrata-panel-audio-card';
+      const strong = document.createElement('strong');
+      strong.textContent = `Xtrata audio #${id}`;
+      const note = document.createElement('div');
+      note.textContent = 'This inscription is audio, so it appears here with playback controls.';
+      const audio = document.createElement('audio');
+      audio.src = url;
+      audio.controls = true;
+      audio.preload = 'metadata';
+      card.append(strong, note, audio);
+      wrap.appendChild(card);
+      if (mediaMetaEl) mediaMetaEl.textContent = xtrataMetaLine(meta, id);
+      return;
+    }
+
+    wrap.appendChild(createXtrataIframe(url, 'xtrata-panel-frame'));
+    if (mediaMetaEl) mediaMetaEl.textContent = xtrataMetaLine(meta, id);
+  }
+
+  function showXtrataPanelMedia(resolved) {
+    const id = normalizeInscriptionId(resolved?.inscriptionId);
+    const url = resolved?.inscriptionUrl || defaultXtrataInscriptionUrl(id);
+    const token = ++xtrataPanelRequestToken;
+    previewRequestToken += 1;
+
+    if (id === null || !url) {
+      clearPanelMedia();
+      return;
+    }
+
+    mediaContainer.classList.add('visible', 'loading', 'inscription');
+    if (mediaMetaEl) mediaMetaEl.textContent = `Loading Xtrata inscription #${id}`;
+
+    const loading = document.createElement('div');
+    loading.className = 'xtrata-panel-loading';
+    loading.innerHTML = `<strong>Loading on-chain display</strong><span>Xtrata inscription #${esc(id)}</span>`;
+    mediaInner.replaceChildren(loading);
+
+    const inferred = inferKindFromUrl(url);
+    if (inferred !== 'unknown') {
+      renderXtrataPanelElement({ id, url, meta: { kind: inferred, contentType: '' }, token });
+    }
+
+    probeXtrataUrl(url).then(meta => {
+      if (token !== xtrataPanelRequestToken) return;
+      renderXtrataPanelElement({ id, url, meta, token });
+    }).catch(error => {
+      if (token !== xtrataPanelRequestToken) return;
+      const wrap = document.createElement('div');
+      wrap.className = 'xtrata-panel-wrap';
+      wrap.appendChild(createXtrataIframe(url, 'xtrata-panel-frame'));
+      mediaInner.replaceChildren(wrap);
+      mediaContainer.classList.remove('loading');
+      if (mediaMetaEl) mediaMetaEl.textContent = `Xtrata #${id} · probe failed, iframe fallback`;
+      console.warn('Xtrata probe failed:', error);
+    });
+  }
+
+  function resetPreviewImageScaling() {
+    const img = ensurePreviewImageElement();
+    img.classList.remove('pixel-perfect');
+    img.style.width = '';
+    img.style.height = '';
+    img.style.maxWidth = '';
+    img.style.maxHeight = '';
+    img.dataset.fallbackSrc = '';
+    if (mediaMetaEl) mediaMetaEl.textContent = '';
+  }
+
+  function setPreviewImageSrc(url, fallbackSrc = '', metaText = 'Loading preview', { token = previewRequestToken, loading = true } = {}) {
+    if (token !== previewRequestToken) return;
+
+    const src = normalizeImageUrl(url);
+    if (!src) return;
+
+    const img = ensurePreviewImageElement();
+    resetPreviewImageScaling();
+    img.dataset.fallbackSrc = normalizeImageUrl(fallbackSrc);
+    mediaContainer.classList.add('visible');
+    mediaContainer.classList.remove('inscription');
+    mediaContainer.classList.toggle('loading', Boolean(loading));
+    if ('fetchPriority' in img) img.fetchPriority = loading ? 'high' : 'auto';
+    if (mediaMetaEl) mediaMetaEl.textContent = metaText;
+
+    const current = img.currentSrc || img.getAttribute('src') || '';
+    if (!sameImageUrl(current, src)) {
+      img.src = src;
+    } else {
+      window.requestAnimationFrame(() => {
+        if (token !== previewRequestToken) return;
+        mediaContainer.classList.remove('loading');
+        applyPreviewImageScaling();
+      });
+    }
+  }
+
+  function applyPreviewImageScaling() {
+    if (mediaContainer.classList.contains('inscription')) return;
+    if (!progImgEl || !mediaInner.contains(progImgEl)) return;
+
+    const naturalW = progImgEl.naturalWidth || 0;
+    const naturalH = progImgEl.naturalHeight || 0;
+    const frame = mediaInner || mediaContainer;
+    const rect = frame.getBoundingClientRect();
+
+    if (!naturalW || !naturalH || !rect.width || !rect.height) {
+      if (mediaMetaEl && mediaContainer.classList.contains('visible')) {
+        mediaMetaEl.textContent = mediaContainer.classList.contains('loading') ? 'Loading preview' : '';
+      }
+      return;
+    }
+
+    const availableW = Math.max(1, rect.width);
+    const availableH = Math.max(1, rect.height);
+    const fitScale = Math.min(availableW / naturalW, availableH / naturalH);
+    const integerScale = Math.floor(fitScale);
+
+    progImgEl.classList.add('pixel-perfect');
+    mediaContainer.classList.remove('loading');
+
+    if (integerScale >= 1) {
+      const displayW = naturalW * integerScale;
+      const displayH = naturalH * integerScale;
+
+      progImgEl.style.width = `${displayW}px`;
+      progImgEl.style.height = `${displayH}px`;
+      progImgEl.style.maxWidth = 'none';
+      progImgEl.style.maxHeight = 'none';
+
+      if (mediaMetaEl) {
+        mediaMetaEl.textContent = integerScale > 1
+          ? `Source ${naturalW}×${naturalH} · ${integerScale}× integer scale`
+          : `Source ${naturalW}×${naturalH} · native 1× preview`;
+      }
+      return;
+    }
+
+    progImgEl.style.width = 'auto';
+    progImgEl.style.height = 'auto';
+    progImgEl.style.maxWidth = '100%';
+    progImgEl.style.maxHeight = '100%';
+
+    if (mediaMetaEl) {
+      mediaMetaEl.textContent = `Source ${naturalW}×${naturalH} · fitted down to panel`;
+    }
+  }
+
+  function showPreviewMedia(block, dbData) {
+    const { primaryUrl, fastUrl } = getPreviewSources(block, dbData);
+    const token = ++previewRequestToken;
+
+    if (!primaryUrl && !fastUrl) {
+      resetPreviewImageScaling();
+      progImgEl.removeAttribute('src');
+      mediaContainer.classList.remove('visible', 'loading');
+      return;
+    }
+
+    const primaryCached = primaryUrl && previewImageCache.get(primaryUrl)?.status === 'loaded';
+    const firstUrl = primaryCached ? primaryUrl : (fastUrl || primaryUrl);
+    const willUpgrade = Boolean(primaryUrl && firstUrl && primaryUrl !== firstUrl);
+
+    setPreviewImageSrc(
+      firstUrl,
+      willUpgrade ? primaryUrl : '',
+      primaryCached
+        ? 'Showing cached sharp preview'
+        : willUpgrade
+          ? 'Loading sharp preview · showing fast board media'
+          : 'Loading preview',
+      { token, loading: !primaryCached }
+    );
+
+    if (willUpgrade) {
+      loadPreviewImage(primaryUrl, 'high')
+        .then(() => {
+          if (token !== previewRequestToken) return;
+          setPreviewImageSrc(primaryUrl, firstUrl, 'Sharp preview ready', { token, loading: false });
+        })
+        .catch(() => {
+          if (token !== previewRequestToken) return;
+          if (mediaMetaEl) mediaMetaEl.textContent = 'Sharp preview unavailable · using board media';
+          mediaContainer.classList.remove('loading');
+        });
+    } else if (primaryUrl) {
+      queuePreviewWarm(primaryUrl, 'high');
+    }
+
+    warmNearbyPreviews(block.id);
+  }
+
+  bindPreviewImageEvents(progImgEl);
+
+  if ('ResizeObserver' in window) {
+    new ResizeObserver(() => {
+      if (mediaContainer.classList.contains('visible') && !mediaContainer.classList.contains('inscription')) {
+        applyPreviewImageScaling();
+      }
+    }).observe(mediaContainer);
+  } else {
+    window.addEventListener('resize', () => {
+      if (mediaContainer.classList.contains('visible') && !mediaContainer.classList.contains('inscription')) {
+        applyPreviewImageScaling();
+      }
+    });
+  }
+
+  function estimateTextWidth(text, size) {
+    return String(text || '').length * size * 0.68;
+  }
+
+  function makeText(text, x, y, size, className, maxWidth) {
+    const el = document.createElementNS(SVGNS, 'text');
+    el.setAttribute('x', x.toFixed(3));
+    el.setAttribute('y', y.toFixed(3));
+    el.setAttribute('font-size', size.toFixed(2));
+    el.setAttribute('class', className);
+    el.textContent = text;
+
+    if (maxWidth && estimateTextWidth(text, size) > maxWidth) {
+      el.setAttribute('textLength', Math.max(1, maxWidth).toFixed(2));
+      el.setAttribute('lengthAdjust', 'spacingAndGlyphs');
+    }
+
+    return el;
+  }
+
+  function makeLinkedText(text, x, y, size, className, maxWidth, href) {
+    const link = document.createElementNS(SVGNS, 'a');
+    link.setAttribute('href', href);
+    link.setAttribute('target', '_blank');
+    link.setAttribute('rel', 'noopener noreferrer');
+    link.setAttribute('class', 'slot-placeholder-link');
+    link.setAttribute('aria-label', `Open ${text}`);
+    link.addEventListener('click', event => {
+      event.stopPropagation();
+    });
+    link.appendChild(makeText(text, x, y, size, className, maxWidth));
+    return link;
+  }
+
+  function linkifyText(value) {
+    return esc(value).replace(/\n/g, '<br>');
+  }
+
+  function stacksBoardLink(label = 'StacksBoard') {
+    return `<a href="${STACKSBOARD_URL}" target="_blank" rel="noopener noreferrer">${esc(label)}</a>`;
+  }
+
+  function addTinyPlaceholderMark(layer, width, height) {
+    const cx = width / 2;
+    const cy = height / 2;
+    const r = Math.max(2.6, Math.min(width, height) * 0.22);
+
+    const a = document.createElementNS(SVGNS, 'path');
+    a.setAttribute('class', 'placeholder-tiny-mark');
+    a.setAttribute('d', `M ${(cx - r).toFixed(2)} ${cy.toFixed(2)} L ${(cx + r).toFixed(2)} ${cy.toFixed(2)} M ${cx.toFixed(2)} ${(cy - r).toFixed(2)} L ${cx.toFixed(2)} ${(cy + r).toFixed(2)}`);
+    layer.appendChild(a);
+
+    const dot = document.createElementNS(SVGNS, 'circle');
+    dot.setAttribute('class', 'placeholder-tiny-dot');
+    dot.setAttribute('cx', cx.toFixed(2));
+    dot.setAttribute('cy', cy.toFixed(2));
+    dot.setAttribute('r', Math.max(1.1, r * 0.18).toFixed(2));
+    layer.appendChild(dot);
+  }
+
+  function createSlotClipPath(id, width, height) {
+    const clipId = `slot-clip-${id}`;
+    const clip = document.createElementNS(SVGNS, 'clipPath');
+    clip.setAttribute('id', clipId);
+    clip.setAttribute('clipPathUnits', 'userSpaceOnUse');
+
+    const rect = document.createElementNS(SVGNS, 'rect');
+    rect.setAttribute('x', '0');
+    rect.setAttribute('y', '0');
+    rect.setAttribute('width', width.toFixed(3));
+    rect.setAttribute('height', height.toFixed(3));
+    clip.appendChild(rect);
+    defs.appendChild(clip);
+
+    return clipId;
+  }
+
+  function createUnlinkedPlaceholder(width, height, id) {
+    const layer = document.createElementNS(SVGNS, 'g');
+    layer.setAttribute('class', 'slot-placeholder');
+    layer.setAttribute('clip-path', `url(#${createSlotClipPath(id, width, height)})`);
+
+    const outerInset = Math.max(1.15, Math.min(2.4, Math.min(width, height) * 0.06));
+    const bgRect = document.createElementNS(SVGNS, 'rect');
+    bgRect.setAttribute('class', 'slot-placeholder-bg');
+    bgRect.setAttribute('x', outerInset.toFixed(3));
+    bgRect.setAttribute('y', outerInset.toFixed(3));
+    bgRect.setAttribute('width', Math.max(1, width - outerInset * 2).toFixed(3));
+    bgRect.setAttribute('height', Math.max(1, height - outerInset * 2).toFixed(3));
+    layer.appendChild(bgRect);
+
+    const innerInset = Math.max(3, Math.min(7, Math.min(width, height) * 0.13));
+    const inner = document.createElementNS(SVGNS, 'rect');
+    inner.setAttribute('class', 'slot-placeholder-inner');
+    inner.setAttribute('x', innerInset.toFixed(3));
+    inner.setAttribute('y', innerInset.toFixed(3));
+    inner.setAttribute('width', Math.max(1, width - innerInset * 2).toFixed(3));
+    inner.setAttribute('height', Math.max(1, height - innerInset * 2).toFixed(3));
+    layer.appendChild(inner);
+
+    const cx = width / 2;
+    const cy = height / 2;
+    const minDim = Math.min(width, height);
+    const maxTextW = Math.max(1, width - Math.max(8, width * 0.16));
+
+    if (width >= 118 && height >= 54) {
+      layer.appendChild(makeText('YOUR SLOT?', cx, cy - height * 0.23, Math.min(10.8, Math.max(8.2, height * 0.16)), 'placeholder-copy', maxTextW));
+      layer.appendChild(makeText('RELINK AT', cx, cy, Math.min(7.4, Math.max(5.8, height * 0.105)), 'placeholder-subcopy', maxTextW));
+      layer.appendChild(makeLinkedText('STACKSBOARD.ART', cx, cy + height * 0.22, Math.min(6.7, Math.max(5.2, height * 0.09)), 'placeholder-microcopy', maxTextW, STACKSBOARD_URL));
+    } else if (width >= 74 && height >= 58) {
+      layer.appendChild(makeText('YOUR SLOT?', cx, cy - height * 0.13, Math.min(8.7, Math.max(7.1, height * 0.112)), 'placeholder-copy', maxTextW));
+      layer.appendChild(makeText('RELINK', cx, cy + height * 0.17, Math.min(6.5, Math.max(5.2, height * 0.078)), 'placeholder-subcopy', maxTextW));
+    } else if (width >= 56 && height >= 36) {
+      layer.appendChild(makeText('RELINK', cx, cy, Math.min(6.5, Math.max(5.0, minDim * 0.13)), 'placeholder-copy', maxTextW));
+    } else if (width >= 44 && height >= 34) {
+      layer.appendChild(makeText('SLOT?', cx, cy, Math.min(5.8, Math.max(4.6, minDim * 0.12)), 'placeholder-copy', maxTextW));
+    } else {
+      addTinyPlaceholderMark(layer, width, height);
+    }
+
+    return layer;
+  }
+
+  function updateSlotTooltip(block) {
+    const title = block.titleEl;
+    if (!title) return;
+
+    if (isDeadOgState(block.ogState)) {
+      title.textContent = `Slot #${block.id}: YOUR SLOT? · relink at StacksBoard.art`;
+    } else if (block.ogState === 'ok') {
+      title.textContent = `Slot #${block.id}: live Web2 media`;
+    } else {
+      title.textContent = `Slot #${block.id}: checking Web2 media`;
+    }
+  }
+
+  function createBoard() {
+    let idCounter = 0;
+
+    bands.forEach(([startRow, heightRows, cellW]) => {
+      const cellsAcross = Math.round(COLS / cellW);
+
+      for (let c = 0; c < cellsAcross; c++) {
+        const cellPxW = cellW * u;
+        const cellPxH = heightRows * u;
+
+        const g = document.createElementNS(SVGNS, 'g');
+        g.setAttribute('class', 'slot-group');
+        g.setAttribute('role', 'button');
+        g.setAttribute('tabindex', '0');
+        g.setAttribute('aria-label', `StacksBoard slot ${idCounter}`);
+
+        const title = document.createElementNS(SVGNS, 'title');
+        title.textContent = `Slot #${idCounter}: checking Web2 media`;
+
+        const rect = document.createElementNS(SVGNS, 'rect');
+        rect.setAttribute('class', 'cell');
+        rect.setAttribute('width', cellPxW.toFixed(3));
+        rect.setAttribute('height', cellPxH.toFixed(3));
+
+        const img = document.createElementNS(SVGNS, 'image');
+        img.setAttribute('class', 'slot-image');
+        img.setAttribute('width', cellPxW.toFixed(3));
+        img.setAttribute('height', cellPxH.toFixed(3));
+        img.setAttribute('preserveAspectRatio', 'xMidYMid slice');
+
+        const placeholder = createUnlinkedPlaceholder(cellPxW, cellPxH, idCounter);
+
+        g.appendChild(title);
+        g.appendChild(rect);
+        g.appendChild(img);
+        g.appendChild(placeholder);
+        svg.appendChild(g);
+
+        const block = {
+          id: idCounter,
+          w: cellW,
+          h: heightRows,
+          gw: Math.round(cellW * 3),
+          gh: Math.round(heightRows * 3),
+          el: g,
+          rectEl: rect,
+          imgEl: img,
+          placeholderEl: placeholder,
+          titleEl: title,
+          ogState: 'unknown',
+          ogReason: 'Image health has not been checked yet.',
+          ogImageUrl: '',
+          layout: { tx: Math.round(c * cellW * 3), ty: Math.round(startRow * 3) }
+        };
+
+        const open = () => selectSlot(block);
+        g.addEventListener('click', open);
+        g.addEventListener('dblclick', event => {
+          event.preventDefault();
+          event.stopPropagation();
+          selectSlot(block);
+          XBoardProgrammingModule.open();
+        });
+        g.addEventListener('keydown', event => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            open();
+          }
+        });
+        g.addEventListener('pointerenter', () => warmPreviewForBlock(block, 'high'));
+        g.addEventListener('focus', () => warmPreviewForBlock(block, 'high'));
+        g.addEventListener('touchstart', () => warmPreviewForBlock(block, 'high'), { passive: true });
+
+        blocks.push(block);
+        idCounter += 1;
+      }
+    });
+  }
+
+  function applyBoardFit() {
+    const minX = Math.min(...blocks.map(b => b.layout.tx));
+    const maxX = Math.max(...blocks.map(b => b.layout.tx + b.gw));
+    const minY = Math.min(...blocks.map(b => b.layout.ty));
+    const maxY = Math.max(...blocks.map(b => b.layout.ty + b.gh));
+
+    const spanX = (maxX - minX) * unit;
+    const spanY = (maxY - minY) * unit;
+    const FIT_MARGIN = 0.965;
+
+    const s = Math.min((VIEW_W * FIT_MARGIN) / spanX, (VIEW_H * FIT_MARGIN) / spanY);
+    const offsetX = (VIEW_W - spanX * s) / 2 - (minX * unit * s);
+    const offsetY = (VIEW_H - spanY * s) / 2 - (minY * unit * s);
+
+    blocks.forEach(block => {
+      const finalX = block.layout.tx * unit * s + offsetX;
+      const finalY = block.layout.ty * unit * s + offsetY;
+      block.el.style.transform = `translate(${finalX.toFixed(2)}px, ${finalY.toFixed(2)}px) scale(${s.toFixed(5)})`;
+    });
+  }
+
+  function applyOgVisibility() {
+    blocks.forEach(block => {
+      const dead = isDeadOgState(block.ogState);
+      const showImage = OG_VIEW_ACTIVE && Boolean(block.ogImageUrl) && block.ogState === 'ok' && !(HIDE_DEAD_OG_LINKS && dead);
+
+      block.imgEl.style.opacity = showImage ? '1' : '0';
+      block.el.classList.toggle('dead-og-hidden', OG_VIEW_ACTIVE && HIDE_DEAD_OG_LINKS && dead);
+      updateSlotTooltip(block);
+    });
+  }
+
+  async function hydrateOgImages({ force = false } = {}) {
+    const token = ++ogHydrateToken;
+    const toCheck = [];
+
+    blocks.forEach(block => {
+      const dbData = stxBoardDb[block.id];
+      const imgUrl = getSlotImageUrl(dbData);
+
+      if (!force && block.ogImageUrl === imgUrl && block.ogState !== 'unknown') return;
+
+      block.ogImageUrl = imgUrl;
+      block.ogState = 'unknown';
+      block.ogReason = 'Checking image health.';
+      block.imgEl.removeAttribute('href');
+
+      if (!dbData) {
+        block.ogState = 'missing';
+        block.ogReason = 'No StacksBoard metadata was returned for this slot.';
+        return;
+      }
+
+      if (force && imgUrl) imageHealthCache.delete(normalizeImageUrl(imgUrl));
+      toCheck.push({ block, imgUrl });
+    });
+
+    applyOgVisibility();
+
+    await runLimited(toCheck, IMAGE_HEALTH_CONCURRENCY, async ({ block, imgUrl }) => {
+      const health = await checkImageHealth(imgUrl);
+      if (token !== ogHydrateToken) return;
+
+      block.ogState = health.state;
+      block.ogReason = health.reason;
+
+      if (imgUrl && health.state === 'ok') {
+        block.imgEl.setAttribute('href', imgUrl);
+      }
+    });
+
+    if (token !== ogHydrateToken) return;
+
+    applyOgVisibility();
+    warmInitialPreviewCache();
+    XBoardProgrammingModule.refresh();
+    if (activeBlock) renderSlotInfo(activeBlock);
+  }
+
+  async function fetchAllSlotMetadata() {
+    loadingNote.classList.add('visible');
+
+    const payload = {
+      operationName: 'GetAllSlots',
+      query: `query GetAllSlots($contractName: String!) {
+        allSlots(contractName: $contractName) {
+          id contractName nftId forSale minted price imageUrl imgixImageUrl ownerName ownerUri
+          description ownerAddress twitterHandle instagramHandle discordUri youtubeUri telegramUri
+          baseNftId isGif baseNftContractName __typename
+        }
+      }`,
+      variables: { contractName: `${CONTRACT_ADDR}.${CONTRACT_NAME}` }
+    };
+
+    try {
+      const res = await fetch(GRAPHQL_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) throw new Error(`GraphQL request failed: ${res.status}`);
+      const json = await res.json();
+
+      if (json?.data?.allSlots) {
+        json.data.allSlots.forEach(slot => {
+          stxBoardDb[Number(slot.nftId)] = slot;
+        });
+        await hydrateOgImages();
+      }
+    } catch (err) {
+      console.error('Failed to fetch StacksBoard metadata:', err);
+    } finally {
+      loadingNote.classList.remove('visible');
+    }
+  }
+
+  function renderMarketStatus(dbData) {
+    if (!dbData) return '<span class="warn">Metadata unavailable</span>';
+    const minted = Boolean(dbData.minted);
+    const forSale = Boolean(dbData.forSale);
+    const price = formatStacksBoardSalePrice(dbData.price);
+
+    return `
+      <div class="market-grid">
+        <div class="market-card">
+          <div class="mini-label">Status</div>
+          <div class="mini-value ${minted ? 'ok' : 'muted'}">${minted ? 'Minted' : 'Unminted'}</div>
+        </div>
+        <div class="market-card">
+          <div class="mini-label">For Sale</div>
+          <div class="mini-value ${forSale ? 'ok' : 'muted'}">${forSale ? 'Yes' : 'No'}</div>
+        </div>
+        ${forSale ? `
+          <div class="market-card full">
+            <div class="mini-label">Price</div>
+            <div class="mini-value">${price} STX</div>
+          </div>
+        ` : ''}
+      </div>
+    `;
+  }
+
+  function renderOgStatus(block) {
+    const state = block?.ogState || 'unknown';
+    const cls = healthClass(state);
+    const hidden = HIDE_DEAD_OG_LINKS && isDeadOgState(state);
+    const url = block?.ogImageUrl || '';
+
+    return `
+      <span class="health-pill ${cls}">${esc(healthLabel(state))}${hidden ? ' • transition placeholder active' : ''}</span>
+      <div style="margin-top:6px;color:#9ca3af;font-size:11px;line-height:1.35;">${esc(block?.ogReason || 'Checking image health.')}</div>
+      ${url ? `<div class="mono" style="margin-top:5px;color:rgba(252,231,243,.72);font-size:10px;line-height:1.3;word-break:break-all;">${esc(url)}</div>` : ''}
+    `;
+  }
+
+  function renderUnlinkedCard(block) {
+    const state = block?.ogState || 'unknown';
+    if (!isDeadOgState(state)) return '';
+
+    return `
+      <strong>Your slot? Relink at ${stacksBoardLink('StacksBoard.art')}</strong>
+      This slot's Web2 media is currently unavailable, so the board is showing a clean placeholder instead of a broken image. If this is your slot, update your ${stacksBoardLink('StacksBoard')} image/link or use the on-chain programming layer to point it at an inscription. This temporary board is testing a future model where original holders can carry their spaces forward into a more on-chain display environment.
+    `;
+  }
+
+  function displayDescriptionHtml(dbData, block) {
+    const original = dbData?.description || 'No description provided.';
+    const safeOriginal = linkifyText(original);
+    if (!isDeadOgState(block?.ogState)) return safeOriginal;
+    return `${safeOriginal}<br><br>Unlinked media placeholder active: update the Web2 media on ${stacksBoardLink('StacksBoard')} or use the on-chain programming layer to point this slot at an inscription. This board is a temporary bridge toward a more on-chain display model for original slot holders.`;
+  }
+
+  function renderSlotInfo(block) {
+    const dbData = stxBoardDb[block.id];
+    const ownerName = dbData?.ownerName || '';
+    const ownerAddress = dbData?.ownerAddress || '';
+    const resolved = XBoardProgrammingModule.resolveSlot(block.id);
+    const showingInscription = resolved?.mode === 'OWNER_INSCRIPTION' || resolved?.mode === 'PUBLIC_INSCRIPTION';
+    const inscriptionUrl = showingInscription ? XBoardProgrammingModule.inscriptionUrl(resolved.inscriptionId) : '';
+    const descHtml = displayDescriptionHtml(dbData, block);
+    const web2Link = dbData?.ownerUri ? withHttps(dbData.ownerUri) : '';
+    const { primaryUrl, fastUrl } = getPreviewSources(block, dbData);
+    const mediaSrc = primaryUrl || fastUrl;
+    const showWeb2Media = !showingInscription && Boolean(mediaSrc) && (block.ogState === 'ok' || block.ogState === 'unknown');
+
+    slotIdEl.textContent = block.id;
+    progTitleEl.textContent = showingInscription
+      ? `${ownerName || 'Programmed slot'} · ${resolved.label}`
+      : ownerName;
+    progDescEl.innerHTML = showingInscription
+      ? `${descHtml}<br><br><strong>${esc(resolved.label)} active:</strong> this slot is currently rendering Xtrata inscription <span class="mono">#${esc(resolved.inscriptionId)}</span> through the on-chain display resolver.`
+      : descHtml;
+    slotOwnerEl.textContent = ownerAddress || 'Unowned / unavailable';
+    slotReprEl.innerHTML = renderMarketStatus(dbData);
+    ogStatusEl.innerHTML = renderOgStatus(block);
+    unlinkedCardEl.innerHTML = showingInscription ? '' : renderUnlinkedCard(block);
+    unlinkedCardEl.classList.toggle('visible', Boolean(unlinkedCardEl.innerHTML));
+    explorerLink.href = `https://explorer.hiro.so/txid/${CONTRACT_ADDR}.${CONTRACT_NAME}?chain=mainnet`;
+
+    if (showingInscription) {
+      showXtrataPanelMedia({ ...resolved, inscriptionUrl });
+    } else if (showWeb2Media) {
+      xtrataPanelRequestToken += 1;
+      showPreviewMedia(block, dbData);
+    } else {
+      clearPanelMedia();
+    }
+
+    const link = showingInscription ? inscriptionUrl : web2Link;
+    if (link) {
+      progLinkBtn.href = link;
+      progLinkBtn.textContent = showingInscription ? 'Open Xtrata Inscription' : 'Visit Programmed Site';
+      progLinkBtn.classList.add('visible');
+    } else {
+      progLinkBtn.href = '#';
+      progLinkBtn.textContent = 'Visit Programmed Site';
+      progLinkBtn.classList.remove('visible');
+    }
+  }
+
+  function createBlockInscriptionLayer(block) {
+    if (block.xtrataLayer) return;
+
+    const width = block.w * u;
+    const height = block.h * u;
+    const layer = document.createElementNS(SVGNS, 'g');
+    layer.setAttribute('class', 'slot-xtrata-layer');
+    layer.setAttribute('clip-path', `url(#${createSlotClipPath(`xtrata-${block.id}`, width, height)})`);
+
+    const foreign = document.createElementNS(SVGNS, 'foreignObject');
+    foreign.setAttribute('class', 'slot-xtrata-foreign');
+    foreign.setAttribute('x', '0');
+    foreign.setAttribute('y', '0');
+    foreign.setAttribute('width', width.toFixed(3));
+    foreign.setAttribute('height', height.toFixed(3));
+
+    const root = document.createElementNS(XHTMLNS, 'div');
+    root.setAttribute('class', 'xtrata-board-root');
+    foreign.appendChild(root);
+    layer.appendChild(foreign);
+
+    if (block.programOverlay) block.el.insertBefore(layer, block.programOverlay);
+    else block.el.appendChild(layer);
+
+    block.xtrataLayer = layer;
+    block.xtrataForeign = foreign;
+    block.xtrataRoot = root;
+    block.xtrataRenderKey = '';
+  }
+
+  function renderBlockXtrataContent(block, resolved, url, meta = null) {
+    if (!block?.xtrataRoot || !url) return;
+
+    const id = normalizeInscriptionId(resolved?.inscriptionId);
+    const kind = meta?.kind || inferKindFromUrl(url) || 'unknown';
+    const renderKey = `${id}|${url}|${kind}|${meta?.contentType || ''}`;
+    if (block.xtrataRenderKey === renderKey) return;
+    block.xtrataRenderKey = renderKey;
+
+    const root = block.xtrataRoot;
+    root.replaceChildren();
+
+    const addLabel = () => {
+      const label = document.createElementNS(XHTMLNS, 'div');
+      label.setAttribute('class', 'xtrata-board-placeholder');
+      label.textContent = id === null ? 'XTRATA' : `XTRATA #${id}`;
+      root.appendChild(label);
+    };
+
+    if (kind === 'image' || kind === 'unknown') {
+      const img = document.createElementNS(XHTMLNS, 'img');
+      img.setAttribute('class', 'xtrata-board-media image');
+      img.setAttribute('alt', `Xtrata inscription #${id}`);
+      img.setAttribute('decoding', 'async');
+      img.setAttribute('loading', 'lazy');
+      img.setAttribute('referrerpolicy', 'no-referrer');
+      img.addEventListener('error', () => {
+        if (block.xtrataRenderKey !== renderKey) return;
+        root.replaceChildren(createXtrataIframe(url, 'xtrata-board-frame'));
+      });
+      img.setAttribute('src', url);
+      root.appendChild(img);
+      return;
+    }
+
+    if (kind === 'video') {
+      const video = document.createElementNS(XHTMLNS, 'video');
+      video.setAttribute('class', 'xtrata-board-media');
+      video.setAttribute('src', url);
+      video.setAttribute('muted', '');
+      video.setAttribute('loop', '');
+      video.setAttribute('playsinline', '');
+      video.setAttribute('preload', 'metadata');
+      video.autoplay = true;
+      video.muted = true;
+      video.loop = true;
+      root.appendChild(video);
+      video.play?.().catch(() => {});
+      return;
+    }
+
+    if (kind === 'audio') {
+      addLabel();
+      return;
+    }
+
+    root.appendChild(createXtrataIframe(url, 'xtrata-board-frame'));
+  }
+
+  function applyBlockInscriptionDisplay(block, resolved, url) {
+    if (!block || normalizeInscriptionId(resolved?.inscriptionId) === null || !url) return;
+
+    createBlockInscriptionLayer(block);
+    block.el.classList.add('programmed-xtrata');
+    block.el.classList.remove('dead-og-hidden');
+    block.xtrataLayer.style.display = 'block';
+
+    const id = normalizeInscriptionId(resolved.inscriptionId);
+    const initialKey = `${id}|${url}|initial`;
+    if (block.xtrataRenderKey !== initialKey && !xtrataBoardRenderCache.has(`${id}|${url}`)) {
+      renderBlockXtrataContent(block, resolved, url, { kind: inferKindFromUrl(url) });
+    }
+
+    const cacheKey = `${id}|${url}`;
+    if (xtrataBoardRenderCache.has(cacheKey)) {
+      renderBlockXtrataContent(block, resolved, url, xtrataBoardRenderCache.get(cacheKey));
+      return;
+    }
+
+    probeXtrataUrl(url).then(meta => {
+      xtrataBoardRenderCache.set(cacheKey, meta);
+      if (!block.el.classList.contains('programmed-xtrata')) return;
+      const current = XBoardProgrammingModule.resolveSlot(block.id);
+      if (current?.inscriptionId !== resolved.inscriptionId) return;
+      renderBlockXtrataContent(block, resolved, url, meta);
+    });
+  }
+
+  function clearBlockInscriptionDisplay(block) {
+    if (!block) return;
+    block.el.classList.remove('programmed-xtrata');
+    if (block.xtrataLayer) {
+      block.xtrataLayer.style.display = 'none';
+      if (block.xtrataRoot) block.xtrataRoot.replaceChildren();
+      block.xtrataRenderKey = '';
+    }
+
+    const dead = isDeadOgState(block.ogState);
+    const showImage = OG_VIEW_ACTIVE && Boolean(block.ogImageUrl) && block.ogState === 'ok' && !(HIDE_DEAD_OG_LINKS && dead);
+    block.imgEl.style.opacity = showImage ? '1' : '0';
+    block.el.classList.toggle('dead-og-hidden', OG_VIEW_ACTIVE && HIDE_DEAD_OG_LINKS && dead);
+  }
+
+
+  const XBoardProgrammingModule = (() => {
+    const STORAGE_KEY = 'xboard-programming-module-v4';
+    const XBOARD_CONTROL_PRINCIPAL = 'SP2CWY47KCSYT6VZDV8CZ1WSBA5JASPHDP95ADB96';
+    const STX_TO_USTX = 1000000;
+    const OWNER_UPDATE_FEE_USTX = 100000;
+    const PUBLIC_TAKEOVER_START_USTX = 1;
+    const PUBLIC_TAKEOVER_WARNING_USTX = 10 * STX_TO_USTX;
+    const DEFAULT_CONFIG = {
+      controlPrincipal: XBOARD_CONTROL_PRINCIPAL,
+      ownerActionMinUstx: OWNER_UPDATE_FEE_USTX,
+      publicMinUstx: PUBLIC_TAKEOVER_START_USTX,
+      inscriptionUrlTemplate: 'https://xtrata.xyz/inscription/{id}'
+    };
+
+    let state = loadState();
+    let selectedSlotId = 0;
+    let ui = null;
+
+    function cloneDefaults() {
+      return {
+        config: { ...DEFAULT_CONFIG },
+        transactions: [],
+        acquiredBlocks: {},
+        nextBlockHeight: 900000,
+        nextTxIndex: 0
+      };
+    }
+
+    function normalizeConfig(input) {
+      const config = { ...DEFAULT_CONFIG, ...(input || {}) };
+      config.controlPrincipal = XBOARD_CONTROL_PRINCIPAL;
+      config.ownerActionMinUstx = OWNER_UPDATE_FEE_USTX;
+      config.publicMinUstx = PUBLIC_TAKEOVER_START_USTX;
+      config.inscriptionUrlTemplate = String(config.inscriptionUrlTemplate || DEFAULT_CONFIG.inscriptionUrlTemplate).trim();
+      return config;
+    }
+
+    function loadState() {
+      try {
+        const raw = window.localStorage.getItem(STORAGE_KEY) || window.localStorage.getItem('xboard-programming-module-v3');
+        if (!raw) return cloneDefaults();
+        const parsed = JSON.parse(raw);
+        return {
+          ...cloneDefaults(),
+          ...parsed,
+          config: normalizeConfig(parsed.config),
+          transactions: Array.isArray(parsed.transactions) ? parsed.transactions : [],
+          acquiredBlocks: parsed.acquiredBlocks || {}
+        };
+      } catch (err) {
+        console.warn('Slot programming state reset after parse failure:', err);
+        return cloneDefaults();
+      }
+    }
+
+    function saveState() {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }
+
+    function normalizeAddr(value) { return String(value || '').trim(); }
+    function txAmount(tx) {
+      const n = Number(tx?.amountUstx || 0);
+      return Number.isFinite(n) ? Math.max(0, Math.floor(n)) : 0;
+    }
+
+    function txKey(tx) {
+      return [
+        tx.txid || '',
+        tx.blockHeight || 0,
+        tx.txIndex || 0,
+        tx.sender || '',
+        tx.recipient || '',
+        tx.amountUstx || 0,
+        tx.memo || ''
+      ].map(value => String(value)).join('\u001f');
+    }
+
+    function sortChronological(a, b) {
+      if (a.blockHeight !== b.blockHeight) return a.blockHeight - b.blockHeight;
+      if (a.txIndex !== b.txIndex) return a.txIndex - b.txIndex;
+      return String(a.txid).localeCompare(String(b.txid));
+    }
+
+    function parseMemo(memo) {
+      const clean = String(memo || '').replace(/\u0000/g, '').trim();
+      const match = clean.match(/^XB:(\d+):(WEB2|CLEAR|OG|\d+)$/i);
+      if (!match) return { ok: false, reason: 'Memo must be XB:<slot>:<inscription> or XB:<slot>:WEB2.' };
+
+      const slotId = Number(match[1]);
+      if (!Number.isInteger(slotId) || slotId < 0 || slotId >= blocks.length) return { ok: false, reason: 'Slot number is outside this board range.' };
+
+      const command = match[2].toUpperCase();
+      if (command === 'WEB2' || command === 'CLEAR' || command === 'OG') return { ok: true, slotId, action: 'WEB2', memo: clean, displayCommand: 'WEB2' };
+
+      const inscriptionId = Number(command);
+      if (!Number.isInteger(inscriptionId) || inscriptionId < 0) return { ok: false, reason: 'Inscription id must be a positive integer.' };
+
+      return { ok: true, slotId, action: 'SET', inscriptionId, memo: clean, displayCommand: `INSCRIPTION #${inscriptionId}` };
+    }
+
+    function normaliseTx(tx) {
+      const parsed = parseMemo(tx.memo);
+      const recipientOk = normalizeAddr(tx.recipient) === normalizeAddr(state.config.controlPrincipal);
+      const confirmed = tx.confirmed !== false;
+      return {
+        ...tx,
+        amountUstx: txAmount(tx),
+        blockHeight: Number(tx.blockHeight || 0),
+        txIndex: Number(tx.txIndex || 0),
+        parsed,
+        recipientOk,
+        confirmed,
+        txid: String(tx.txid || '')
+      };
+    }
+
+    function getOwnerAddress(slotId) { return normalizeAddr(stxBoardDb[slotId]?.ownerAddress || ''); }
+    function getAcquiredBlock(slotId) {
+      const n = Number(state.acquiredBlocks[String(slotId)] || 0);
+      return Number.isFinite(n) ? Math.max(0, Math.floor(n)) : 0;
+    }
+
+    function ownerCandidate(tx, slotId) {
+      const owner = getOwnerAddress(slotId);
+      const acquiredBlock = getAcquiredBlock(slotId);
+      if (!tx.parsed.ok) return { ok: false, reason: tx.parsed.reason };
+      if (!tx.confirmed) return { ok: false, reason: 'Not confirmed yet.' };
+      if (!tx.recipientOk) return { ok: false, reason: 'Sent to the wrong control address.' };
+      if (tx.parsed.slotId !== slotId) return { ok: false, reason: 'Instruction is for a different slot.' };
+      if (!owner) return { ok: false, reason: 'Current slot owner is not known yet.' };
+      if (normalizeAddr(tx.sender) !== owner) return { ok: false, reason: 'Sender is not the current slot owner.' };
+      if (tx.amountUstx !== OWNER_UPDATE_FEE_USTX) return { ok: false, reason: `Owner updates must send exactly ${stxFromUstx(OWNER_UPDATE_FEE_USTX)} STX.` };
+      if (tx.blockHeight < acquiredBlock) return { ok: false, reason: 'Instruction predates the current owner acquisition block.' };
+      return { ok: true, reason: 'Valid owner instruction at the fixed 0.1 STX fee. Latest confirmed owner instruction wins.' };
+    }
+
+    function publicBaseCandidate(tx, slotId) {
+      const block = blocks[slotId];
+      if (!tx.parsed.ok) return { ok: false, reason: tx.parsed.reason };
+      if (!tx.confirmed) return { ok: false, reason: 'Not confirmed yet.' };
+      if (!tx.recipientOk) return { ok: false, reason: 'Sent to the wrong control address.' };
+      if (tx.parsed.slotId !== slotId) return { ok: false, reason: 'Instruction is for a different slot.' };
+      if (tx.parsed.action !== 'SET') return { ok: false, reason: 'Temporary takeover must point at an inscription.' };
+      if (block?.ogState === 'ok') return { ok: false, reason: 'Public takeover only applies when the Web2 media is unlinked or broken.' };
+      if (!block || !isDeadOgState(block.ogState)) return { ok: false, reason: 'Web2 media health has not been confirmed as unlinked yet.' };
+      return { ok: true, reason: 'Temporary takeover base rules passed.' };
+    }
+
+    function expectedPublicTakeoverUstx(currentUstx) {
+      const current = Number(currentUstx || 0);
+      return current > 0 ? Math.floor(current * 2) : PUBLIC_TAKEOVER_START_USTX;
+    }
+
+    function publicTakeoverEvaluations(slotId) {
+      const results = new Map();
+      let currentUstx = 0;
+      slotInstructions(slotId).slice().sort(sortChronological).forEach(tx => {
+        const key = txKey(tx);
+        const base = publicBaseCandidate(tx, slotId);
+        if (!base.ok) {
+          results.set(key, base);
+          return;
+        }
+
+        const expectedUstx = expectedPublicTakeoverUstx(currentUstx);
+        if (tx.amountUstx !== expectedUstx) {
+          const expectedStx = stxFromUstx(expectedUstx);
+          results.set(key, {
+            ok: false,
+            reason: currentUstx > 0
+              ? `Temporary takeover must send exactly ${expectedStx} STX, double the current holder amount.`
+              : `Opening temporary takeover must send exactly ${expectedStx} STX.`
+          });
+          return;
+        }
+
+        currentUstx = tx.amountUstx;
+        results.set(key, {
+          ok: true,
+          reason: currentUstx >= PUBLIC_TAKEOVER_WARNING_USTX
+            ? 'Valid temporary takeover at the exact doubled price. The owner can still override it, and public takeover payments are not refundable.'
+            : 'Valid temporary takeover at the exact required price.'
+        });
+      });
+      return results;
+    }
+
+    function publicCandidate(tx, slotId) {
+      const base = publicBaseCandidate(tx, slotId);
+      if (!base.ok) return base;
+      return publicTakeoverEvaluations(slotId).get(txKey(tx)) || { ok: false, reason: 'Temporary takeover is not in the valid doubling sequence.' };
+    }
+
+    function sortOwner(a, b) {
+      if (b.blockHeight !== a.blockHeight) return b.blockHeight - a.blockHeight;
+      if (b.txIndex !== a.txIndex) return b.txIndex - a.txIndex;
+      return String(b.txid).localeCompare(String(a.txid));
+    }
+
+    function slotInstructions(slotId) {
+      return state.transactions.map(normaliseTx).filter(tx => tx.parsed.ok && tx.parsed.slotId === slotId);
+    }
+
+    function publicWinner(slotId) {
+      const evaluations = publicTakeoverEvaluations(slotId);
+      return slotInstructions(slotId).slice().sort(sortChronological)
+        .map(tx => ({ ...tx, validity: evaluations.get(txKey(tx)) || publicBaseCandidate(tx, slotId) }))
+        .filter(tx => tx.validity.ok)
+        .pop() || null;
+    }
+
+    function resolveSlot(blockOrId) {
+      const slotId = typeof blockOrId === 'number' ? blockOrId : blockOrId.id;
+      const block = blocks[slotId];
+      const healthyWeb2 = block?.ogState === 'ok';
+      const unhealthyWeb2 = block ? isDeadOgState(block.ogState) : false;
+      const txs = slotInstructions(slotId);
+
+      const ownerValid = txs
+        .map(tx => ({ ...tx, validity: ownerCandidate(tx, slotId) }))
+        .filter(tx => tx.validity.ok)
+        .sort(sortOwner);
+
+      const latestOwner = ownerValid[0] || null;
+
+      if (latestOwner?.parsed.action === 'SET') {
+        return {
+          mode: 'OWNER_INSCRIPTION',
+          label: 'Owner inscription',
+          badgeClass: 'owner',
+          inscriptionId: latestOwner.parsed.inscriptionId,
+          instruction: latestOwner,
+          reason: 'The current slot owner has pointed this slot at an inscription. Owner instructions always take priority over Web2 fallback and public takeovers.'
+        };
+      }
+
+      if (healthyWeb2) {
+        return {
+          mode: 'WEB2_MEDIA',
+          label: latestOwner ? 'Owner chose Web2 fallback' : 'Web2 display',
+          badgeClass: 'web2',
+          instruction: latestOwner,
+          reason: latestOwner ? 'The owner explicitly chose Web2 fallback, and the Web2 media currently loads.' : 'No owner inscription is active, so the board is showing the existing Web2 media.'
+        };
+      }
+
+      const winningPublic = publicWinner(slotId);
+      if (unhealthyWeb2 && winningPublic) {
+        return {
+          mode: 'PUBLIC_INSCRIPTION',
+          label: 'Temporary public inscription',
+          badgeClass: 'public',
+          inscriptionId: winningPublic.parsed.inscriptionId,
+          instruction: winningPublic,
+          reason: 'The Web2 media is unlinked or broken, so the current valid temporary takeover points this space at an inscription. The next public takeover must pay exactly double this amount, and the real owner can override it at any time.'
+        };
+      }
+
+      return {
+        mode: 'PLACEHOLDER',
+        label: latestOwner?.parsed.action === 'WEB2' ? 'Owner chose Web2, but media is unlinked' : 'Unlinked slot',
+        badgeClass: 'placeholder',
+        instruction: latestOwner || null,
+        reason: latestOwner?.parsed.action === 'WEB2'
+          ? 'The owner cleared the on-chain inscription, but the Web2 media is not currently healthy. Until it is relinked, this slot shows the clean placeholder.'
+          : 'There is no owner inscription, no healthy Web2 media, and no valid temporary public takeover yet.'
+      };
+    }
+
+    function overlayText(text, x, y, size, className, maxWidth) {
+      const el = document.createElementNS(SVGNS, 'text');
+      el.setAttribute('x', x.toFixed(3));
+      el.setAttribute('y', y.toFixed(3));
+      el.setAttribute('font-size', size.toFixed(2));
+      el.setAttribute('class', className);
+      el.textContent = text;
+      if (maxWidth && estimateTextWidth(text, size) > maxWidth) {
+        el.setAttribute('textLength', Math.max(1, maxWidth).toFixed(2));
+        el.setAttribute('lengthAdjust', 'spacingAndGlyphs');
+      }
+      return el;
+    }
+
+    function createOverlay(block) {
+      if (block.programOverlay) return;
+
+      const width = block.w * u;
+      const height = block.h * u;
+      const g = document.createElementNS(SVGNS, 'g');
+      g.setAttribute('class', 'xpm-slot-overlay');
+
+      const rect = document.createElementNS(SVGNS, 'rect');
+      rect.setAttribute('class', 'xpm-slot-overlay-bg');
+      rect.setAttribute('x', '1.25');
+      rect.setAttribute('y', '1.25');
+      rect.setAttribute('width', Math.max(1, width - 2.5).toFixed(3));
+      rect.setAttribute('height', Math.max(1, height - 2.5).toFixed(3));
+      g.appendChild(rect);
+
+      const main = overlayText('', width / 2, height / 2 - Math.min(6, height * 0.12), Math.min(11, Math.max(5.5, Math.min(width, height) * 0.13)), 'xpm-slot-overlay-main', Math.max(1, width - 8));
+      const sub = overlayText('', width / 2, height / 2 + Math.min(9, height * 0.16), Math.min(7, Math.max(4.2, Math.min(width, height) * 0.08)), 'xpm-slot-overlay-sub', Math.max(1, width - 8));
+
+      g.appendChild(main);
+      g.appendChild(sub);
+      block.el.appendChild(g);
+
+      block.programOverlay = g;
+      block.programOverlayMain = main;
+      block.programOverlaySub = sub;
+    }
+
+    function applyVisuals() {
+      blocks.forEach(block => {
+        createOverlay(block);
+        const resolved = resolveSlot(block);
+
+        if (resolved.mode === 'OWNER_INSCRIPTION' || resolved.mode === 'PUBLIC_INSCRIPTION') {
+          const url = inscriptionUrl(resolved.inscriptionId);
+          applyBlockInscriptionDisplay(block, { ...resolved, inscriptionUrl: url }, url);
+          block.programOverlay.style.display = 'none';
+          block.programOverlay.classList.remove('owner', 'public');
+        } else {
+          clearBlockInscriptionDisplay(block);
+          block.programOverlay.style.display = 'none';
+          block.programOverlay.classList.remove('owner', 'public');
+        }
+      });
+    }
+
+    function switchTab(tabId) {
+      document.querySelectorAll('.xpm-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tabId));
+      document.querySelectorAll('.xpm-tab-content').forEach(c => c.classList.toggle('active', c.id === tabId));
+    }
+
+    function openDrawer() {
+      if (!ui) return;
+      ui.drawer.classList.add('visible');
+      ui.backdrop.classList.add('visible');
+      if (!hasLoggedWalletEnvironment) {
+        hasLoggedWalletEnvironment = true;
+        addWalletLog('info', 'Initial wallet environment snapshot.', runtimeBridgeSnapshot());
+      }
+      render();
+      window.requestAnimationFrame(() => ui.close?.focus?.());
+    }
+
+    function closeDrawer() {
+      if (!ui) return;
+      hideFloatingTip();
+      ui.drawer.classList.remove('visible');
+      ui.backdrop.classList.remove('visible');
+    }
+
+    function currentBlock() {
+      return blocks[selectedSlotId] || blocks[0];
+    }
+
+    function stxFromUstx(ustx) {
+      const n = Number(ustx || 0);
+      return (n / STX_TO_USTX).toLocaleString(undefined, { maximumFractionDigits: 6 });
+    }
+
+    function stxValForInput(ustx) {
+      return (Number(ustx || 0) / STX_TO_USTX).toFixed(6).replace(/\.?0+$/, '');
+    }
+
+    function inscriptionUrl(id) {
+      const clean = normalizeInscriptionId(id);
+      if (clean === null) return '';
+      const template = String(state.config.inscriptionUrlTemplate || DEFAULT_CONFIG.inscriptionUrlTemplate || '').trim();
+      return (template || defaultXtrataInscriptionUrl(clean)).replace('{id}', encodeURIComponent(String(clean)));
+    }
+
+    function compactInscriptionUrl(id) { return defaultXtrataInscriptionUrl(id, true); }
+    function nextTxId() { return `0xpm-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`; }
+
+    function addTx({ sender, amountUstx, memo }) {
+      const tx = {
+        txid: nextTxId(),
+        sender: normalizeAddr(sender),
+        recipient: normalizeAddr(state.config.controlPrincipal),
+        amountUstx: Number(amountUstx || 0),
+        memo: String(memo || '').trim(),
+        blockHeight: Number(state.nextBlockHeight || 900000),
+        txIndex: Number(state.nextTxIndex || 0),
+        confirmed: true
+      };
+
+      state.transactions.push(tx);
+      state.nextTxIndex += 1;
+      if (state.nextTxIndex > 20) {
+        state.nextBlockHeight += 1;
+        state.nextTxIndex = 0;
+      }
+      saveState();
+      applyVisuals();
+      render();
+    }
+
+    function selectedSlotInputValue() {
+      const n = Number(ui?.slotInput?.value ?? selectedSlotId);
+      if (!Number.isInteger(n)) return selectedSlotId;
+      return Math.min(blocks.length - 1, Math.max(0, n));
+    }
+
+    function currentMemo(action) {
+      const slotId = selectedSlotInputValue();
+      if (action === 'WEB2') return `XB:${slotId}:WEB2`;
+      const inscriptionId = Number(ui.inscriptionInput.value || 0);
+      return `XB:${slotId}:${Math.max(0, Math.floor(inscriptionId || 0))}`;
+    }
+
+    const WALLET_TRANSFER_METHODS = [
+      'stx_transferStx',
+      'stx_transferSTX',
+      'stx_transfer',
+      'stx_sendTransfer',
+      'sendTransfer',
+      'transferStx',
+      'openSTXTransfer'
+    ];
+    const WALLET_LOG_LIMIT = 70;
+    const STACKS_CONNECT_MODULE_URL = 'https://esm.sh/@stacks/connect?bundle';
+    const XBOARD_STACKS_NETWORK = 'mainnet';
+    let lastWalletPayload = null;
+    let walletLogEntries = [];
+    let hasLoggedWalletEnvironment = false;
+    let stacksConnectModulePromise = null;
+    let stacksConnectRequestFn = null;
+
+    function trimWalletLogText(value, max = 180) {
+      const text = String(value ?? '');
+      return text.length > max ? `${text.slice(0, max - 3)}...` : text;
+    }
+
+    function walletLogValue(value, depth = 0) {
+      if (value === null || value === undefined) return value;
+      if (typeof value === 'string') return trimWalletLogText(value);
+      if (typeof value === 'number' || typeof value === 'boolean') return value;
+      if (typeof value === 'bigint') return value.toString();
+      if (Array.isArray(value)) {
+        if (depth > 1) return `[${value.length} items]`;
+        return value.slice(0, 10).map(item => walletLogValue(item, depth + 1));
+      }
+      if (typeof value === 'object') {
+        if (depth > 1) return '[object]';
+        const output = {};
+        Object.keys(value).slice(0, 16).forEach(key => {
+          try {
+            const rawValue = value[key];
+            const shouldRedact = /password|secret|private|seed/i.test(key) ||
+              (/token/i.test(key) && typeof rawValue === 'string');
+            output[key] = shouldRedact ? '[redacted]' : walletLogValue(rawValue, depth + 1);
+          } catch (error) {
+            output[key] = '[unreadable]';
+          }
+        });
+        return output;
+      }
+      return trimWalletLogText(value);
+    }
+
+    function walletLogDetailsText(details) {
+      if (!details) return '';
+      try {
+        return trimWalletLogText(JSON.stringify(walletLogValue(details)), 700);
+      } catch (error) {
+        return trimWalletLogText(String(details), 700);
+      }
+    }
+
+    function renderWalletLog() {
+      if (!ui?.walletLogBody) return;
+      if (!walletLogEntries.length) {
+        ui.walletLogBody.innerHTML = '<div class="xpm-wallet-log-empty">No wallet requests yet.</div>';
+        return;
+      }
+      ui.walletLogBody.innerHTML = walletLogEntries.map(entry => `
+        <div class="xpm-wallet-log-row">
+          <div class="xpm-wallet-log-time">${esc(entry.time)}</div>
+          <div class="xpm-wallet-log-level ${esc(entry.level)}">${esc(entry.level)}</div>
+          <div class="xpm-wallet-log-message">
+            ${esc(entry.message)}
+            ${entry.details ? `<div class="xpm-wallet-log-details">${esc(entry.details)}</div>` : ''}
+          </div>
+        </div>
+      `).join('');
+      ui.walletLogBody.scrollTop = ui.walletLogBody.scrollHeight;
+    }
+
+    function addWalletLog(level, message, details = null) {
+      const normalizedLevel = ['ok', 'warn', 'bad'].includes(level) ? level : 'info';
+      const safeDetails = details ? walletLogValue(details) : null;
+      const entry = {
+        time: new Date().toLocaleTimeString([], { hour12: false }),
+        level: normalizedLevel,
+        message: trimWalletLogText(message, 260),
+        details: walletLogDetailsText(safeDetails)
+      };
+      walletLogEntries.push(entry);
+      if (walletLogEntries.length > WALLET_LOG_LIMIT) walletLogEntries = walletLogEntries.slice(-WALLET_LOG_LIMIT);
+      try {
+        const method = normalizedLevel === 'bad' ? 'error' : normalizedLevel === 'warn' ? 'warn' : 'info';
+        console[method]('[xboard-wallet]', entry.message, safeDetails || '');
+      } catch (error) {}
+      renderWalletLog();
+    }
+
+    function walletErrorDebug(error) {
+      const debug = { message: walletErrorText(error) };
+      if (error && typeof error === 'object') {
+        if ('name' in error) debug.name = String(error.name);
+        if ('code' in error) debug.code = String(error.code);
+      }
+      return debug;
+    }
+
+    function providerLabel(provider) {
+      try {
+        if (provider === window.LeatherProvider) return 'window.LeatherProvider';
+        if (provider === window.StacksProvider) return 'window.StacksProvider';
+        if (provider === window.HiroWalletProvider) return 'window.HiroWalletProvider';
+        if (provider === window.stacksProvider) return 'window.stacksProvider';
+        if (provider === window.stacks) return 'window.stacks';
+        if (provider === window.XverseProviders?.StacksProvider) return 'window.XverseProviders.StacksProvider';
+        if (provider === window.XverseProviders?.Stacks) return 'window.XverseProviders.Stacks';
+        if (provider === window.XverseProvider) return 'window.XverseProvider';
+        if (provider === window.AsignaProvider) return 'window.AsignaProvider';
+        const flags = ['isLeather', 'isXverse', 'isHiroWallet', 'isStacksWallet']
+          .filter(flag => Boolean(provider?.[flag]));
+        const name = provider?.name || provider?.constructor?.name || 'wallet provider';
+        return flags.length ? `${name} (${flags.join(', ')})` : name;
+      } catch (error) {
+        return 'wallet provider';
+      }
+    }
+
+    function runtimeBridgeSnapshot() {
+      let params = null;
+      try {
+        params = new URLSearchParams(window.location.search || '');
+      } catch (error) {}
+      return {
+        path: window.location.pathname || '/',
+        hasWalletBridgeToken: Boolean(params?.get('walletBridgeToken')),
+        hasRuntimeShimFlag: Boolean(window.__xtrataRuntimeWalletShimInstalled),
+        protocol: window.location.protocol || '',
+        isLocalFile: window.location.protocol === 'file:',
+        hasStacksProviderRequest: Boolean(window.StacksProvider && typeof window.StacksProvider.request === 'function'),
+        hasStacksAliasRequest: Boolean(window.stacks && typeof window.stacks.request === 'function'),
+        hasStacksConnectRequest: Boolean(stacksConnectRequestFn),
+        hasOpener: Boolean(window.opener && window.opener !== window),
+        hasParentFrame: Boolean(window.parent && window.parent !== window),
+        origin: window.location.origin || '(opaque)',
+        stacksConnectModuleUrl: STACKS_CONNECT_MODULE_URL,
+        localDevServerCommand: isLocalFileOrigin() ? localDevServerCommand() : '',
+        localDevServerUrl: isLocalFileOrigin() ? localDevServerUrl() : ''
+      };
+    }
+
+    function walletPayloadDebug(payload, extra = {}) {
+      return {
+        ...extra,
+        recipient: payload?.recipient || '',
+        amountUstx: payload?.amount || '',
+        amountStx: payload?.amount ? stxFromUstx(payload.amount) : '',
+        memo: payload?.memo || '',
+        network: payload?.network || '',
+        address: payload?.address || ''
+      };
+    }
+
+
+
+    function isLocalFileOrigin() {
+      return window.location.protocol === 'file:';
+    }
+
+    function decodedLocalPath() {
+      try {
+        return decodeURIComponent(window.location.pathname || '');
+      } catch (error) {
+        return window.location.pathname || '';
+      }
+    }
+
+    function localDevDirectory() {
+      const path = decodedLocalPath();
+      if (!path || !path.includes('/')) return '.';
+      return path.slice(0, path.lastIndexOf('/')) || '/';
+    }
+
+    function localDevFileName() {
+      const path = decodedLocalPath();
+      const name = path.split('/').filter(Boolean).pop();
+      return name || 'x-board.html';
+    }
+
+    function localDevServerCommand() {
+      return `cd "${localDevDirectory()}" && python3 -m http.server 8787`;
+    }
+
+    function localDevServerUrl() {
+      return `http://localhost:8787/${encodeURIComponent(localDevFileName())}`;
+    }
+
+    function originHelpHtml() {
+      if (!isLocalFileOrigin()) return '';
+      const command = localDevServerCommand();
+      const url = localDevServerUrl();
+      return `
+        <div class="xpm-origin-warning">
+          <strong>Local file mode blocks wallet detection</strong>
+          This page is open as <code>file://</code>. Chrome wallet extensions often do not inject their Stacks providers into local files, so Stacks Connect can show an install-wallet panel even when Leather or Xverse is installed. For wallet testing, serve this folder locally, then open the localhost URL.
+          <div style="margin-top:7px;"><code>${esc(command)}</code></div>
+          <div style="margin-top:5px;"><code>${esc(url)}</code></div>
+          <div class="xpm-origin-actions">
+            <button class="xpm-btn secondary" type="button" data-xpm-copy="local-command">Copy server command</button>
+            <button class="xpm-btn secondary" type="button" data-xpm-copy="local-url">Copy localhost URL</button>
+          </div>
+        </div>
+      `;
+    }
+
+    async function copyWalletLog() {
+      const text = walletLogEntries.length
+        ? walletLogEntries.map(entry => `${entry.time} ${entry.level.toUpperCase()} ${entry.message}${entry.details ? ` ${entry.details}` : ''}`).join('\n')
+        : 'No wallet requests yet.';
+      try {
+        await navigator.clipboard.writeText(text);
+        addWalletLog('ok', 'Copied wallet diagnostics log.');
+      } catch (error) {
+        addWalletLog('bad', 'Could not copy wallet diagnostics log.', walletErrorDebug(error));
+      }
+    }
+
+    function hasXtrataRuntimeWalletBridge() {
+      if (window.__xtrataRuntimeWalletShimInstalled) return true;
+      try {
+        return Boolean(new URLSearchParams(window.location.search || '').get('walletBridgeToken'));
+      } catch (error) {
+        return false;
+      }
+    }
+
+    function xtrataRuntimeWalletProvider() {
+      const candidates = [window.StacksProvider, window.stacks];
+      return candidates.find(provider => provider && typeof provider.request === 'function') || null;
+    }
+
+    function waitForXtrataRuntimeWalletProvider(timeoutMs = 1600) {
+      if (!hasXtrataRuntimeWalletBridge()) return Promise.resolve(null);
+      const immediate = xtrataRuntimeWalletProvider();
+      if (immediate) return Promise.resolve(immediate);
+      const started = Date.now();
+      return new Promise(resolve => {
+        const tick = () => {
+          const provider = xtrataRuntimeWalletProvider();
+          if (provider) {
+            resolve(provider);
+            return;
+          }
+          if (Date.now() - started >= timeoutMs) {
+            resolve(null);
+            return;
+          }
+          window.setTimeout(tick, 80);
+        };
+        tick();
+      });
+    }
+
+    function addProviderCandidate(list, seen, value) {
+      if (!value || typeof value !== 'object') return;
+      if (typeof value.request === 'function' && !seen.has(value)) {
+        seen.add(value);
+        list.push(value);
+      }
+      ['provider', 'walletProvider', 'stacksProvider', 'StacksProvider', 'stacks', 'wallet'].forEach(key => {
+        const nested = value[key];
+        if (nested && typeof nested === 'object') addProviderCandidate(list, seen, nested);
+      });
+      if (typeof value.getProvider === 'function') {
+        try { addProviderCandidate(list, seen, value.getProvider()); } catch (error) {}
+      }
+    }
+
+    function walletProviderCandidates() {
+      const list = [];
+      const seen = new Set();
+      [
+        window.LeatherProvider,
+        window.StacksProvider,
+        window.HiroWalletProvider,
+        window.stacksProvider,
+        window.stacks,
+        window.XverseProviders?.StacksProvider,
+        window.XverseProviders?.Stacks,
+        window.XverseProvider,
+        window.AsignaProvider
+      ].forEach(provider => addProviderCandidate(list, seen, provider));
+      return list;
+    }
+
+    function walletErrorText(error) {
+      const message = error?.message ? String(error.message) : String(error || '');
+      if (!message || message === '[object Object]') return 'Wallet request failed.';
+      return message.length > 170 ? `${message.slice(0, 167)}...` : message;
+    }
+
+    function walletMethodUnsupported(error) {
+      const lower = String(error?.message || error || '').toLowerCase();
+      return (
+        lower.includes('method not found') ||
+        lower.includes('unsupported') ||
+        lower.includes('not implemented') ||
+        lower.includes('request function is not implemented') ||
+        lower.includes('unavailable') ||
+        lower.includes('unknown method')
+      );
+    }
+
+    function walletUserCancelled(error) {
+      const code = error && typeof error === 'object' && 'code' in error ? Number(error.code) : NaN;
+      if (code === 4001 || code === -32000 || code === -31001) return true;
+      const lower = String(error?.message || error || '').toLowerCase();
+      return lower.includes('cancel') || lower.includes('reject') || lower.includes('denied') || lower.includes('closed');
+    }
+
+    function walletRequestArgError(error) {
+      const lower = String(error?.message || error || '').toLowerCase();
+      return lower.includes('argument') || lower.includes('parameter') || lower.includes('object');
+    }
+
+    function walletNetworkMismatch(error) {
+      const lower = String(error?.message || error || '').toLowerCase();
+      return lower.includes('mismatch') && lower.includes('network');
+    }
+
+    function normalizeWalletAddressEntry(entry) {
+      if (!entry) return null;
+      if (typeof entry === 'string') return { address: entry, symbol: '', raw: entry };
+      if (typeof entry !== 'object') return null;
+      const address = entry.address || entry.stxAddress || entry.addr || entry.value || '';
+      if (!address) return null;
+      return {
+        address: String(address),
+        symbol: String(entry.symbol || entry.type || entry.blockchain || ''),
+        raw: entry
+      };
+    }
+
+    function addressListFromWalletResult(result) {
+      const root = result?.result || result || {};
+      const direct = root.addresses || root.accounts || root.stx || [];
+      const nested = root.addresses?.stx || root.stx?.addresses || [];
+      const list = [];
+      [direct, nested].forEach(value => {
+        if (Array.isArray(value)) list.push(...value);
+      });
+      if (root.address && !list.length) list.push(root);
+      return list.map(normalizeWalletAddressEntry).filter(Boolean);
+    }
+
+    function pickMainnetStxAddress(result) {
+      const entries = addressListFromWalletResult(result);
+      return entries.find(entry => /^SP/i.test(entry.address) && (!entry.symbol || /stx/i.test(entry.symbol))) ||
+        entries.find(entry => /^SP/i.test(entry.address)) ||
+        entries.find(entry => /stx/i.test(entry.symbol)) ||
+        null;
+    }
+
+    function walletRequestObject(method, params) {
+      return { method, params };
+    }
+
+    async function requestWalletProvider(provider, method, params) {
+      try {
+        return await provider.request(walletRequestObject(method, params));
+      } catch (objectError) {
+        if (walletUserCancelled(objectError)) throw objectError;
+        if (!walletRequestArgError(objectError) && !walletMethodUnsupported(objectError)) throw objectError;
+        addWalletLog('warn', 'Wallet rejected object request format; retrying positional request format.', {
+          provider: providerLabel(provider),
+          method,
+          error: walletErrorDebug(objectError)
+        });
+        return provider.request(method, params);
+      }
+    }
+
+    async function requestInjectedMainnetAddress(provider) {
+      const attempts = [
+        ['stx_getAddresses', { network: XBOARD_STACKS_NETWORK }],
+        ['getAddresses', { network: XBOARD_STACKS_NETWORK }],
+        ['stx_getAccounts', { network: XBOARD_STACKS_NETWORK }]
+      ];
+      let lastError = null;
+      for (const [method, params] of attempts) {
+        try {
+          const result = await requestWalletProvider(provider, method, params);
+          const selected = pickMainnetStxAddress(result);
+          if (selected?.address) {
+            addWalletLog('ok', 'Wallet returned a mainnet STX address for preflight.', {
+              provider: providerLabel(provider),
+              method,
+              address: selected.address
+            });
+            return selected.address;
+          }
+          addWalletLog('warn', 'Wallet address preflight returned no SP mainnet STX address.', {
+            provider: providerLabel(provider),
+            method,
+            result: walletLogValue(result)
+          });
+        } catch (error) {
+          lastError = error;
+          if (walletUserCancelled(error)) throw error;
+          if (walletNetworkMismatch(error)) throw error;
+          if (!walletMethodUnsupported(error) && !walletRequestArgError(error)) {
+            addWalletLog('warn', 'Wallet address preflight failed.', {
+              provider: providerLabel(provider),
+              method,
+              error: walletErrorDebug(error)
+            });
+          }
+        }
+      }
+      if (lastError) {
+        addWalletLog('warn', 'Mainnet address preflight could not complete; continuing to transfer request.', {
+          provider: providerLabel(provider),
+          error: walletErrorDebug(lastError)
+        });
+      }
+      return '';
+    }
+
+    function createWalletPayload(amountUstx, memo, expectedSender = '') {
+      const amount = Math.max(0, Math.floor(Number(amountUstx || 0)));
+      if (!amount) throw new Error('Transfer amount must be greater than zero.');
+      const recipient = normalizeAddr(state.config.controlPrincipal);
+      if (!recipient) throw new Error('Control principal is missing.');
+      const payload = {
+        recipient,
+        amount: String(amount),
+        memo: String(memo || '').trim(),
+        network: XBOARD_STACKS_NETWORK
+      };
+      const sender = normalizeAddr(expectedSender);
+      if (/^SP/i.test(sender)) payload.address = sender;
+      return payload;
+    }
+
+    function isLikelyModuleLoadError(error) {
+      const lower = String(error?.message || error || '').toLowerCase();
+      return lower.includes('failed to fetch') || lower.includes('loading chunk') || lower.includes('network') || lower.includes('cors') || lower.includes('module');
+    }
+
+
+
+    function walletOriginUnsupported(error) {
+      const lower = String(error?.message || error || '').toLowerCase();
+      return lower.includes('local file') || lower.includes('file://') || lower.includes('localhost') || lower.includes('hosted origin');
+    }
+
+    function getStacksConnectRequestFromModule(mod) {
+      const request = mod?.request || mod?.default?.request || mod?.StacksConnect?.request;
+      return typeof request === 'function' ? request : null;
+    }
+
+    function preloadStacksConnect({ log = false } = {}) {
+      if (stacksConnectRequestFn) return Promise.resolve(stacksConnectRequestFn);
+      if (!stacksConnectModulePromise) {
+        stacksConnectModulePromise = import(STACKS_CONNECT_MODULE_URL)
+          .then(mod => {
+            const request = getStacksConnectRequestFromModule(mod);
+            if (!request) throw new Error('Stacks Connect loaded but did not expose a request() function.');
+            stacksConnectRequestFn = request;
+            if (log) addWalletLog('ok', 'Official Stacks Connect helper loaded.', { moduleUrl: STACKS_CONNECT_MODULE_URL });
+            return request;
+          })
+          .catch(error => {
+            stacksConnectModulePromise = null;
+            stacksConnectRequestFn = null;
+            if (log) addWalletLog('warn', 'Could not load official Stacks Connect helper.', {
+              moduleUrl: STACKS_CONNECT_MODULE_URL,
+              error: walletErrorDebug(error),
+              likelyModuleLoadError: isLikelyModuleLoadError(error)
+            });
+            throw error;
+          });
+      }
+      return stacksConnectModulePromise;
+    }
+
+    async function requestStacksConnectMainnetAddress(request, payload) {
+      const connectParams = { network: XBOARD_STACKS_NETWORK };
+      if (payload.address) connectParams.address = payload.address;
+      const connectOptions = {
+        forceWalletSelect: true,
+        persistWalletSelect: true,
+        enableOverrides: true,
+        enableLocalStorage: true
+      };
+
+      const attempts = [
+        () => request(connectOptions, 'getAddresses', connectParams),
+        () => request('getAddresses', { ...connectParams, forceWalletSelect: true, enableOverrides: true, enableLocalStorage: true }),
+        () => request(connectOptions, 'stx_getAddresses', connectParams),
+        () => request('stx_getAddresses', { ...connectParams, forceWalletSelect: true, enableOverrides: true, enableLocalStorage: true })
+      ];
+
+      let lastError = null;
+      for (const attempt of attempts) {
+        try {
+          const result = await attempt();
+          const selected = pickMainnetStxAddress(result);
+          if (selected?.address) {
+            addWalletLog('ok', 'Stacks Connect selected a mainnet STX address.', { address: selected.address });
+            return selected.address;
+          }
+          addWalletLog('warn', 'Stacks Connect address preflight returned no SP mainnet STX address.', walletLogValue(result));
+        } catch (error) {
+          lastError = error;
+          if (walletUserCancelled(error)) throw error;
+          if (walletNetworkMismatch(error)) throw error;
+          if (!walletRequestArgError(error) && !walletMethodUnsupported(error)) {
+            addWalletLog('warn', 'Stacks Connect address preflight attempt failed.', walletErrorDebug(error));
+          }
+        }
+      }
+      if (lastError) throw lastError;
+      return '';
+    }
+
+    function stacksConnectTransferParams(payload, selectedAddress = '') {
+      const params = {
+        recipient: payload.recipient,
+        amount: payload.amount,
+        memo: payload.memo,
+        network: XBOARD_STACKS_NETWORK
+      };
+      const address = normalizeAddr(payload.address || selectedAddress || '');
+      if (/^SP/i.test(address)) params.address = address;
+      return params;
+    }
+
+    async function requestStacksConnectTransfer(request, params) {
+      try {
+        return await request('stx_transferStx', params);
+      } catch (simpleError) {
+        if (walletUserCancelled(simpleError)) throw simpleError;
+        if (!walletRequestArgError(simpleError) && !walletMethodUnsupported(simpleError)) throw simpleError;
+        addWalletLog('warn', 'Stacks Connect simple transfer signature was not accepted; retrying options-first signature.', walletErrorDebug(simpleError));
+        return request(
+          {
+            forceWalletSelect: false,
+            persistWalletSelect: true,
+            enableOverrides: true,
+            enableLocalStorage: true
+          },
+          'stx_transferStx',
+          params
+        );
+      }
+    }
+
+    async function openViaStacksConnect(payload) {
+      addWalletLog('info', 'Trying official Stacks Connect wallet selector on mainnet.', {
+        moduleUrl: STACKS_CONNECT_MODULE_URL,
+        bridge: runtimeBridgeSnapshot()
+      });
+
+      if (isLocalFileOrigin()) {
+        addWalletLog('warn', 'This is running from file://. Wallets may work if file URL access is enabled, but localhost is still more reliable.', runtimeBridgeSnapshot());
+      }
+
+      const request = await preloadStacksConnect({ log: true });
+      const selectedAddress = await requestStacksConnectMainnetAddress(request, payload).catch(error => {
+        if (walletUserCancelled(error) || walletNetworkMismatch(error)) throw error;
+        addWalletLog('warn', 'Stacks Connect mainnet address preflight did not complete; continuing with explicit mainnet transfer params.', walletErrorDebug(error));
+        return '';
+      });
+      const params = stacksConnectTransferParams(payload, selectedAddress);
+
+      addWalletLog('info', 'Submitting Stacks Connect transfer with explicit mainnet params.', params);
+      try {
+        return await requestStacksConnectTransfer(request, params);
+      } catch (error) {
+        if (walletNetworkMismatch(error)) {
+          addWalletLog('bad', 'Wallet reported a network mismatch even though XBoard sent mainnet params. This usually means the wallet session cached the wrong network; disconnect/reconnect the wallet to mainnet.', {
+            error: walletErrorDebug(error),
+            params
+          });
+        }
+        throw error;
+      }
+    }
+
+    async function openViaInjectedWallet(payload) {
+      const providers = walletProviderCandidates();
+      addWalletLog(providers.length ? 'info' : 'warn', 'Direct browser wallet provider scan complete.', {
+        count: providers.length,
+        providers: providers.map(providerLabel)
+      });
+      let lastError = null;
+      for (const provider of providers) {
+        const label = providerLabel(provider);
+        let selectedAddress = '';
+        try {
+          selectedAddress = await requestInjectedMainnetAddress(provider);
+        } catch (error) {
+          lastError = error;
+          if (walletUserCancelled(error) || walletNetworkMismatch(error)) throw error;
+        }
+        const transferPayload = { ...payload, network: XBOARD_STACKS_NETWORK };
+        if (!transferPayload.address && selectedAddress) transferPayload.address = selectedAddress;
+        for (const method of WALLET_TRANSFER_METHODS) {
+          try {
+            addWalletLog('info', 'Trying direct wallet provider method with explicit mainnet payload.', { provider: label, method, payload: transferPayload });
+            return await requestWalletProvider(provider, method, transferPayload);
+          } catch (error) {
+            lastError = error;
+            if (walletUserCancelled(error) || walletNetworkMismatch(error)) throw error;
+            if (walletMethodUnsupported(error) || walletRequestArgError(error)) {
+              addWalletLog('warn', 'Wallet provider method was not accepted.', {
+                provider: label,
+                method,
+                error: walletErrorDebug(error)
+              });
+              continue;
+            }
+            addWalletLog('bad', 'Wallet provider method failed.', {
+              provider: label,
+              method,
+              error: walletErrorDebug(error)
+            });
+          }
+        }
+      }
+      if (lastError) throw lastError;
+      throw new Error('No browser wallet provider was found.');
+    }
+
+    async function openViaXtrataRuntimeBridge(payload) {
+      addWalletLog('info', 'Checking Xtrata runtime wallet bridge.', runtimeBridgeSnapshot());
+      const provider = await waitForXtrataRuntimeWalletProvider();
+      if (!provider) {
+        addWalletLog('warn', 'Xtrata runtime wallet bridge provider did not appear before timeout.', runtimeBridgeSnapshot());
+        throw new Error('Xtrata runtime wallet bridge is not available.');
+      }
+      addWalletLog('info', 'Sending request to Xtrata runtime wallet bridge.', { provider: providerLabel(provider), method: 'stx_transferStx' });
+      return requestWalletProvider(provider, 'stx_transferStx', payload);
+    }
+
+    async function openWalletTransfer(payload) {
+      try {
+        const result = await openViaXtrataRuntimeBridge(payload);
+        addWalletLog('ok', 'Xtrata runtime wallet bridge accepted the request.');
+        return result;
+      } catch (error) {
+        if (walletUserCancelled(error)) throw error;
+        addWalletLog('warn', 'Xtrata runtime wallet bridge path did not complete.', walletErrorDebug(error));
+        if (hasXtrataRuntimeWalletBridge()) {
+          const lower = String(error?.message || error || '').toLowerCase();
+          if (!lower.includes('bridge') && !walletMethodUnsupported(error) && !walletRequestArgError(error)) {
+            throw error;
+          }
+        }
+      }
+
+      try {
+        const result = await openViaStacksConnect(payload);
+        addWalletLog('ok', 'Official Stacks Connect wallet selector accepted the request.');
+        return result;
+      } catch (error) {
+        if (walletUserCancelled(error)) throw error;
+        addWalletLog('warn', 'Official Stacks Connect path did not complete.', walletErrorDebug(error));
+        if (!isLikelyModuleLoadError(error) && !walletOriginUnsupported(error) && !walletMethodUnsupported(error) && !walletRequestArgError(error)) {
+          // If Stacks Connect loaded and produced a real wallet error, do not hide it behind the raw-provider fallback.
+          throw error;
+        }
+      }
+
+      try {
+        const result = await openViaInjectedWallet(payload);
+        addWalletLog('ok', 'Direct browser wallet provider accepted the request.');
+        return result;
+      } catch (error) {
+        if (walletUserCancelled(error)) throw error;
+        addWalletLog('warn', 'Direct browser wallet provider path did not complete.', walletErrorDebug(error));
+        if (
+          !walletMethodUnsupported(error) &&
+          !walletRequestArgError(error) &&
+          !String(error?.message || '').toLowerCase().includes('no browser wallet')
+        ) {
+          throw error;
+        }
+      }
+
+      const fileHint = window.location.protocol === 'file:'
+        ? ' You are currently opening this as a local file; browser wallets often do not inject providers into file:// pages. Try serving the file from http://localhost or testing it from a hosted Xtrata page.'
+        : '';
+      throw new Error(`No Stacks wallet path was available to XBoard.${fileHint} If this is open as file://, run a local server and open ${localDevServerUrl()}. See Wallet diagnostics below, or use the manual fallback values.`);
+    }
+
+    function txIdFromWalletResult(result) {
+      if (!result) return '';
+      if (typeof result === 'string') return result;
+      if (typeof result.txid === 'string') return result.txid;
+      if (typeof result.txId === 'string') return result.txId;
+      if (typeof result.transactionId === 'string') return result.transactionId;
+      if (result.result) return txIdFromWalletResult(result.result);
+      return '';
+    }
+
+    function walletManualHtml(payload) {
+      return `
+        <div class="xpm-wallet-manual">
+          <strong>Manual fallback</strong><br>
+          If the wallet does not open, create a normal STX transfer manually with these exact values.
+          <div class="xpm-preview-row"><div class="xpm-preview-key">Recipient</div><div class="xpm-preview-val mono">${esc(payload.recipient)}</div></div>
+          <div class="xpm-preview-row"><div class="xpm-preview-key">Amount</div><div class="xpm-preview-val">${esc(stxFromUstx(payload.amount))} STX (${esc(payload.amount)} uSTX)</div></div>
+          <div class="xpm-preview-row"><div class="xpm-preview-key">Memo</div><div class="xpm-preview-val mono">${esc(payload.memo)}</div></div>
+          <div class="xpm-copy-actions">
+            <button class="xpm-btn secondary" type="button" data-xpm-copy="recipient">Copy recipient</button>
+            <button class="xpm-btn secondary" type="button" data-xpm-copy="amount">Copy amount</button>
+            <button class="xpm-btn secondary" type="button" data-xpm-copy="memo">Copy memo</button>
+          </div>
+        </div>
+      `;
+    }
+
+    function publicTakeoverRiskWarningHtml(amountUstx) {
+      const amount = Number(amountUstx || 0);
+      if (amount < PUBLIC_TAKEOVER_WARNING_USTX) return '';
+      return `
+        <div class="xpm-wallet-warning">
+          This temporary public takeover costs ${esc(stxFromUstx(amount))} STX. The slot owner can replace it later with a valid 0.1 STX owner update, and public takeover payments are not refundable.
+        </div>
+      `;
+    }
+
+    function walletRuleWarningHtml(kind, amountUstx) {
+      const ownerMode = String(kind || '').toLowerCase().includes('owner');
+      return `
+        <div class="xpm-wallet-warning">
+          ${ownerMode
+            ? 'Owner rule: the wallet that signs this transfer must be the current slot owner and must send exactly 0.1 STX. Xtrata will ask Leather/Xverse to open the transfer; the wallet may ask you to unlock first.'
+            : 'Public rule: this only affects display when the Web2 media for the slot is unlinked or broken. The amount must be the exact required price: 0.000001 STX first, then double the current holder amount. Xtrata will ask Leather/Xverse to open or unlock if available.'}
+        </div>
+      ` + (ownerMode ? '' : publicTakeoverRiskWarningHtml(amountUstx));
+    }
+
+    function renderWalletRequestPreview(kind, memo, sender, amountUstx, extraHtml = '') {
+      let payload = null;
+      try {
+        payload = createWalletPayload(amountUstx, memo, expectedSender);
+        lastWalletPayload = payload;
+      } catch (error) {
+        lastWalletPayload = null;
+      }
+      ui.preview.innerHTML =
+        previewHtml(kind, memo, sender || 'Selected in wallet', amountUstx) +
+        walletRuleWarningHtml(kind, amountUstx) +
+        (payload ? walletManualHtml(payload) : '') +
+        extraHtml;
+    }
+
+    function logWalletPreview(kind, memo, sender, amountUstx) {
+      try {
+        const payload = createWalletPayload(amountUstx, memo, expectedSender);
+        addWalletLog('info', 'Previewed wallet transfer payload.', walletPayloadDebug(payload, {
+          kind,
+          expectedSender: sender || 'Selected in wallet',
+          slotId: selectedSlotInputValue(),
+          bridge: runtimeBridgeSnapshot()
+        }));
+      } catch (error) {
+        addWalletLog('bad', 'Preview could not build wallet payload.', {
+          kind,
+          memo,
+          amountUstx,
+          error: walletErrorDebug(error)
+        });
+      }
+    }
+
+    async function requestWalletInstruction(kind, action, amountUstx, expectedSender) {
+      const memo = currentMemo(action);
+      const parsed = parseMemo(memo);
+      if (!parsed.ok) {
+        addWalletLog('bad', 'Wallet request stopped because memo validation failed.', {
+          kind,
+          action,
+          memo,
+          reason: parsed.reason
+        });
+        renderPreview(kind, memo, expectedSender || 'Selected in wallet', amountUstx);
+        return;
+      }
+
+      let payload;
+      try {
+        payload = createWalletPayload(amountUstx, memo, expectedSender);
+      } catch (error) {
+        addWalletLog('bad', 'Wallet request stopped before opening because payload creation failed.', {
+          kind,
+          action,
+          error: walletErrorDebug(error)
+        });
+        renderWalletRequestPreview(
+          kind,
+          memo,
+          expectedSender || 'Selected in wallet',
+          amountUstx,
+          `<div class="xpm-wallet-result bad">${esc(walletErrorText(error))}</div>`
+        );
+        return;
+      }
+
+      lastWalletPayload = payload;
+      addWalletLog('info', 'Prepared wallet transfer payload.', walletPayloadDebug(payload, {
+        kind,
+        action,
+        expectedSender: expectedSender || 'Selected in wallet',
+        slotId: selectedSlotInputValue(),
+        bridge: runtimeBridgeSnapshot()
+      }));
+      renderWalletRequestPreview(
+        kind,
+        memo,
+        expectedSender || 'Selected in wallet',
+        amountUstx,
+        '<div class="xpm-wallet-result">Opening wallet through Xtrata. Your wallet may ask you to unlock before showing the transfer. Review the recipient, amount, and memo before sending.</div>'
+      );
+
+      try {
+        addWalletLog('info', 'Opening wallet transfer request.');
+        const result = await openWalletTransfer(payload);
+        const txid = txIdFromWalletResult(result);
+        addWalletLog('ok', 'Wallet request submitted.', {
+          txid: txid || '(wallet did not return txid)'
+        });
+        renderWalletRequestPreview(
+          kind,
+          memo,
+          expectedSender || 'Selected in wallet',
+          amountUstx,
+          `<div class="xpm-wallet-result ok">Wallet request submitted${txid ? `: <span class="mono">${esc(txid)}</span>` : '.'} The board display changes after the resolver sees a confirmed transaction that follows the rules.</div>`
+        );
+      } catch (error) {
+        addWalletLog(walletUserCancelled(error) ? 'warn' : 'bad', walletUserCancelled(error)
+          ? 'Wallet request was cancelled or rejected by the user.'
+          : 'Wallet request failed before submission.',
+          walletErrorDebug(error)
+        );
+        renderWalletRequestPreview(
+          kind,
+          memo,
+          expectedSender || 'Selected in wallet',
+          amountUstx,
+          `<div class="xpm-wallet-result bad">${esc(walletNetworkMismatch(error) ? 'Network mismatch: XBoard is requesting Stacks mainnet. Switch the active wallet account/network to mainnet, or disconnect/reconnect the wallet to this app, then retry.' : walletErrorText(error))} Use the manual fallback values if your wallet supports STX transfers with memos.</div>`
+        );
+      }
+    }
+
+    async function copyTextToClipboard(value, label = 'value') {
+      try {
+        await navigator.clipboard.writeText(String(value || ''));
+        if (ui?.preview) ui.preview.insertAdjacentHTML('beforeend', `<div class="xpm-wallet-result ok">Copied ${esc(label)}.</div>`);
+        addWalletLog('ok', `Copied ${label}.`);
+      } catch (error) {
+        if (ui?.preview) ui.preview.insertAdjacentHTML('beforeend', `<div class="xpm-wallet-result bad">Copy failed. Select the value manually.</div>`);
+        addWalletLog('bad', `Could not copy ${label}.`, walletErrorDebug(error));
+      }
+    }
+
+    async function copyLastWalletField(field) {
+      if (field === 'local-command') return copyTextToClipboard(localDevServerCommand(), 'server command');
+      if (field === 'local-url') return copyTextToClipboard(localDevServerUrl(), 'localhost URL');
+      if (!lastWalletPayload) return;
+      const value = field === 'recipient'
+        ? lastWalletPayload.recipient
+        : field === 'amount'
+          ? lastWalletPayload.amount
+          : lastWalletPayload.memo;
+      return copyTextToClipboard(value, field);
+    }
+
+    function previewHtml(kind, memo, sender, amountUstx) {
+      const parsed = parseMemo(memo);
+      const valid = parsed.ok;
+      const inscriptionLine = parsed.inscriptionId !== undefined
+        ? `<div class="xpm-preview-row"><div class="xpm-preview-key">Display</div><div class="xpm-preview-val">${esc(inscriptionUrl(parsed.inscriptionId))}</div></div><div class="xpm-preview-row"><div class="xpm-preview-key">Compact</div><div class="xpm-preview-val">${esc(compactInscriptionUrl(parsed.inscriptionId))}</div></div>`
+        : '';
+
+      return `
+        <div class="xpm-preview-title">Generated transaction instruction</div>
+        <div class="xpm-preview-row"><div class="xpm-preview-key">Mode</div><div class="xpm-preview-val">${esc(kind)}</div></div>
+        <div class="xpm-preview-row"><div class="xpm-preview-key">Recipient</div><div class="xpm-preview-val mono">${esc(state.config.controlPrincipal)}</div></div>
+        <div class="xpm-preview-row"><div class="xpm-preview-key">Sender</div><div class="xpm-preview-val mono">${esc(sender || '(not set)')}</div></div>
+        <div class="xpm-preview-row"><div class="xpm-preview-key">Amount</div><div class="xpm-preview-val">${esc(stxFromUstx(amountUstx))} STX (${esc(amountUstx)} uSTX)</div></div>
+        <div class="xpm-preview-row"><div class="xpm-preview-key">Memo</div><div class="xpm-preview-val mono">${esc(memo)}</div></div>
+        ${inscriptionLine}
+        <div class="xpm-preview-row"><div class="xpm-preview-key">Parser</div><div class="xpm-preview-val ${valid ? 'xpm-valid' : 'xpm-invalid'}">${valid ? 'Valid format' : esc(parsed.reason)}</div></div>
+      `;
+    }
+
+    function renderPreview(kind, memo, sender, amountUstx) {
+      ui.preview.innerHTML = previewHtml(kind, memo, sender, amountUstx);
+    }
+
+    function currentPublicSuggestedAmount(slotId) {
+      const current = publicWinner(slotId)?.amountUstx || 0;
+      return expectedPublicTakeoverUstx(current);
+    }
+
+    function renderTransactionTable(slotId) {
+      const rows = state.transactions.slice().reverse().map(tx => {
+        const n = normaliseTx(tx);
+        const parsed = n.parsed;
+        const forCurrent = parsed.ok && parsed.slotId === slotId;
+        const owner = parsed.ok ? ownerCandidate(n, parsed.slotId) : { ok: false, reason: parsed.reason };
+        const pub = parsed.ok ? publicCandidate(n, parsed.slotId) : { ok: false, reason: parsed.reason };
+        const badge = owner.ok
+          ? '<span class="xpm-badge owner">owner</span>'
+          : pub.ok
+            ? '<span class="xpm-badge public">temporary</span>'
+            : '<span class="xpm-badge placeholder">ignored</span>';
+        const reason = owner.ok ? owner.reason : pub.ok ? pub.reason : (parsed.ok ? `${owner.reason} / ${pub.reason}` : parsed.reason);
+
+        return `
+          <tr class="${forCurrent ? '' : 'xpm-muted'}">
+            <td>${esc(parsed.ok ? `#${parsed.slotId}` : '?')}</td>
+            <td>${esc(n.memo)}</td>
+            <td>${esc(stxFromUstx(n.amountUstx))}</td>
+            <td>${badge}</td>
+            <td class="${owner.ok || pub.ok ? 'xpm-valid' : 'xpm-invalid'}">${esc(reason)}</td>
+          </tr>
+        `;
+      }).join('');
+
+      return `
+        <table class="xpm-table">
+          <thead><tr><th>Slot</th><th>Memo</th><th>STX</th><th>Use</th><th>Why</th></tr></thead>
+          <tbody>${rows || '<tr><td colspan="5" class="xpm-muted">No local simulated instructions yet.</td></tr>'}</tbody>
+        </table>
+      `;
+    }
+
+    function exportState() { ui.jsonBox.value = JSON.stringify(state, null, 2); }
+    function importState() {
+      try {
+        const parsed = JSON.parse(ui.jsonBox.value || '{}');
+        state = {
+          ...cloneDefaults(),
+          ...parsed,
+          config: normalizeConfig(parsed.config),
+          transactions: Array.isArray(parsed.transactions) ? parsed.transactions : [],
+          acquiredBlocks: parsed.acquiredBlocks || {}
+        };
+        saveState();
+        applyVisuals();
+        render();
+      } catch (err) {
+        ui.preview.innerHTML = `<span class="xpm-invalid">Import failed: ${esc(err.message)}</span>`;
+      }
+    }
+
+    function render() {
+      if (!ui) return;
+      const block = currentBlock();
+      const slotId = block?.id || 0;
+      selectedSlotId = slotId;
+      const owner = getOwnerAddress(slotId);
+      const acquired = getAcquiredBlock(slotId);
+      const resolved = resolveSlot(slotId);
+      const suggestedPublicUstx = currentPublicSuggestedAmount(slotId);
+      const web2State = block?.ogState || 'unknown';
+      const publicOpen = block ? isDeadOgState(block.ogState) : false;
+
+      ui.slotInput.value = slotId;
+      ui.ownerSenderInput.value = ui.ownerSenderInput.value || owner;
+      
+      ui.ownerAmountInput.value = stxValForInput(OWNER_UPDATE_FEE_USTX);
+      ui.publicAmountInput.value = stxValForInput(suggestedPublicUstx);
+      ui.acquiredInput.value = acquired || '';
+
+      ui.status.innerHTML = `
+        <div class="xpm-status-card">
+          <div class="xpm-chip">
+            <div class="xpm-chip-label">Selected slot</div>
+            <div class="xpm-chip-value">#${esc(slotId)}</div>
+          </div>
+          <div class="xpm-chip">
+            <div class="xpm-chip-label">Showing now</div>
+            <div class="xpm-chip-value"><span class="xpm-badge ${esc(resolved.badgeClass || '')}">${esc(resolved.label)}</span></div>
+          </div>
+          <div class="xpm-chip full">
+            <div class="xpm-chip-label">Current slot owner</div>
+            <div class="xpm-chip-value mono">${esc(owner || 'Unknown until metadata loads')}</div>
+          </div>
+          <div class="xpm-chip">
+            <div class="xpm-chip-label">Web2 media</div>
+            <div class="xpm-chip-value">${esc(healthLabel(web2State))}</div>
+          </div>
+          <div class="xpm-chip">
+            <div class="xpm-chip-label">Public takeover</div>
+            <div class="xpm-chip-value">${publicOpen ? 'Open while unlinked' : 'Closed while Web2 is live'}</div>
+          </div>
+        </div>
+        <div class="xpm-help">${esc(resolved.reason)}</div>
+        ${publicOpen && suggestedPublicUstx >= PUBLIC_TAKEOVER_WARNING_USTX ? publicTakeoverRiskWarningHtml(suggestedPublicUstx) : ''}
+        ${resolved.inscriptionId !== undefined ? `<div class="xpm-help" style="margin-top:7px;">Resolved URL: <span class="mono">${esc(inscriptionUrl(resolved.inscriptionId))}</span></div>` : ''}
+      `;
+
+      if (ui.originHelp) ui.originHelp.innerHTML = originHelpHtml();
+
+      ui.txTable.innerHTML = renderTransactionTable(slotId);
+      ui.configControl.value = XBOARD_CONTROL_PRINCIPAL;
+      ui.configOwnerMin.value = stxValForInput(OWNER_UPDATE_FEE_USTX);
+      ui.configPublicMin.value = stxValForInput(PUBLIC_TAKEOVER_START_USTX);
+      ui.configInscriptionUrl.value = state.config.inscriptionUrlTemplate;
+    }
+
+    let activeTipButton = null;
+
+    function drawerVisibleBounds() {
+      const fallback = { left: 8, top: 8, right: Math.max(8, window.innerWidth - 8), bottom: Math.max(8, window.innerHeight - 8) };
+      if (!ui?.drawer) return fallback;
+      const drawerRect = ui.drawer.getBoundingClientRect();
+      const bodyRect = ui.body?.getBoundingClientRect?.() || drawerRect;
+      const left = Math.max(fallback.left, drawerRect.left + 10);
+      const right = Math.min(fallback.right, drawerRect.right - 10);
+      const top = Math.max(fallback.top, bodyRect.top + 8);
+      const bottom = Math.min(fallback.bottom, bodyRect.bottom - 8);
+      return { left, right: Math.max(left + 160, right), top, bottom: Math.max(top + 80, bottom) };
+    }
+
+    function positionFloatingTip(button) {
+      if (!ui?.floatingTip || !button) return;
+      const text = String(button.getAttribute('data-tip') || '').trim();
+      if (!text) return;
+
+      const bounds = drawerVisibleBounds();
+      const availableWidth = Math.max(180, bounds.right - bounds.left);
+      const targetWidth = Math.min(320, availableWidth);
+
+      const tip = ui.floatingTip;
+      tip.textContent = text;
+      tip.style.width = `${targetWidth}px`;
+      tip.style.maxHeight = `${Math.max(60, bounds.bottom - bounds.top)}px`;
+      tip.classList.add('measuring', 'visible');
+      tip.style.visibility = 'hidden';
+      tip.style.left = '0px';
+      tip.style.top = '0px';
+
+      const buttonRect = button.getBoundingClientRect();
+      const tipRect = tip.getBoundingClientRect();
+      const gap = 9;
+      const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
+
+      let left = buttonRect.left + buttonRect.width / 2 - tipRect.width / 2;
+      left = clamp(left, bounds.left, Math.max(bounds.left, bounds.right - tipRect.width));
+
+      const spaceBelow = bounds.bottom - buttonRect.bottom - gap;
+      const spaceAbove = buttonRect.top - bounds.top - gap;
+      let top;
+      
+      if (spaceBelow >= tipRect.height || spaceBelow >= spaceAbove) {
+        top = buttonRect.bottom + gap;
+        if (top + tipRect.height > bounds.bottom) top = bounds.bottom - tipRect.height;
+      } else {
+        top = buttonRect.top - gap - tipRect.height;
+      }
+
+      top = clamp(top, bounds.top, Math.max(bounds.top, bounds.bottom - tipRect.height));
+      tip.style.left = `${Math.round(left)}px`;
+      tip.style.top = `${Math.round(top)}px`;
+      tip.style.visibility = '';
+      tip.classList.remove('measuring');
+    }
+
+    function showFloatingTip(button) {
+      if (!ui?.floatingTip || !button) return;
+      if (activeTipButton && activeTipButton !== button) {
+        activeTipButton.classList.remove('is-active');
+        activeTipButton.removeAttribute('aria-describedby');
+      }
+      activeTipButton = button;
+      button.classList.add('is-active');
+      button.setAttribute('aria-describedby', 'xpm-floating-tip');
+      positionFloatingTip(button);
+    }
+
+    function hideFloatingTip() {
+      if (activeTipButton) {
+        activeTipButton.classList.remove('is-active');
+        activeTipButton.removeAttribute('aria-describedby');
+      }
+      activeTipButton = null;
+      if (ui?.floatingTip) ui.floatingTip.classList.remove('visible', 'measuring');
+    }
+
+    function bindFloatingTips() {
+      if (!ui?.drawer || !ui?.floatingTip) return;
+
+      ui.drawer.querySelectorAll('.xpm-tip').forEach(button => {
+        button.addEventListener('pointerdown', event => event.stopPropagation());
+        button.addEventListener('click', event => {
+          event.preventDefault();
+          event.stopPropagation();
+          if (activeTipButton === button && ui.floatingTip.classList.contains('visible')) hideFloatingTip();
+          else showFloatingTip(button);
+        });
+        button.addEventListener('pointerenter', () => showFloatingTip(button));
+        button.addEventListener('pointerleave', () => { if (document.activeElement !== button) hideFloatingTip(); });
+        button.addEventListener('focus', () => showFloatingTip(button));
+        button.addEventListener('blur', hideFloatingTip);
+        button.addEventListener('keydown', event => {
+          if (event.key === 'Escape') { event.preventDefault(); hideFloatingTip(); button.blur(); }
+        });
+      });
+
+      ui.body?.addEventListener('scroll', () => { if (activeTipButton) positionFloatingTip(activeTipButton); }, { passive: true });
+      window.addEventListener('resize', () => { if (activeTipButton) positionFloatingTip(activeTipButton); });
+      document.addEventListener('pointerdown', event => {
+        if (!activeTipButton || event.target.closest?.('.xpm-tip')) return;
+        hideFloatingTip();
+      });
+    }
+
+    function getFormAmountsUstx() {
+      return {
+        owner: OWNER_UPDATE_FEE_USTX,
+        public: currentPublicSuggestedAmount(selectedSlotInputValue())
+      };
+    }
+
+    function bindEvents() {
+      ui.open.addEventListener('click', openDrawer);
+      ui.close.addEventListener('click', closeDrawer);
+      ui.footerCloseBtn.addEventListener('click', closeDrawer);
+      ui.backdrop.addEventListener('click', closeDrawer);
+      ui.drawer.addEventListener('click', event => {
+        const button = event.target.closest?.('[data-xpm-copy]');
+        if (!button) return;
+        event.preventDefault();
+        copyLastWalletField(button.getAttribute('data-xpm-copy'));
+      });
+      ui.copyWalletLogBtn.addEventListener('click', copyWalletLog);
+      ui.clearWalletLogBtn.addEventListener('click', () => {
+        walletLogEntries = [];
+        renderWalletLog();
+      });
+
+      document.querySelectorAll('.xpm-tab').forEach(tabBtn => {
+        tabBtn.addEventListener('click', () => switchTab(tabBtn.dataset.tab));
+      });
+
+      ui.slotInput.addEventListener('change', () => {
+        const slotId = selectedSlotInputValue();
+        selectedSlotId = slotId;
+        const block = blocks[slotId];
+        if (block) {
+          selectSlot(block);
+          openDrawer();
+        } else render();
+      });
+
+      ui.ownerPresetMin.addEventListener('click', () => {
+        ui.ownerAmountInput.value = stxValForInput(OWNER_UPDATE_FEE_USTX);
+      });
+
+      ui.publicPresetSug.addEventListener('click', () => {
+        ui.publicAmountInput.value = stxValForInput(currentPublicSuggestedAmount(selectedSlotInputValue()));
+      });
+
+      ui.useOwnerBtn.addEventListener('click', () => {
+        ui.ownerSenderInput.value = getOwnerAddress(selectedSlotInputValue());
+        renderWalletRequestPreview('Owner inscription', currentMemo('SET'), ui.ownerSenderInput.value || 'Selected in wallet', getFormAmountsUstx().owner);
+      });
+
+      ui.previewOwnerSetBtn.addEventListener('click', () => {
+        const kind = 'Owner inscription';
+        const memo = currentMemo('SET');
+        const sender = ui.ownerSenderInput.value || getOwnerAddress(selectedSlotInputValue()) || 'Selected in wallet';
+        renderWalletRequestPreview(kind, memo, sender, getFormAmountsUstx().owner);
+        logWalletPreview(kind, memo, sender, getFormAmountsUstx().owner);
+      });
+
+      ui.addOwnerSetBtn.addEventListener('click', () => {
+        requestWalletInstruction(
+          'Owner inscription',
+          'SET',
+          OWNER_UPDATE_FEE_USTX,
+          ui.ownerSenderInput.value || getOwnerAddress(selectedSlotInputValue()) || 'Selected in wallet'
+        );
+      });
+
+      ui.addOwnerClearBtn.addEventListener('click', () => {
+        requestWalletInstruction(
+          'Owner Web2 fallback',
+          'WEB2',
+          OWNER_UPDATE_FEE_USTX,
+          ui.ownerSenderInput.value || getOwnerAddress(selectedSlotInputValue()) || 'Selected in wallet'
+        );
+      });
+
+      ui.previewPublicBtn.addEventListener('click', () => {
+        const kind = 'Temporary public takeover';
+        const memo = currentMemo('SET');
+        const sender = ui.publicSenderInput.value || 'Selected in wallet';
+        renderWalletRequestPreview(kind, memo, sender, getFormAmountsUstx().public);
+        logWalletPreview(kind, memo, sender, getFormAmountsUstx().public);
+      });
+
+      ui.addPublicBtn.addEventListener('click', () => {
+        requestWalletInstruction(
+          'Temporary public takeover',
+          'SET',
+          currentPublicSuggestedAmount(selectedSlotInputValue()),
+          ui.publicSenderInput.value || 'Selected in wallet'
+        );
+      });
+
+      ui.acquiredInput.addEventListener('change', () => {
+        const slotId = selectedSlotInputValue();
+        const value = Number(ui.acquiredInput.value || 0);
+        if (value > 0) state.acquiredBlocks[String(slotId)] = Math.floor(value);
+        else delete state.acquiredBlocks[String(slotId)];
+        saveState();
+        applyVisuals();
+        render();
+      });
+
+      ui.saveConfigBtn.addEventListener('click', () => {
+        state.config = normalizeConfig({
+          ...state.config,
+          inscriptionUrlTemplate: String(ui.configInscriptionUrl.value || DEFAULT_CONFIG.inscriptionUrlTemplate).trim()
+        });
+        saveState();
+        applyVisuals();
+        render();
+      });
+
+      ui.clearTxBtn.addEventListener('click', () => {
+        if (!window.confirm('Clear all local simulated instructions?')) return;
+        state.transactions = [];
+        saveState();
+        applyVisuals();
+        render();
+      });
+
+      ui.exportBtn.addEventListener('click', exportState);
+      ui.importBtn.addEventListener('click', importState);
+
+      window.addEventListener('keydown', event => {
+        if (event.key === 'Escape' && ui.drawer.classList.contains('visible')) {
+          event.preventDefault();
+          closeDrawer();
+          return;
+        }
+        if (event.key.toLowerCase() === 'b' && !event.metaKey && !event.ctrlKey && !event.altKey) {
+          const tag = String(document.activeElement?.tagName || '').toLowerCase();
+          if (tag === 'input' || tag === 'textarea') return;
+          openDrawer();
+        }
+      });
+    }
+
+    function buildUi() {
+      const open = document.createElement('button');
+      open.id = 'xpm-open';
+      open.type = 'button';
+      open.textContent = 'Program slot';
+      document.body.appendChild(open);
+
+      const backdrop = document.createElement('div');
+      backdrop.id = 'xpm-backdrop';
+      document.body.appendChild(backdrop);
+
+      const drawer = document.createElement('aside');
+      drawer.id = 'xpm-drawer';
+      drawer.setAttribute('aria-label', 'XBoard slot programming panel');
+      drawer.setAttribute('role', 'dialog');
+      drawer.setAttribute('aria-modal', 'true');
+      drawer.innerHTML = `
+        <div class="xpm-head">
+          <div>
+            <div class="xpm-kicker">On-chain display layer</div>
+            <h2 class="xpm-title">Program a slot</h2>
+            <div class="xpm-subtitle">Open a wallet transfer with the right recipient, amount, and memo. No wallet connection is stored by XBoard.</div>
+          </div>
+          <button id="xpm-close" type="button" aria-label="Close slot programmer">&times;</button>
+        </div>
+
+        <div class="xpm-body">
+          <div class="xpm-tabs">
+            <button class="xpm-tab active" data-tab="tab-resolver">Live Resolver</button>
+            <button class="xpm-tab" data-tab="tab-rules">Rules & Settings</button>
+            <button class="xpm-tab" data-tab="tab-data">Data Core</button>
+          </div>
+
+          <!-- TAB 1: RESOLVER -->
+          <div id="tab-resolver" class="xpm-tab-content active">
+              <div class="xpm-intro" aria-label="Slot programming overview">
+                <div class="xpm-mode-card"><strong>Web2 fallback</strong><span>Current board media displays when it loads.</span></div>
+              <div class="xpm-mode-card"><strong>Owner control</strong><span>Slot owner can point to an inscription or force Web2 with a fixed 0.1 STX memo transfer.</span></div>
+              <div class="xpm-mode-card"><strong>Public takeover</strong><span>If Web2 media dies, a temporary takeover starts at the smallest possible STX amount and then doubles exactly.</span></div>
+            </div>
+
+            <div class="xpm-section">
+              <div class="xpm-section-title"><span class="xpm-section-heading">Selected slot resolver <button class="xpm-tip" type="button" data-tip="Current display decision for the selected slot based on local simulation state." aria-label="Selected slot resolver help">?</button></span></div>
+              <div class="xpm-panel" id="xpm-status"></div>
+            </div>
+
+            <div class="xpm-section">
+              <div class="xpm-section-title"><span class="xpm-section-heading">Program slot <button class="xpm-tip" type="button" data-tip="XBoard prepares a Stacks transfer request with the memo. Your wallet opens separately and you choose whether to send it." aria-label="Program slot help">?</button></span></div>
+              <div class="xpm-panel">
+                <div class="xpm-wallet-warning">
+                  XBoard does not connect to or remember your wallet. It first tries the Xtrata runtime bridge, then the official Stacks Connect wallet selector, then any directly injected browser provider. Your wallet may ask you to unlock before review. Owner updates only count if the transaction is sent from the current slot owner wallet.
+                </div>
+                <div id="xpm-origin-help"></div>
+                <div class="xpm-grid">
+                  <div class="xpm-field">
+                    <label for="xpm-slot">Slot <button class="xpm-tip" type="button" data-tip="Board slot number you are programming. Clicking a slot selects it." aria-label="Slot field help">?</button></label>
+                    <input id="xpm-slot" type="number" min="0" step="1">
+                  </div>
+                  <div class="xpm-field">
+                    <label for="xpm-inscription">Inscription ID <button class="xpm-tip" type="button" data-tip="The Xtrata inscription number to display." aria-label="Inscription id field help">?</button></label>
+                    <input id="xpm-inscription" type="number" min="0" step="1" value="315">
+                  </div>
+                </div>
+
+                <div class="xpm-choice-grid">
+                  <div class="xpm-choice">
+                    <div class="xpm-choice-title">For the slot owner</div>
+                    <div class="xpm-field full">
+                      <label for="xpm-owner-sender">Expected Owner Address</label>
+                      <input id="xpm-owner-sender" placeholder="Current owner address">
+                      <div class="xpm-field-help">Your wallet must send from this address for owner actions to count.</div>
+                    </div>
+                    <div class="xpm-grid">
+                      <div class="xpm-field">
+                        <label for="xpm-owner-amount">Update fee (STX) 
+                          <button type="button" class="xpm-preset-pill" id="xpm-preset-owner-min">Fixed</button>
+                        </label>
+                        <input id="xpm-owner-amount" type="number" min="0" step="0.000001" readonly>
+                        <div class="xpm-field-help">Every owner action sends exactly 0.1 STX to the XBoard address.</div>
+                      </div>
+                      <div class="xpm-field">
+                        <label for="xpm-acquired">Acquired block</label>
+                        <input id="xpm-acquired" type="number" min="0" step="1" placeholder="optional">
+                      </div>
+                    </div>
+                    <div class="xpm-actions">
+                      <button class="xpm-btn secondary" id="xpm-use-owner" type="button">Fill owner</button>
+                      <button class="xpm-btn secondary" id="xpm-preview-owner-set" type="button">Preview TX</button>
+                      <button class="xpm-btn" id="xpm-add-owner-set" type="button">Open Wallet</button>
+                      <button class="xpm-btn" id="xpm-add-owner-clear" type="button">Wallet Web2</button>
+                    </div>
+                  </div>
+
+                  <div class="xpm-choice">
+                    <div class="xpm-choice-title">Public Takeover</div>
+                    <div class="xpm-field full">
+                      <label for="xpm-public-sender">Public Sender Note</label>
+                      <input id="xpm-public-sender" placeholder="Any public wallet">
+                      <div class="xpm-field-help">The actual sender is whatever wallet signs the transfer.</div>
+                    </div>
+                    <div class="xpm-field full">
+                      <label for="xpm-public-amount">Takeover amount (STX)
+                        <button type="button" class="xpm-preset-pill" id="xpm-preset-public-sug">Required</button>
+                      </label>
+                      <input id="xpm-public-amount" type="number" min="0" step="0.000001" readonly>
+                      <div class="xpm-field-help">Starts at 0.000001 STX. Each later takeover must pay exactly double the current temporary holder.</div>
+                    </div>
+                    <div class="xpm-actions" style="margin-top:auto;">
+                      <button class="xpm-btn secondary" id="xpm-preview-public" type="button">Preview TX</button>
+                      <button class="xpm-btn" id="xpm-add-public" type="button">Open Wallet</button>
+                    </div>
+                  </div>
+                </div>
+
+                <div style="margin-top:10px;" class="xpm-preview" id="xpm-preview">
+                  <div class="xpm-preview-title">Generated transaction preview</div>
+                  Choose an action above to preview or open a wallet transfer.
+                </div>
+                <div class="xpm-wallet-log" id="xpm-wallet-log">
+                  <div class="xpm-preview-title">Wallet diagnostics</div>
+                  <div class="xpm-wallet-log-body" id="xpm-wallet-log-body">
+                    <div class="xpm-wallet-log-empty">No wallet requests yet.</div>
+                  </div>
+                  <div class="xpm-wallet-log-actions">
+                    <button class="xpm-btn secondary" id="xpm-copy-wallet-log" type="button">Copy Log</button>
+                    <button class="xpm-btn secondary" id="xpm-clear-wallet-log" type="button">Clear Log</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB 2: RULES & SETTINGS -->
+          <div id="tab-rules" class="xpm-tab-content">
+            <div class="xpm-section">
+              <div class="xpm-section-title"><span class="xpm-section-heading">Resolver Network Rules <button class="xpm-tip" type="button" data-tip="Base configurations that the simulated indexer applies when parsing valid tx memos." aria-label="Rules help">?</button></span></div>
+              <div class="xpm-panel">
+                <div class="xpm-field full">
+                  <label for="xpm-config-control">Control Principal</label>
+                  <input id="xpm-config-control" readonly>
+                  <div class="xpm-field-help">Fixed XBoard recipient for valid display memos.</div>
+                </div>
+                <div class="xpm-grid">
+                  <div class="xpm-field">
+                    <label for="xpm-config-owner-min">Owner update fee (STX)</label>
+                    <input id="xpm-config-owner-min" type="number" min="0" step="0.000001" readonly>
+                  </div>
+                  <div class="xpm-field">
+                    <label for="xpm-config-public-min">Public start price (STX)</label>
+                    <input id="xpm-config-public-min" type="number" min="0" step="0.000001" readonly>
+                  </div>
+                  <div class="xpm-field full">
+                    <label for="xpm-config-inscription-url">Inscription URL template</label>
+                    <input id="xpm-config-inscription-url">
+                  </div>
+                </div>
+                <div class="xpm-actions">
+                  <button class="xpm-btn full" id="xpm-save-config" type="button">Save Settings</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB 3: DATA CORE -->
+          <div id="tab-data" class="xpm-tab-content">
+            <div class="xpm-section">
+              <div class="xpm-section-title"><span class="xpm-section-heading">Instruction Logs <button class="xpm-tip" type="button" data-tip="All simulated indexer events." aria-label="Logs help">?</button></span></div>
+              <div class="xpm-panel">
+                <div id="xpm-tx-table"></div>
+                <div class="xpm-actions">
+                  <button class="xpm-btn danger full" id="xpm-clear-tx" type="button">Clear Local Simulation</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="xpm-section">
+              <div class="xpm-section-title"><span class="xpm-section-heading">Import / Export <button class="xpm-tip" type="button" data-tip="Move local states between devices." aria-label="Import export help">?</button></span></div>
+              <div class="xpm-panel">
+                <div class="xpm-field full">
+                  <label for="xpm-json">Local JSON Dump</label>
+                  <textarea id="xpm-json" spellcheck="false"></textarea>
+                </div>
+                <div class="xpm-actions">
+                  <button class="xpm-btn secondary" id="xpm-export" type="button">Export JSON</button>
+                  <button class="xpm-btn" id="xpm-import" type="button">Import JSON</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="xpm-footer">
+            <button class="xpm-btn secondary full" id="xpm-footer-close" type="button">Close Panel</button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(drawer);
+
+      const floatingTip = document.createElement('div');
+      floatingTip.id = 'xpm-floating-tip';
+      floatingTip.className = 'xpm-floating-tip';
+      floatingTip.setAttribute('role', 'tooltip');
+      document.body.appendChild(floatingTip);
+
+      ui = {
+        open,
+        backdrop,
+        drawer,
+        body: drawer.querySelector('.xpm-body'),
+        floatingTip,
+        close: drawer.querySelector('#xpm-close'),
+        footerCloseBtn: drawer.querySelector('#xpm-footer-close'),
+        status: drawer.querySelector('#xpm-status'),
+        slotInput: drawer.querySelector('#xpm-slot'),
+        inscriptionInput: drawer.querySelector('#xpm-inscription'),
+        ownerSenderInput: drawer.querySelector('#xpm-owner-sender'),
+        ownerAmountInput: drawer.querySelector('#xpm-owner-amount'),
+        publicSenderInput: drawer.querySelector('#xpm-public-sender'),
+        publicAmountInput: drawer.querySelector('#xpm-public-amount'),
+        ownerPresetMin: drawer.querySelector('#xpm-preset-owner-min'),
+        publicPresetSug: drawer.querySelector('#xpm-preset-public-sug'),
+        acquiredInput: drawer.querySelector('#xpm-acquired'),
+        useOwnerBtn: drawer.querySelector('#xpm-use-owner'),
+        previewOwnerSetBtn: drawer.querySelector('#xpm-preview-owner-set'),
+        addOwnerSetBtn: drawer.querySelector('#xpm-add-owner-set'),
+        addOwnerClearBtn: drawer.querySelector('#xpm-add-owner-clear'),
+        previewPublicBtn: drawer.querySelector('#xpm-preview-public'),
+        addPublicBtn: drawer.querySelector('#xpm-add-public'),
+        preview: drawer.querySelector('#xpm-preview'),
+        walletLogBody: drawer.querySelector('#xpm-wallet-log-body'),
+        originHelp: drawer.querySelector('#xpm-origin-help'),
+        copyWalletLogBtn: drawer.querySelector('#xpm-copy-wallet-log'),
+        clearWalletLogBtn: drawer.querySelector('#xpm-clear-wallet-log'),
+        txTable: drawer.querySelector('#xpm-tx-table'),
+        clearTxBtn: drawer.querySelector('#xpm-clear-tx'),
+        configControl: drawer.querySelector('#xpm-config-control'),
+        configOwnerMin: drawer.querySelector('#xpm-config-owner-min'),
+        configPublicMin: drawer.querySelector('#xpm-config-public-min'),
+        configInscriptionUrl: drawer.querySelector('#xpm-config-inscription-url'),
+        saveConfigBtn: drawer.querySelector('#xpm-save-config'),
+        jsonBox: drawer.querySelector('#xpm-json'),
+        exportBtn: drawer.querySelector('#xpm-export'),
+        importBtn: drawer.querySelector('#xpm-import')
+      };
+    }
+
+    function setActiveSlot(block) {
+      if (!block) return;
+      selectedSlotId = block.id;
+      if (ui?.ownerSenderInput) ui.ownerSenderInput.value = getOwnerAddress(block.id) || ui.ownerSenderInput.value || '';
+      render();
+    }
+
+    function refresh() { applyVisuals(); render(); }
+    function setTransactions(transactions) {
+      state.transactions = Array.isArray(transactions) ? transactions : [];
+      saveState();
+      refresh();
+    }
+    function getResolvedState() {
+      return blocks.map(block => ({
+        slotId: block.id,
+        ownerAddress: getOwnerAddress(block.id),
+        web2State: block.ogState,
+        ...resolveSlot(block)
+      }));
+    }
+
+    function init() {
+      buildUi();
+      blocks.forEach(createOverlay);
+      bindEvents();
+      bindFloatingTips();
+      preloadStacksConnect({ log: false }).catch(() => null);
+      applyVisuals();
+      render();
+
+      window.XBoardProgrammingModuleAPI = {
+        open: openDrawer, close: closeDrawer, refresh, setTransactions, getResolvedState,
+        parseMemo, resolveSlot, exportState: () => JSON.parse(JSON.stringify(state))
+      };
+    }
+
+    return { init, setActiveSlot, refresh, open: openDrawer, setTransactions, getResolvedState, resolveSlot, inscriptionUrl, compactInscriptionUrl };
+  })();
+
+  function selectSlot(block) {
+    if (activeBlock) activeBlock.el.classList.remove('active');
+    activeBlock = block;
+    block.el.classList.add('active');
+    svg.appendChild(block.el);
+    renderSlotInfo(block);
+    XBoardProgrammingModule.setActiveSlot(block);
+    infoPanel.classList.add('visible');
+  }
+
+  document.getElementById('close-panel').addEventListener('click', () => {
+    infoPanel.classList.remove('visible');
+    if (activeBlock) activeBlock.el.classList.remove('active');
+    activeBlock = null;
+  });
+
+  const HOME = { x: 0, y: 0, w: VIEW_W, h: VIEW_H };
+  let view = { ...HOME };
+  const MIN_W = VIEW_W * 0.04;
+  const MAX_W = VIEW_W * 1.4;
+
+  function setViewBox() { svg.setAttribute('viewBox', `${view.x} ${view.y} ${view.w} ${view.h}`); }
+  function resetView() { view = { ...HOME }; setViewBox(); }
+
+  function clientToView(clientX, clientY) {
+    const r = svg.getBoundingClientRect();
+    const scale = Math.min(r.width / view.w, r.height / view.h);
+    return {
+      x: view.x + (clientX - r.left - (r.width - view.w * scale) / 2) / scale,
+      y: view.y + (clientY - r.top  - (r.height - view.h * scale) / 2) / scale
+    };
+  }
+
+  svg.addEventListener('wheel', event => {
+    event.preventDefault();
+    if (event.ctrlKey) {
+      const p = clientToView(event.clientX, event.clientY);
+      const factor = Math.exp(event.deltaY * 0.01);
+      const newW = Math.min(MAX_W, Math.max(MIN_W, view.w * factor));
+      const k = newW / view.w;
+      view.x = p.x - (p.x - view.x) * k;
+      view.y = p.y - (p.y - view.y) * k;
+      view.w = newW;
+      view.h = view.h * k;
+    } else {
+      const r = svg.getBoundingClientRect();
+      const scale = Math.min(r.width / view.w, r.height / view.h);
+      view.x += event.deltaX / scale;
+      view.y += event.deltaY / scale;
+    }
+    setViewBox();
+  }, { passive: false });
+
+  let pointerPan = null;
+
+  svg.addEventListener('pointerdown', event => {
+    if (event.button !== 0) return;
+    const isBackground = event.target === svg || event.target === bg;
+    if (!isBackground) return;
+
+    svg.setPointerCapture(event.pointerId);
+    pointerPan = { id: event.pointerId, x: event.clientX, y: event.clientY, vx: view.x, vy: view.y };
+  });
+
+  svg.addEventListener('pointermove', event => {
+    if (!pointerPan || pointerPan.id !== event.pointerId) return;
+    const r = svg.getBoundingClientRect();
+    const scale = Math.min(r.width / view.w, r.height / view.h);
+    view.x = pointerPan.vx - (event.clientX - pointerPan.x) / scale;
+    view.y = pointerPan.vy - (event.clientY - pointerPan.y) / scale;
+    setViewBox();
+  });
+
+  svg.addEventListener('pointerup', event => {
+    if (pointerPan && pointerPan.id === event.pointerId) pointerPan = null;
+  });
+
+  svg.addEventListener('pointercancel', () => { pointerPan = null; });
+  svg.addEventListener('dblclick', event => {
+    if (event.target === svg || event.target === bg) resetView();
+  });
+
+  function boot() {
+    createBoard();
+    applyBoardFit();
+    setViewBox();
+    XBoardProgrammingModule.init();
+    fetchAllSlotMetadata();
+    refreshTimer = window.setInterval(() => fetchAllSlotMetadata(), REFRESH_MS);
+  }
+
+  window.addEventListener('beforeunload', () => {
+    if (refreshTimer) window.clearInterval(refreshTimer);
+  });
+
+  boot();
+})();
+</script>
+</body>
+</html>
