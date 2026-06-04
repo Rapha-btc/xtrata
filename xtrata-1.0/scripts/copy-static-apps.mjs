@@ -8,10 +8,14 @@ const staticApps = [
   {
     source: 'opus-file-generator',
     target: 'dist/opus-file-generator'
+  },
+  {
+    source: 'recursive-apps/x-board',
+    target: 'dist/recursive-apps/x-board'
   }
 ];
 
-const ignoredNames = new Set(['.DS_Store', '.git', '.gitignore', '.gitIgnore']);
+const ignoredNames = new Set(['.DS_Store', '.git', '.gitignore', '.gitIgnore', 'node_modules']);
 
 const copyStaticApp = async ({ source, target }) => {
   const sourcePath = join(repoRoot, source);
