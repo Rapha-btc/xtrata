@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>XBoard v1.25 - Resilient Chain Sync + Slot Audit</title>
+<title>XBoard v1.26 - Resilient Slot Recovery</title>
 <style>
   :root {
     --bg: #000;
@@ -4442,17 +4442,24 @@
     blocks.forEach(applyBlockOgVisibility);
   }
 
+  function blockHasPriorityResolverInstruction(block) {
+    try { return Boolean(window.XBoardProgrammingModuleAPI?.hasResolverInstructionForSlot?.(block?.id)); }
+    catch (error) { return false; }
+  }
+
   async function hydrateOgImages({ force = false, source = 'fresh' } = {}) {
     const token = ++ogHydrateToken;
     const toCheck = [];
     let cachedHealthCount = 0;
+    let cachedRecheckCount = 0;
     let missingCount = 0;
 
     blocks.forEach(block => {
       const dbData = stxBoardDb[block.id];
       const imgUrl = getSlotImageUrl(dbData);
+      const priorityResolver = blockHasPriorityResolverInstruction(block);
 
-      if (!force && block.ogImageUrl === imgUrl && block.ogState !== 'unknown') return;
+      if (!force && !priorityResolver && block.ogImageUrl === imgUrl && block.ogState !== 'unknown') return;
 
       block.ogImageUrl = imgUrl;
       block.ogState = 'unknown';
@@ -4469,15 +4476,15 @@
 
       if (force && imgUrl) clearPersistentImageHealth(imgUrl);
 
-      const cachedHealth = !force ? getPersistentImageHealth(imgUrl) : null;
-      if (cachedHealth) {
+      const cachedHealth = (!force && !priorityResolver) ? getPersistentImageHealth(imgUrl) : null;
+      if (cachedHealth?.state === 'ok') {
         cachedHealthCount += 1;
         block.ogState = cachedHealth.state;
         block.ogReason = `${cachedHealth.reason} (cached ${Math.round(cachedHealth.ageMs / 1000)}s ago).`;
-        if (imgUrl && cachedHealth.state === 'ok') block.imgEl.setAttribute('href', imgUrl);
+        if (imgUrl) block.imgEl.setAttribute('href', imgUrl);
         applyBlockOgVisibility(block);
 
-        if (cachedHealth.state === 'ok' && cachedHealth.ageMs > IMAGE_HEALTH_OK_BACKGROUND_VERIFY_AFTER_MS) {
+        if (cachedHealth.ageMs > IMAGE_HEALTH_OK_BACKGROUND_VERIFY_AFTER_MS) {
           scheduleSlotHealthRecheck(block, {
             reason: `stale-cached-ok-${source}`,
             delay: 2500 + ((block.id % 24) * 350),
@@ -4487,18 +4494,40 @@
         return;
       }
 
+      if (cachedHealth) {
+        cachedRecheckCount += 1;
+        block.ogState = cachedHealth.state;
+        block.ogReason = `${cachedHealth.reason} (cached ${Math.round(cachedHealth.ageMs / 1000)}s ago; rechecking).`;
+        block.imgEl.removeAttribute('href');
+        clearPersistentImageHealth(imgUrl);
+      } else if (priorityResolver && imgUrl) {
+        clearPersistentImageHealth(imgUrl);
+      }
+
       toCheck.push({ block, imgUrl });
       applyBlockOgVisibility(block);
     });
+
+    const priorityResolverCount = toCheck.reduce((count, { block }) => count + (blockHasPriorityResolverInstruction(block) ? 1 : 0), 0);
+    if (priorityResolverCount) {
+      toCheck.sort((a, b) => {
+        const ap = blockHasPriorityResolverInstruction(a.block) ? 1 : 0;
+        const bp = blockHasPriorityResolverInstruction(b.block) ? 1 : 0;
+        if (bp !== ap) return bp - ap;
+        return a.block.id - b.block.id;
+      });
+    }
 
     applyOgVisibility();
     addSummaryEvent('board', 'info', 'Started progressive image health pass.', {
       source,
       queued: toCheck.length,
+      priorityResolverSlots: priorityResolverCount,
       cached: cachedHealthCount,
+      cachedRechecks: cachedRecheckCount,
       missing: missingCount,
       elapsedMs: Date.now() - BOOT_STARTED_AT
-    }, { category: 'performance', notable: source === 'cache' });
+    }, { category: 'performance', notable: source === 'cache' || priorityResolverCount > 0 || cachedRecheckCount > 0 });
 
     if (!toCheck.length) {
       warmInitialPreviewCache();
@@ -4507,6 +4536,7 @@
       addSummaryEvent('board', 'ok', 'Image health pass satisfied from cache.', {
         source,
         cached: cachedHealthCount,
+        cachedRechecks: cachedRecheckCount,
         elapsedMs: Date.now() - BOOT_STARTED_AT
       }, { category: 'performance' });
       return;
@@ -4535,6 +4565,9 @@
       }
 
       applyBlockOgVisibility(block);
+      if (blockHasPriorityResolverInstruction(block)) {
+        XBoardProgrammingModule.refresh();
+      }
       if (activeBlock?.id === block.id) renderSlotInfo(block);
     }).then(() => {
       if (token !== ogHydrateToken) return;
@@ -4549,7 +4582,9 @@
       addSummaryEvent('board', 'ok', 'Progressive image health pass complete.', {
         source,
         checked: toCheck.length,
+        priorityResolverSlots: priorityResolverCount,
         cached: cachedHealthCount,
+        cachedRechecks: cachedRecheckCount,
         states,
         elapsedMs: Date.now() - BOOT_STARTED_AT
       }, { category: 'performance', force: true, reason: 'health-pass-complete' });
@@ -5444,7 +5479,7 @@
     const CHAIN_SYNC_PAGE_LIMIT = 50;
     const CHAIN_SYNC_AUTO_PAGES = 3;
     const CHAIN_SYNC_MANUAL_PAGES = 8;
-    const CHAIN_SYNC_PAGE_DELAY_MS = 450;
+    const CHAIN_SYNC_PAGE_DELAY_MS = 1500;
     const CHAIN_SYNC_REFRESH_MS = 45 * 1000;
     const CHAIN_SYNC_INITIAL_DELAY_MS = 1600;
     const CHAIN_SYNC_RATE_LIMIT_BACKOFF_MS = 15 * 60 * 1000;
@@ -5755,6 +5790,13 @@
         elapsedMs: Date.now() - BOOT_STARTED_AT
       }, { category: 'chain-sync', force: true, reason: 'chain-cache-applied' });
 
+      const prioritySlotIds = resolverInstructionSlotIds(indexedTransactions);
+      if (prioritySlotIds.length) {
+        priorityHydrateResolverSlots(prioritySlotIds, 'chain-cache').catch(error => {
+          addWalletLog('warn', 'Priority programmed slot refresh failed after applying cached chain memos.', walletErrorDebug(error));
+        });
+      }
+
       if (refreshVisuals) {
         applyVisuals();
         render();
@@ -5793,7 +5835,9 @@
       }
       const json = await response.json();
       const rows = Array.isArray(json?.results) ? json.results : [];
-      return { endpoint, offset, limit, rows };
+      const totalRaw = Number(json?.total ?? json?.total_count ?? json?.count ?? 0);
+      const total = Number.isFinite(totalRaw) && totalRaw >= 0 ? totalRaw : 0;
+      return { endpoint, offset, limit, rows, total };
     }
 
     function mergeChainTransactions(...lists) {
@@ -5898,6 +5942,81 @@
       return `<div class="xpm-chain-status ${cls}"><strong>Chain sync:</strong> ${esc(indexerStatus.message)}<br>Valid XBoard memos loaded: ${esc(indexerStatus.count)} from ${esc(indexerStatus.scanned)} inbound transfer(s). Last sync: ${esc(formatSyncTime(indexerStatus.lastSync))}.${pageNote}${cacheNote}${retryNote}${endpoint}</div>`;
     }
 
+    function resolverInstructionSlotIds(transactions = allResolverTransactions()) {
+      const ids = new Set();
+      (Array.isArray(transactions) ? transactions : []).forEach(tx => {
+        const parsed = tx?.parsed?.ok ? tx.parsed : parseMemo(tx?.memo);
+        if (parsed?.ok && Number.isInteger(parsed.slotId) && blocks[parsed.slotId]) ids.add(parsed.slotId);
+      });
+      return Array.from(ids).sort((a, b) => a - b);
+    }
+
+    function hasResolverInstructionForSlot(slotId) {
+      const n = Number(slotId);
+      return Number.isInteger(n) && slotInstructions(n).length > 0;
+    }
+
+    async function priorityHydrateResolverSlots(slotIds, source = 'chain-sync') {
+      const ids = Array.from(new Set((Array.isArray(slotIds) ? slotIds : [])
+        .map(Number)
+        .filter(id => Number.isInteger(id) && blocks[id])));
+      if (!ids.length) return [];
+
+      addWalletLog('info', 'Prioritising programmed slots ahead of the Web2 queue.', { source, slotIds: ids });
+
+      applyVisuals();
+      render();
+      if (activeBlock && ids.includes(activeBlock.id)) renderSlotInfo(activeBlock);
+
+      const checked = [];
+      const waitingForMetadata = [];
+      await runLimited(ids, Math.min(IMAGE_HEALTH_CONCURRENCY, 6), async slotId => {
+        const block = blocks[slotId];
+        if (!block) return;
+
+        const dbData = stxBoardDb[slotId];
+        if (!dbData) {
+          waitingForMetadata.push(slotId);
+          return;
+        }
+
+        const imgUrl = getSlotImageUrl(dbData);
+        block.ogImageUrl = imgUrl;
+
+        if (!imgUrl) {
+          block.ogState = 'missing';
+          block.ogReason = 'No image URL is set for this slot. Checked early because it has a chain instruction.';
+          block.imgEl.removeAttribute('href');
+        } else {
+          clearPersistentImageHealth(imgUrl);
+          block.ogState = 'unknown';
+          block.ogReason = `Priority checking Web2 health because ${source} has a resolver instruction.`;
+          block.imgEl.removeAttribute('href');
+          applyBlockOgVisibility(block);
+
+          const health = await checkImageHealth(imgUrl, { usePersistent: false });
+          if (normalizeImageUrl(block.ogImageUrl) !== normalizeImageUrl(imgUrl)) return;
+          block.ogState = health.state;
+          block.ogReason = `${health.reason || 'Image health checked.'} (priority ${source})`;
+          if (health.state === 'ok') block.imgEl.setAttribute('href', imgUrl);
+          else block.imgEl.removeAttribute('href');
+        }
+
+        checked.push(slotId);
+        applyBlockOgVisibility(block);
+        applyVisuals();
+        if (activeBlock?.id === block.id) renderSlotInfo(block);
+      });
+
+      render();
+      addSummaryEvent('board', checked.length ? 'ok' : 'info', 'Priority programmed slot refresh complete.', {
+        source,
+        checked,
+        waitingForMetadata
+      }, { category: 'image-health', force: true, reason: 'programmed-slot-priority-refresh' });
+      return checked;
+    }
+
     function chainSyncBackoffDelay() {
       const index = Math.min(Math.max(0, chainSyncConsecutiveFailures - 1), CHAIN_SYNC_BACKOFF_STEPS_MS.length - 1);
       return CHAIN_SYNC_BACKOFF_STEPS_MS[index] || CHAIN_SYNC_REFRESH_MS;
@@ -5963,10 +6082,12 @@
               page: page + 1,
               pages: pageBudget,
               scanned: result.rows.length,
+              total: result.total || 0,
               endpoint: result.endpoint
             }, { category: 'chain-sync' });
 
             if (result.rows.length < pageLimit) break;
+            if (result.total && (offset + result.rows.length) >= result.total) break;
             if (page < pageBudget - 1) await wait(CHAIN_SYNC_PAGE_DELAY_MS);
           } catch (pageError) {
             partialError = pageError;
@@ -5984,6 +6105,12 @@
         const validFresh = normalized.filter(tx => parseMemo(tx.memo).ok);
         const merged = mergeChainTransactions(indexedTransactions, validFresh);
         indexedTransactions = merged;
+        const prioritySlotIds = resolverInstructionSlotIds(indexedTransactions);
+        if (prioritySlotIds.length) {
+          priorityHydrateResolverSlots(prioritySlotIds, partialError ? 'chain-sync-partial' : 'chain-sync').catch(error => {
+            addWalletLog('warn', 'Priority programmed slot refresh failed after chain sync.', walletErrorDebug(error));
+          });
+        }
 
         if (partialError) {
           chainSyncConsecutiveFailures += 1;
@@ -7675,7 +7802,7 @@
             <div class="xpm-section">
               <div class="xpm-section-title"><span class="xpm-section-heading">Xtrata Chunk Debug <button class="xpm-tip" type="button" data-tip="Debugs the Xtrata reconstruction path: read metadata, request chunk batches, concatenate bytes, create a Blob, and render by MIME type." aria-label="Xtrata chunk debug help">?</button></span></div>
               <div class="xpm-panel">
-                <div class="xpm-help">v1.24 tries to reconstruct inscriptions from Xtrata contract chunks first, then falls back to the runtime URL. Use the console filter tag XBOARD-SUMMARY for compact diagnostic summaries. These settings are deliberately visible so we can correct contract names/endpoints without touching the board code.</div>
+                <div class="xpm-help">v1.26 tries to reconstruct inscriptions from Xtrata contract chunks first, then falls back to the runtime URL. Use the console filter tag XBOARD-SUMMARY for compact diagnostic summaries. These settings are deliberately visible so we can correct contract names/endpoints without touching the board code.</div>
                 <div class="xpm-grid" style="margin-top:10px;">
                   <div class="xpm-field">
                     <label for="xpm-xtrata-api-base">Stacks API Base</label>
@@ -7812,6 +7939,12 @@
     function setTransactions(transactions) {
       state.transactions = Array.isArray(transactions) ? transactions : [];
       saveState();
+      const prioritySlotIds = resolverInstructionSlotIds(state.transactions);
+      if (prioritySlotIds.length) {
+        priorityHydrateResolverSlots(prioritySlotIds, 'local-simulation').catch(error => {
+          addWalletLog('warn', 'Priority programmed slot refresh failed after local transaction update.', walletErrorDebug(error));
+        });
+      }
       refresh();
     }
     function getResolvedState() {
@@ -7850,6 +7983,7 @@
         ok: true,
         slotId,
         resolved,
+        hasResolverInstruction: hasResolverInstructionForSlot(slotId),
         ownerAddress: getOwnerAddress(slotId),
         ownerIdentity: getOwnerIdentity(slotId),
         web2: {
@@ -7896,6 +8030,9 @@
         getIndexedTransactions: () => indexedTransactions.slice(),
         getChainSyncStatus: () => ({ ...indexerStatus }),
         auditSlot,
+        hasResolverInstructionForSlot,
+        resolverInstructionSlotIds,
+        priorityHydrateResolverSlots,
         forceRefreshSlotHealth,
         deepSyncChain: () => syncChainInstructions({ manual: true, maxPages: CHAIN_SYNC_MANUAL_PAGES }),
         refreshLiveOwners: () => hydrateLiveSlotOwners({ force: true, reason: 'manual-api' }),
@@ -7904,7 +8041,7 @@
       };
     }
 
-    return { init, setActiveSlot, refresh, open: openDrawer, setTransactions, getResolvedState, resolveSlot, inscriptionUrl, compactInscriptionUrl, applyCachedChainInstructions };
+    return { init, setActiveSlot, refresh, open: openDrawer, setTransactions, getResolvedState, resolveSlot, inscriptionUrl, compactInscriptionUrl, applyCachedChainInstructions, hasResolverInstructionForSlot, resolverInstructionSlotIds, priorityHydrateResolverSlots };
   })();
 
   function selectSlot(block) {
