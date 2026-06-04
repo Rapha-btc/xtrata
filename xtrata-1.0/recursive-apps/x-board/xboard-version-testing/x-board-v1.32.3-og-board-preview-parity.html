@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>XBoard v1.32 - Runtime Wallet Open</title>
+<title>XBoard v1.32.3 - OG Board Preview Parity</title>
 <style>
   :root {
     --bg: #000;
@@ -2323,6 +2323,27 @@
     return normalizeImageUrl(imgUrl);
   }
 
+  function uniqueImageSources(...values) {
+    const seen = new Set();
+    const out = [];
+    values.forEach(value => {
+      const url = normalizeImageUrl(value);
+      if (!url || seen.has(url)) return;
+      seen.add(url);
+      out.push(url);
+    });
+    return out;
+  }
+
+  function getSlotImageCandidates(dbData, block = null) {
+    if (!dbData) return uniqueImageSources(block?.ogImageUrl || '');
+    const original = normalizeImageUrl(dbData.imageUrl || '');
+    const imgix = normalizeImageUrl(dbData.imgixImageUrl || '');
+    const boardPreferred = getSlotImageUrl(dbData);
+    const previewPreferred = getSlotPreviewImageUrl(dbData);
+    return uniqueImageSources(boardPreferred, previewPreferred, original, imgix, block?.ogImageUrl || '');
+  }
+
   function hasPlaceholderUrlHint(url) {
     const lower = String(url || '').toLowerCase();
     const hints = [
@@ -3418,8 +3439,17 @@
     img.dataset.previewEventsBound = '1';
 
     img.addEventListener('load', () => {
-      rememberLoadedPreview(img.currentSrc || img.src, img);
+      const loadedUrl = img.currentSrc || img.src;
+      rememberLoadedPreview(loadedUrl, img);
       if (mediaInner.contains(img) && !mediaContainer.classList.contains('inscription')) {
+        if (activeBlock) {
+          promoteLoadedWeb2ImageToBoard(activeBlock, loadedUrl, {
+            source: 'selected preview',
+            naturalW: img.naturalWidth || 0,
+            naturalH: img.naturalHeight || 0,
+            reason: `Preview image loaded successfully (${img.naturalWidth || 0}x${img.naturalHeight || 0}); promoted to board tile.`
+          });
+        }
         applyPreviewImageScaling();
       }
     });
@@ -4832,6 +4862,39 @@
     catch (error) { return false; }
   }
 
+  function promoteLoadedWeb2ImageToBoard(blockOrId, url, details = {}) {
+    const block = typeof blockOrId === 'number' ? blocks[blockOrId] : blockOrId;
+    const loadedUrl = normalizeImageUrl(url);
+    if (!block || !loadedUrl) return false;
+
+    block.ogImageUrl = loadedUrl;
+    block.ogState = 'ok';
+    block.ogReason = details.reason || `Image loaded successfully${details.source ? ` via ${details.source}` : ''}.`;
+    block.imgEl.setAttribute('href', loadedUrl);
+    applyBlockOgVisibility(block);
+    persistImageHealth(loadedUrl, {
+      state: 'ok',
+      reason: block.ogReason,
+      naturalW: details.naturalW || 0,
+      naturalH: details.naturalH || 0
+    });
+    if (activeBlock?.id === block.id) renderSlotInfo(block);
+    return true;
+  }
+
+  async function checkFirstHealthyImageSource(urls, { usePersistent = false } = {}) {
+    const candidates = uniqueImageSources(...(Array.isArray(urls) ? urls : [urls]));
+    if (!candidates.length) return { url: '', health: { state: 'missing', reason: 'No image URL is set for this slot.' } };
+
+    let lastHealth = null;
+    for (const url of candidates) {
+      const health = await checkImageHealth(url, { usePersistent });
+      if (health?.state === 'ok') return { url, health };
+      lastHealth = health;
+    }
+    return { url: candidates[0], health: lastHealth || { state: 'missing', reason: 'No usable image source loaded.' } };
+  }
+
   async function hydrateOgImages({ force = false, source = 'fresh' } = {}) {
     const token = ++ogHydrateToken;
     const toCheck = [];
@@ -4841,7 +4904,8 @@
 
     blocks.forEach(block => {
       const dbData = stxBoardDb[block.id];
-      const imgUrl = getSlotImageUrl(dbData);
+      const imageCandidates = getSlotImageCandidates(dbData, block);
+      const imgUrl = imageCandidates[0] || '';
       const priorityResolver = blockHasPriorityResolverInstruction(block);
 
       if (!force && !priorityResolver && block.ogImageUrl === imgUrl && block.ogState !== 'unknown') return;
@@ -4889,7 +4953,7 @@
         clearPersistentImageHealth(imgUrl);
       }
 
-      toCheck.push({ block, imgUrl });
+      toCheck.push({ block, imgUrl, imageCandidates });
       applyBlockOgVisibility(block);
     });
 
@@ -4928,22 +4992,29 @@
     }
 
     // Per-slot work, shared by the eager batch and the lazy (viewport) path.
-    const processSlot = async ({ block, imgUrl }) => {
+    const processSlot = async ({ block, imgUrl, imageCandidates }) => {
       // Shimmer only while this slot's probe is actually running (covers the slow
       // 8.5s window and the 12s retry), not for every deferred off-screen slot.
       block.el.classList.add('slot-checking');
-      const health = await checkImageHealth(imgUrl, { usePersistent: false });
+      const result = await checkFirstHealthyImageSource(imageCandidates?.length ? imageCandidates : [imgUrl], { usePersistent: false });
+      const health = result.health;
+      const loadedUrl = result.url || imgUrl;
       block.el.classList.remove('slot-checking');
       if (token !== ogHydrateToken) return;
 
       block.ogState = health.state;
       block.ogReason = health.reason;
 
-      if (imgUrl && health.state === 'ok') {
+      if (loadedUrl && health.state === 'ok') {
         // The probe already populated the browser cache and previewImageCache
         // (rememberLoadedPreview), so setting the SVG href here is a cache hit,
         // not a second network fetch — one fetch per slot we actually show.
-        block.imgEl.setAttribute('href', imgUrl);
+        promoteLoadedWeb2ImageToBoard(block, loadedUrl, {
+          source: 'board health pass',
+          naturalW: health.naturalW || 0,
+          naturalH: health.naturalH || 0,
+          reason: health.reason
+        });
         if (!firstImageShownLogged) {
           firstImageShownLogged = true;
           addSummaryEvent('board', 'ok', 'First Web2 board image became visible.', {
@@ -5043,7 +5114,8 @@
     const block = typeof blockOrId === 'number' ? blocks[blockOrId] : blockOrId;
     if (!block) return false;
     const dbData = stxBoardDb[block.id];
-    const imgUrl = getSlotImageUrl(dbData) || block.ogImageUrl || '';
+    const imageCandidates = getSlotImageCandidates(dbData, block);
+    const imgUrl = imageCandidates[0] || '';
     if (!imgUrl) return false;
 
     const key = block.id;
@@ -5057,8 +5129,9 @@
     const timer = window.setTimeout(async () => {
       slotHealthRecheckTimers.delete(key);
       const currentDbData = stxBoardDb[block.id];
-      const currentUrl = getSlotImageUrl(currentDbData) || block.ogImageUrl || '';
-      if (!currentUrl || normalizeImageUrl(currentUrl) !== normalizeImageUrl(imgUrl)) return;
+      const currentCandidates = getSlotImageCandidates(currentDbData, block);
+      const currentUrl = currentCandidates[0] || '';
+      if (!currentUrl) return;
 
       addSummaryEvent('board', 'info', 'Rechecking cached Web2 health for slot.', {
         slotId: block.id,
@@ -5073,11 +5146,19 @@
       applyBlockOgVisibility(block);
 
       try {
-        const health = await checkImageHealth(currentUrl, { usePersistent: false });
-        if (normalizeImageUrl(block.ogImageUrl) !== normalizeImageUrl(currentUrl)) return;
+        const result = await checkFirstHealthyImageSource(currentCandidates, { usePersistent: false });
+        const health = result.health;
+        const loadedUrl = result.url || currentUrl;
         block.ogState = health.state;
         block.ogReason = `${health.reason} (refreshed for ${reason}).`;
-        if (currentUrl && health.state === 'ok') block.imgEl.setAttribute('href', currentUrl);
+        if (loadedUrl && health.state === 'ok') {
+          promoteLoadedWeb2ImageToBoard(block, loadedUrl, {
+            source: `health recheck ${reason}`,
+            naturalW: health.naturalW || 0,
+            naturalH: health.naturalH || 0,
+            reason: block.ogReason
+          });
+        }
         else block.imgEl.removeAttribute('href');
         applyBlockOgVisibility(block);
         XBoardProgrammingModule?.refresh?.();
@@ -6698,7 +6779,8 @@
           return;
         }
 
-        const imgUrl = getSlotImageUrl(dbData);
+        const imageCandidates = getSlotImageCandidates(dbData, block);
+        const imgUrl = imageCandidates[0] || '';
         block.ogImageUrl = imgUrl;
 
         if (!imgUrl) {
@@ -6712,11 +6794,19 @@
           block.imgEl.removeAttribute('href');
           applyBlockOgVisibility(block);
 
-          const health = await checkImageHealth(imgUrl, { usePersistent: false });
-          if (normalizeImageUrl(block.ogImageUrl) !== normalizeImageUrl(imgUrl)) return;
+          const result = await checkFirstHealthyImageSource(imageCandidates, { usePersistent: false });
+          const health = result.health;
+          const loadedUrl = result.url || imgUrl;
           block.ogState = health.state;
           block.ogReason = `${health.reason || 'Image health checked.'} (priority ${source})`;
-          if (health.state === 'ok') block.imgEl.setAttribute('href', imgUrl);
+          if (loadedUrl && health.state === 'ok') {
+            promoteLoadedWeb2ImageToBoard(block, loadedUrl, {
+              source: `priority ${source}`,
+              naturalW: health.naturalW || 0,
+              naturalH: health.naturalH || 0,
+              reason: block.ogReason
+            });
+          }
           else block.imgEl.removeAttribute('href');
         }
 
@@ -8572,7 +8662,7 @@
               <div class="xpm-section-title"><span class="xpm-section-heading">Program slot <button class="xpm-tip" type="button" data-tip="XBoard prepares a Stacks transfer request with the memo. Your wallet opens separately and you choose whether to send it." aria-label="Program slot help">?</button></span></div>
               <div class="xpm-panel">
                 <div class="xpm-wallet-warning">
-                  XBoard does not connect to or remember your wallet. v1.32 first installs and tries the Xtrata executable-runtime wallet bridge. If this inscription is trapped in a sandboxed preview, it opens an executable runtime link before falling back to the official Stacks Connect wallet selector or directly injected browser providers. Your wallet may ask you to unlock before review. Owner updates only count if the transaction is sent from the current slot owner wallet.
+                  XBoard does not connect to or remember your wallet. v1.32.3 first installs and tries the Xtrata executable-runtime wallet bridge. If this inscription is trapped in a sandboxed preview, it opens an executable runtime link before falling back to the official Stacks Connect wallet selector or directly injected browser providers. Your wallet may ask you to unlock before review. Owner updates only count if the transaction is sent from the current slot owner wallet.
                 </div>
                 <div id="xpm-origin-help"></div>
                 <div class="xpm-grid">
@@ -8731,7 +8821,7 @@
             <div class="xpm-section">
               <div class="xpm-section-title"><span class="xpm-section-heading">Xtrata Chunk Debug <button class="xpm-tip" type="button" data-tip="Debugs the Xtrata reconstruction path: read metadata, request chunk batches, concatenate bytes, create a Blob, and render by MIME type." aria-label="Xtrata chunk debug help">?</button></span></div>
               <div class="xpm-panel">
-                <div class="xpm-help">v1.32 tries to reconstruct inscriptions from Xtrata contract chunks first, then falls back to the runtime URL. Wallet actions now prefer Xtrata's executable runtime bridge and expose a runtime-open link when the board is embedded in a sandboxed inscription preview. Use the console filter tag XBOARD-SUMMARY for compact diagnostic summaries. These settings are deliberately visible so we can correct contract names/endpoints without touching the board code.</div>
+                <div class="xpm-help">v1.32.3 tries to reconstruct inscriptions from Xtrata contract chunks first, then falls back to the runtime URL. Wallet actions prefer Xtrata's executable runtime bridge. OG board tiles now test both original and imgix media sources, and a successful selected-slot preview image is promoted back to the board tile so preview and board rendering stay in sync. Use the console filter tag XBOARD-SUMMARY for compact diagnostic summaries.</div>
                 <div class="xpm-grid" style="margin-top:10px;">
                   <div class="xpm-field">
                     <label for="xpm-xtrata-api-base">Stacks API Base</label>

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>XBoard v1.32 - Runtime Wallet Open</title>
+<title>XBoard v1.31.2 - Runtime Optimized</title>
 <style>
   :root {
     --bg: #000;
@@ -1594,20 +1594,6 @@
     margin-top: 9px;
   }
 
-  .xpm-runtime-open-actions {
-    display: grid;
-    gap: 7px;
-    margin-top: 9px;
-  }
-
-  .xpm-runtime-open-actions .xpm-runtime-url {
-    color: #93c5fd;
-    font-family: var(--mono);
-    font-size: 10px;
-    line-height: 1.35;
-    overflow-wrap: anywhere;
-  }
-
   .xpm-copy-actions {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1830,6 +1816,7 @@
   const XHTMLNS = 'http://www.w3.org/1999/xhtml';
   const XTRATA_RUNTIME_ORIGIN = 'https://xtrata.xyz';
   const XTRATA_HIRO_MAINNET_API_BASE = 'https://api.mainnet.hiro.so';
+  const XTRATA_HIRO_MAINNET_PROXY_BASE = '/hiro/mainnet';
   const XTRATA_READONLY_SENDER = 'SP2CWY47KCSYT6VZDV8CZ1WSBA5JASPHDP95ADB96';
   const XTRATA_DEBUG_CONFIG_KEY = 'xboard-xtrata-debug-config-v1';
   const XTRATA_DEFAULT_DEBUG_CONFIG = {
@@ -1847,6 +1834,9 @@
   const GRAPHQL_ENDPOINT = 'https://www.stacksboard.art/api/graphql';
   const STACKSBOARD_URL = 'https://www.stacksboard.art/';
   const REFRESH_MS = 5 * 60 * 1000;
+  const RUNTIME_FETCH_TIMEOUT_MS = 12000;
+  const XTRATA_RECONSTRUCT_FAILURE_TTL_MS = 60 * 1000;
+  const XTRATA_RECONSTRUCT_NEGATIVE_TTL_MS = 30 * 1000;
 
   const OG_VIEW_ACTIVE = true;
   const HIDE_DEAD_OG_LINKS = true;
@@ -3768,6 +3758,48 @@
   let xtrataDebugEntries = [];
   const XTRATA_DEBUG_LOG_LIMIT = 180;
   const xtrataReconstructCache = new Map();
+  const xtrataResolveInflight = new Map();
+  const xtrataResolveNegativeCache = new Map();
+
+  function isXtrataHostedRuntime() {
+    try {
+      return window.location.origin === XTRATA_RUNTIME_ORIGIN || /(^|\.)xtrata\.xyz$/i.test(window.location.hostname || '');
+    } catch (error) {
+      return false;
+    }
+  }
+
+  function xtrataProxyHiroUrl(pathWithQuery) {
+    const clean = String(pathWithQuery || '').replace(/^\/+/, '');
+    const base = XTRATA_HIRO_MAINNET_PROXY_BASE.replace(/\/+$/, '');
+    return `${base}/${clean}`;
+  }
+
+  function directHiroUrl(apiBase, pathWithQuery) {
+    const base = String(apiBase || XTRATA_HIRO_MAINNET_API_BASE).replace(/\/+$/, '');
+    const clean = String(pathWithQuery || '').replace(/^\/+/, '');
+    return `${base}/${clean}`;
+  }
+
+  function hiroEndpointCandidates(pathWithQuery, apiBase = XTRATA_HIRO_MAINNET_API_BASE) {
+    const proxy = xtrataProxyHiroUrl(pathWithQuery);
+    const direct = directHiroUrl(apiBase, pathWithQuery);
+    const preferred = isXtrataHostedRuntime() ? [proxy, direct] : [direct, proxy];
+    return preferred.filter((value, index, arr) => value && arr.indexOf(value) === index);
+  }
+
+  async function fetchWithTimeout(url, options = {}, timeoutMs = RUNTIME_FETCH_TIMEOUT_MS) {
+    const controller = typeof AbortController === 'function' ? new AbortController() : null;
+    const timer = controller ? window.setTimeout(() => controller.abort(), Math.max(1000, timeoutMs)) : 0;
+    try {
+      return await fetch(url, {
+        ...options,
+        signal: controller ? controller.signal : options.signal
+      });
+    } finally {
+      if (timer) window.clearTimeout(timer);
+    }
+  }
 
   function trimXtrataLogText(value, max = 220) {
     const text = String(value ?? '');
@@ -4040,27 +4072,42 @@
 
   async function callXtrataReadOnly(contractAddress, contractName, functionName, argsHex, { surface = 'xtrata' } = {}) {
     const config = getXtrataDebugConfig();
-    const endpoint = `${config.apiBase}/v2/contracts/call-read/${encodeURIComponent(contractAddress)}/${encodeURIComponent(contractName)}/${encodeURIComponent(functionName)}`;
-    addXtrataLog('info', `read-only ${functionName}()`, { surface, endpoint, contractAddress, contractName, args: argsHex });
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-      body: JSON.stringify({ sender: XTRATA_READONLY_SENDER, arguments: argsHex })
-    });
-    const text = await response.text();
-    let json = null;
-    try { json = text ? JSON.parse(text) : null; } catch (error) {}
-    if (!response.ok) {
-      addXtrataLog('warn', `read-only ${functionName} HTTP ${response.status}`, { body: text });
-      throw new Error(`${functionName} HTTP ${response.status}`);
+    const path = `/v2/contracts/call-read/${encodeURIComponent(contractAddress)}/${encodeURIComponent(contractName)}/${encodeURIComponent(functionName)}`;
+    const endpoints = hiroEndpointCandidates(path, config.apiBase);
+    addXtrataLog('info', `read-only ${functionName}()`, { surface, endpoints, contractAddress, contractName, args: argsHex, proxyPreferred: isXtrataHostedRuntime() });
+    let lastError = null;
+    for (const endpoint of endpoints) {
+      try {
+        const response = await fetchWithTimeout(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+          body: JSON.stringify({ sender: XTRATA_READONLY_SENDER, arguments: argsHex })
+        });
+        const text = await response.text();
+        let json = null;
+        try { json = text ? JSON.parse(text) : null; } catch (error) {}
+        if (!response.ok) {
+          const error = new Error(`${functionName} HTTP ${response.status}`);
+          error.status = response.status;
+          error.endpoint = endpoint;
+          error.body = trimXtrataLogText(text, 260);
+          throw error;
+        }
+        if (!json?.okay) {
+          const error = new Error(`${functionName} returned not okay`);
+          error.endpoint = endpoint;
+          error.body = json || text;
+          throw error;
+        }
+        const parsed = parseClarityCVFromHex(json.result || '0x');
+        addXtrataLog('ok', `read-only ${functionName} parsed`, { endpoint, type: parsed?.type, js: clarityValueToJs(parsed) });
+        return parsed;
+      } catch (error) {
+        lastError = error;
+        addXtrataLog('warn', `read-only ${functionName} endpoint failed`, { endpoint, error: error.message, status: error.status || 0 });
+      }
     }
-    if (!json?.okay) {
-      addXtrataLog('warn', `read-only ${functionName} returned not okay`, json || text);
-      throw new Error(`${functionName} returned not okay`);
-    }
-    const parsed = parseClarityCVFromHex(json.result || '0x');
-    addXtrataLog('ok', `read-only ${functionName} parsed`, { type: parsed?.type, js: clarityValueToJs(parsed) });
-    return parsed;
+    throw lastError || new Error(`${functionName} failed`);
   }
 
   function xtrataContractCandidateList() {
@@ -4212,6 +4259,25 @@
   async function resolveXtrataInscription(id, { surface = 'panel', force = false } = {}) {
     const clean = normalizeInscriptionId(id);
     if (clean === null) return null;
+    const resolveKey = `inscription#${clean}`;
+    if (!force) {
+      const negative = xtrataResolveNegativeCache.get(resolveKey);
+      if (negative && negative.expiresAt > Date.now()) {
+        addXtrataLog('warn', 'Skipping recently failed reconstruction; runtime URL fallback will be used.', {
+          surface,
+          inscriptionId: clean,
+          lastError: negative.error || '',
+          retryInMs: Math.max(0, negative.expiresAt - Date.now())
+        });
+        return null;
+      }
+      if (xtrataResolveInflight.has(resolveKey)) {
+        addXtrataLog('info', 'Joining in-flight reconstruction instead of starting a duplicate attempt.', { surface, inscriptionId: clean });
+        return xtrataResolveInflight.get(resolveKey);
+      }
+    }
+
+    const run = (async () => {
     const candidates = xtrataContractCandidateList();
     if (!candidates.length) {
       addXtrataLog('warn', 'No Xtrata contract configured; skipping chunk reconstruction.', getXtrataDebugConfig());
@@ -4226,8 +4292,19 @@
         addXtrataLog('warn', 'Contract reconstruction candidate failed.', { inscriptionId: clean, contract: `${candidate.address}.${candidate.name}`, error: error.message });
       }
     }
+    xtrataResolveNegativeCache.set(resolveKey, {
+      expiresAt: Date.now() + (lastError?.message === 'Failed to fetch' ? XTRATA_RECONSTRUCT_FAILURE_TTL_MS : XTRATA_RECONSTRUCT_NEGATIVE_TTL_MS),
+      error: lastError?.message || ''
+    });
     addXtrataLog('bad', 'All contract reconstruction candidates failed; runtime URL fallback will be used.', { inscriptionId: clean, lastError: lastError?.message || '' });
     return null;
+    })();
+
+    if (!force) {
+      xtrataResolveInflight.set(resolveKey, run);
+      run.finally(() => xtrataResolveInflight.delete(resolveKey));
+    }
+    return run;
   }
 
   async function copyXtrataDebugLog() {
@@ -6031,15 +6108,7 @@
     const WALLET_LOG_LIMIT = 70;
     const STACKS_CONNECT_MODULE_URL = 'https://esm.sh/@stacks/connect?bundle';
     const XBOARD_STACKS_NETWORK = 'mainnet';
-    const RUNTIME_WALLET_BRIDGE_TOKEN_STORAGE_KEY = 'xtrata.runtime-wallet-bridge.tokens.v1';
-    const RUNTIME_WALLET_BRIDGE_TOKEN_PARAM = 'walletBridgeToken';
-    const RUNTIME_WALLET_BRIDGE_REQUEST_TYPE = 'xtrata:wallet:request';
-    const RUNTIME_WALLET_BRIDGE_RESPONSE_TYPE = 'xtrata:wallet:response';
-    const RUNTIME_WALLET_BRIDGE_TOKEN_TTL_MS = 6 * 60 * 60 * 1000;
-    const XBOARD_RUNTIME_RESUME_PARAM = 'xboardWalletResume';
-    const XBOARD_RUNTIME_RESUME_STORAGE_KEY = 'xboard.runtime-wallet-resume.v1';
     let lastWalletPayload = null;
-    let lastRuntimeOpenUrl = '';
     let walletLogEntries = [];
     let hasLoggedWalletEnvironment = false;
     let walletRequestInFlight = false;
@@ -6256,153 +6325,6 @@
       return `http://localhost:8787/${encodeURIComponent(localDevFileName())}`;
     }
 
-    function safeSessionStorageGet(key) {
-      try { return window.sessionStorage?.getItem(key) || ''; } catch (error) { return ''; }
-    }
-
-    function safeSessionStorageSet(key, value) {
-      try { window.sessionStorage?.setItem(key, value); return true; } catch (error) { return false; }
-    }
-
-    function createRuntimeWalletBridgeToken() {
-      if (window.crypto && typeof window.crypto.randomUUID === 'function') return window.crypto.randomUUID();
-      return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
-    }
-
-    function registerRuntimeWalletBridgeToken(token) {
-      if (!token) return false;
-      let tokens = {};
-      try {
-        const raw = safeSessionStorageGet(RUNTIME_WALLET_BRIDGE_TOKEN_STORAGE_KEY);
-        tokens = raw ? JSON.parse(raw) : {};
-        if (!tokens || typeof tokens !== 'object' || Array.isArray(tokens)) tokens = {};
-      } catch (error) {
-        tokens = {};
-      }
-      const now = Date.now();
-      Object.entries(tokens).forEach(([key, expiresAt]) => {
-        if (Number(expiresAt || 0) <= now) delete tokens[key];
-      });
-      tokens[token] = now + RUNTIME_WALLET_BRIDGE_TOKEN_TTL_MS;
-      return safeSessionStorageSet(RUNTIME_WALLET_BRIDGE_TOKEN_STORAGE_KEY, JSON.stringify(tokens));
-    }
-
-    function currentQueryParams() {
-      try { return new URLSearchParams(window.location.search || ''); } catch (error) { return new URLSearchParams(); }
-    }
-
-    function currentRuntimeBridgeToken() {
-      return currentQueryParams().get(RUNTIME_WALLET_BRIDGE_TOKEN_PARAM) || '';
-    }
-
-    function inferSelfInscriptionTokenId() {
-      const params = currentQueryParams();
-      const queryToken = normalizeInscriptionId(params.get('tokenId'));
-      if (queryToken !== null) return queryToken;
-      const parts = String(window.location.pathname || '').split('/').filter(Boolean);
-      const inscriptionIndex = parts.findIndex(part => part === 'inscription' || part === 'i');
-      if (inscriptionIndex >= 0) {
-        const pathToken = normalizeInscriptionId(parts[inscriptionIndex + 1]);
-        if (pathToken !== null) return pathToken;
-      }
-      return null;
-    }
-
-    function defaultRuntimeContractId() {
-      return `${XTRATA_DEFAULT_DEBUG_CONFIG.contractAddress}.${XTRATA_DEFAULT_DEBUG_CONFIG.contractName}`;
-    }
-
-    function inferSelfRuntimeContractId() {
-      const params = currentQueryParams();
-      return params.get('contractId') || params.get('fallbackContractId') || defaultRuntimeContractId();
-    }
-
-    function encodeRuntimeResumePayload(payload) {
-      try {
-        return btoa(unescape(encodeURIComponent(JSON.stringify({
-          recipient: payload.recipient,
-          amount: payload.amount,
-          memo: payload.memo,
-          network: payload.network || XBOARD_STACKS_NETWORK,
-          savedAt: Date.now()
-        }))));
-      } catch (error) {
-        return '';
-      }
-    }
-
-    function decodeRuntimeResumePayload(value) {
-      if (!value) return null;
-      try {
-        const parsed = JSON.parse(decodeURIComponent(escape(atob(String(value)))));
-        if (!parsed || typeof parsed !== 'object') return null;
-        if (!parsed.recipient || !parsed.amount || !parsed.memo) return null;
-        return {
-          recipient: String(parsed.recipient),
-          amount: String(parsed.amount),
-          memo: String(parsed.memo),
-          network: String(parsed.network || XBOARD_STACKS_NETWORK)
-        };
-      } catch (error) {
-        return null;
-      }
-    }
-
-    function readRuntimeResumePayload() {
-      const params = currentQueryParams();
-      return decodeRuntimeResumePayload(params.get(XBOARD_RUNTIME_RESUME_PARAM)) ||
-        decodeRuntimeResumePayload(safeSessionStorageGet(XBOARD_RUNTIME_RESUME_STORAGE_KEY));
-    }
-
-    function buildExecutableRuntimeOpenUrl(payload = null) {
-      const tokenId = inferSelfInscriptionTokenId();
-      if (tokenId === null) return '';
-
-      const params = currentQueryParams();
-      const runtimeUrl = new URL('/runtime/', XTRATA_RUNTIME_ORIGIN);
-      runtimeUrl.searchParams.set('contractId', inferSelfRuntimeContractId());
-      runtimeUrl.searchParams.set('tokenId', String(tokenId));
-      runtimeUrl.searchParams.set('network', params.get('network') || XBOARD_STACKS_NETWORK);
-      if (params.get('fallbackContractId')) runtimeUrl.searchParams.set('fallbackContractId', params.get('fallbackContractId'));
-      if (params.get('source')) runtimeUrl.searchParams.set('source', params.get('source'));
-
-      const bridgeToken = currentRuntimeBridgeToken() || createRuntimeWalletBridgeToken();
-      if (registerRuntimeWalletBridgeToken(bridgeToken)) {
-        runtimeUrl.searchParams.set(RUNTIME_WALLET_BRIDGE_TOKEN_PARAM, bridgeToken);
-      }
-
-      if (payload) {
-        const encodedPayload = encodeRuntimeResumePayload(payload);
-        if (encodedPayload) {
-          safeSessionStorageSet(XBOARD_RUNTIME_RESUME_STORAGE_KEY, encodedPayload);
-          runtimeUrl.searchParams.set(XBOARD_RUNTIME_RESUME_PARAM, encodedPayload);
-        }
-      }
-
-      return runtimeUrl.toString();
-    }
-
-    function isEmbeddedFrame() {
-      try { return Boolean(window.parent && window.parent !== window); } catch (error) { return true; }
-    }
-
-    function isExecutableRuntimePath() {
-      return String(window.location.pathname || '') === '/runtime/' || String(window.location.pathname || '') === '/runtime';
-    }
-
-    function isLikelySandboxedWithoutRuntimeBridge() {
-      return isEmbeddedFrame() && !hasXtrataRuntimeWalletBridge();
-    }
-
-    function openExecutableRuntimeView(payload) {
-      const url = buildExecutableRuntimeOpenUrl(payload);
-      lastRuntimeOpenUrl = url;
-      if (!url) return null;
-      let opened = null;
-      try { opened = window.open(url, '_blank', 'noopener'); } catch (error) { opened = null; }
-      return opened;
-    }
-
     function originHelpHtml() {
       if (!isLocalFileOrigin()) return '';
       const command = localDevServerCommand();
@@ -6524,7 +6446,12 @@
     }
 
     function chainInboundEndpoint({ limit = CHAIN_SYNC_PAGE_LIMIT, offset = 0 } = {}) {
-      return `${HIRO_MAINNET_API_BASE}/extended/v1/address/${encodeURIComponent(XBOARD_CONTROL_PRINCIPAL)}/stx_inbound?limit=${encodeURIComponent(String(limit))}&offset=${encodeURIComponent(String(offset))}&unanchored=false`;
+      return chainInboundEndpoints({ limit, offset })[0];
+    }
+
+    function chainInboundEndpoints({ limit = CHAIN_SYNC_PAGE_LIMIT, offset = 0 } = {}) {
+      const path = `/extended/v1/address/${encodeURIComponent(XBOARD_CONTROL_PRINCIPAL)}/stx_inbound?limit=${encodeURIComponent(String(limit))}&offset=${encodeURIComponent(String(offset))}&unanchored=false`;
+      return hiroEndpointCandidates(path, HIRO_MAINNET_API_BASE);
     }
 
     function wait(ms) {
@@ -6538,24 +6465,37 @@
     }
 
     async function fetchChainInboundPage({ offset = 0, limit = CHAIN_SYNC_PAGE_LIMIT } = {}) {
-      const endpoint = chainInboundEndpoint({ limit, offset });
-      const response = await fetch(endpoint, {
-        method: 'GET',
-        headers: { 'Accept': 'application/json' },
-        cache: 'no-store'
-      });
-      if (!response.ok) {
-        const error = new Error(`Hiro inbound transfer request failed: HTTP ${response.status}`);
-        error.status = response.status;
-        error.endpoint = endpoint;
-        error.retryAfterSeconds = response.status === 429 ? retryAfterSecondsFromResponse(response) : 0;
-        throw error;
+      const endpoints = chainInboundEndpoints({ limit, offset });
+      let lastError = null;
+      for (const endpoint of endpoints) {
+        try {
+          const response = await fetchWithTimeout(endpoint, {
+            method: 'GET',
+            headers: { 'Accept': 'application/json' },
+            cache: 'no-store'
+          });
+          if (!response.ok) {
+            const error = new Error(`Hiro inbound transfer request failed: HTTP ${response.status}`);
+            error.status = response.status;
+            error.endpoint = endpoint;
+            error.retryAfterSeconds = response.status === 429 ? retryAfterSecondsFromResponse(response) : 0;
+            throw error;
+          }
+          const json = await response.json();
+          const rows = Array.isArray(json?.results) ? json.results : [];
+          const totalRaw = Number(json?.total ?? json?.total_count ?? json?.count ?? 0);
+          const total = Number.isFinite(totalRaw) && totalRaw >= 0 ? totalRaw : 0;
+          return { endpoint, offset, limit, rows, total };
+        } catch (error) {
+          lastError = error;
+          addSummaryEvent('chain-sync', 'warn', 'Chain sync endpoint failed; trying fallback if available.', {
+            endpoint,
+            error: error.message,
+            status: error.status || 0
+          }, { category: 'chain-sync' });
+        }
       }
-      const json = await response.json();
-      const rows = Array.isArray(json?.results) ? json.results : [];
-      const totalRaw = Number(json?.total ?? json?.total_count ?? json?.count ?? 0);
-      const total = Number.isFinite(totalRaw) && totalRaw >= 0 ? totalRaw : 0;
-      return { endpoint, offset, limit, rows, total };
+      throw lastError || new Error('Hiro inbound transfer request failed.');
     }
 
     function mergeChainTransactions(...lists) {
@@ -7200,68 +7140,13 @@
       }, Math.max(0, delay));
     }
 
-    function installXtrataRuntimeWalletShim() {
-      const bridgeToken = currentRuntimeBridgeToken();
-      if (!bridgeToken || window.__xtrataRuntimeWalletShimInstalled) return Boolean(window.__xtrataRuntimeWalletShimInstalled);
-      const targetWindow = (() => {
-        try {
-          if (window.parent && window.parent !== window) return window.parent;
-        } catch (error) {}
-        try {
-          if (window.opener && window.opener !== window) return window.opener;
-        } catch (error) {}
-        return null;
-      })();
-      if (!targetWindow || typeof targetWindow.postMessage !== 'function') return false;
-
-      const pending = new Map();
-      const request = (input, params) => {
-        const method = typeof input === 'string' ? input : input?.method;
-        const requestParams = typeof input === 'string' ? params : input?.params;
-        if (!method) return Promise.reject(new Error('Runtime wallet bridge method is required.'));
-        const requestId = `xboard-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
-        return new Promise((resolve, reject) => {
-          pending.set(requestId, { resolve, reject });
-          targetWindow.postMessage({
-            type: RUNTIME_WALLET_BRIDGE_REQUEST_TYPE,
-            requestId,
-            bridgeToken,
-            method,
-            params: requestParams || {}
-          }, XTRATA_RUNTIME_ORIGIN);
-          window.setTimeout(() => {
-            if (!pending.has(requestId)) return;
-            pending.delete(requestId);
-            reject(new Error('Xtrata runtime wallet bridge timed out.'));
-          }, 120000);
-        });
-      };
-
-      window.addEventListener('message', event => {
-        const data = event.data || {};
-        if (!data || data.type !== RUNTIME_WALLET_BRIDGE_RESPONSE_TYPE) return;
-        const entry = pending.get(data.requestId);
-        if (!entry) return;
-        pending.delete(data.requestId);
-        if (data.ok) entry.resolve(data.result);
-        else entry.reject(Object.assign(new Error(data.error?.message || 'Xtrata runtime wallet bridge request failed.'), { code: data.error?.code }));
-      });
-
-      const provider = {
-        name: 'Xtrata Runtime Wallet Bridge',
-        isXtrataRuntimeBridge: true,
-        request
-      };
-      if (!window.StacksProvider || typeof window.StacksProvider.request !== 'function') window.StacksProvider = provider;
-      if (!window.stacks || typeof window.stacks.request !== 'function') window.stacks = provider;
-      window.__xtrataRuntimeWalletShimInstalled = true;
-      addWalletLog('ok', 'Installed Xtrata runtime wallet bridge shim.', runtimeBridgeSnapshot());
-      return true;
-    }
-
     function hasXtrataRuntimeWalletBridge() {
       if (window.__xtrataRuntimeWalletShimInstalled) return true;
-      return Boolean(currentRuntimeBridgeToken());
+      try {
+        return Boolean(new URLSearchParams(window.location.search || '').get('walletBridgeToken'));
+      } catch (error) {
+        return false;
+      }
     }
 
     function xtrataRuntimeWalletProvider() {
@@ -7673,7 +7558,6 @@
     }
 
     async function openWalletTransfer(payload) {
-      installXtrataRuntimeWalletShim();
       if (hasXtrataRuntimeWalletBridge()) {
         try {
           const result = await openViaXtrataRuntimeBridge(payload);
@@ -7689,19 +7573,6 @@
         }
       } else {
         addWalletLog('info', 'No Xtrata runtime wallet bridge detected; using browser wallet path.', runtimeBridgeSnapshot());
-      }
-
-      if (isLikelySandboxedWithoutRuntimeBridge()) {
-        const runtimeUrl = buildExecutableRuntimeOpenUrl(payload);
-        if (runtimeUrl) {
-          openExecutableRuntimeView(payload);
-          addWalletLog('warn', 'Sandboxed inscription view detected; opened executable Xtrata runtime view for wallet access.', {
-            runtimeUrl,
-            bridge: runtimeBridgeSnapshot()
-          });
-          throw new Error('This inscription is running inside a sandboxed preview. Open the executable Xtrata runtime view, then continue the wallet request there.');
-        }
-        addWalletLog('warn', 'Sandboxed inscription view detected, but XBoard could not infer its own inscription id for a runtime-open URL.', runtimeBridgeSnapshot());
       }
 
       try {
@@ -7766,27 +7637,6 @@
       `;
     }
 
-    function runtimeOpenFallbackHtml(payload) {
-      const runtimeUrl = buildExecutableRuntimeOpenUrl(payload);
-      lastRuntimeOpenUrl = runtimeUrl;
-      if (!runtimeUrl) return '';
-      const sandboxCopy = isEmbeddedFrame()
-        ? 'This view appears to be embedded. If the wallet does not open here, use Xtrata executable runtime so the wallet bridge can run outside the preview sandbox.'
-        : 'Use Xtrata executable runtime if your wallet blocks this embedded or preview context.';
-      return `
-        <div class="xpm-wallet-warning">
-          <strong>Xtrata executable runtime</strong><br>
-          ${esc(sandboxCopy)}
-          <div class="xpm-runtime-open-actions">
-            <button class="xpm-btn" type="button" data-xpm-open-runtime="wallet">Open executable view</button>
-            <a class="xpm-btn secondary" href="${esc(runtimeUrl)}" target="_blank" rel="noopener noreferrer">Open runtime link</a>
-            <button class="xpm-btn secondary" type="button" data-xpm-copy-runtime-url="1">Copy runtime URL</button>
-            <div class="xpm-runtime-url">${esc(runtimeUrl)}</div>
-          </div>
-        </div>
-      `;
-    }
-
     function publicTakeoverRiskWarningHtml(amountUstx) {
       const amount = Number(amountUstx || 0);
       if (amount < PUBLIC_TAKEOVER_WARNING_USTX) return '';
@@ -7830,7 +7680,6 @@
       ui.preview.innerHTML =
         previewHtml(kind, memo, sender || 'Selected in wallet', amountUstx) +
         walletRuleWarningHtml(kind, amountUstx) +
-        (payload && (isEmbeddedFrame() || buildExecutableRuntimeOpenUrl(payload)) ? runtimeOpenFallbackHtml(payload) : '') +
         (payload ? walletManualHtml(payload) : '') +
         extraHtml;
       hydrateGeneratedInscriptionPreview();
@@ -7858,36 +7707,6 @@
           error: walletErrorDebug(error)
         });
       }
-    }
-
-    function renderRuntimeResumePrompt() {
-      const payload = readRuntimeResumePayload();
-      if (!payload || !ui?.preview) return false;
-      lastWalletPayload = payload;
-      installXtrataRuntimeWalletShim();
-      const parsed = parseMemo(payload.memo);
-      const slotId = parsed?.slotId || selectedSlotInputValue();
-      if (ui.slotInput && slotId !== undefined) ui.slotInput.value = String(slotId);
-      const kind = parsed?.action === 'WEB2'
-        ? 'Resumed Web2 fallback'
-        : Number(payload.amount) === OWNER_UPDATE_FEE_USTX
-          ? 'Resumed owner inscription'
-          : 'Resumed temporary public takeover';
-      openDrawer();
-      ui.preview.innerHTML =
-        `<div class="xpm-wallet-result ok">Executable Xtrata runtime loaded. Continue the prepared wallet request below.</div>` +
-        previewHtml(kind, payload.memo, 'Selected in wallet', Number(payload.amount || 0)) +
-        walletRuleWarningHtml(kind, Number(payload.amount || 0)) +
-        `<div class="xpm-wallet-warning">
-          <strong>Runtime wallet bridge</strong><br>
-          This page was opened through Xtrata's executable runtime path. Use the button below to send the prepared transfer through the runtime wallet bridge.
-          <div class="xpm-runtime-open-actions">
-            <button class="xpm-btn" type="button" data-xpm-continue-runtime-wallet="1">Continue wallet request</button>
-          </div>
-        </div>` +
-        walletManualHtml(payload);
-      addWalletLog('info', 'Loaded resumed wallet payload from executable runtime URL.', walletPayloadDebug(payload, { bridge: runtimeBridgeSnapshot() }));
-      return true;
     }
 
     async function requestWalletInstruction(kind, action, amountUstx, expectedSender) {
@@ -8306,54 +8125,6 @@
       ui.footerCloseBtn.addEventListener('click', closeDrawer);
       ui.backdrop.addEventListener('click', closeDrawer);
       ui.drawer.addEventListener('click', event => {
-        const runtimeOpenButton = event.target.closest?.('[data-xpm-open-runtime]');
-        if (runtimeOpenButton) {
-          event.preventDefault();
-          const opened = openExecutableRuntimeView(lastWalletPayload);
-          addWalletLog(opened ? 'ok' : 'warn', opened
-            ? 'Opened Xtrata executable runtime view.'
-            : 'Runtime popup may have been blocked. Use the runtime link or copy the URL.', {
-              runtimeUrl: lastRuntimeOpenUrl || buildExecutableRuntimeOpenUrl(lastWalletPayload),
-              bridge: runtimeBridgeSnapshot()
-            });
-          return;
-        }
-
-        const continueRuntimeButton = event.target.closest?.('[data-xpm-continue-runtime-wallet]');
-        if (continueRuntimeButton) {
-          event.preventDefault();
-          const payload = lastWalletPayload || readRuntimeResumePayload();
-          if (!payload) {
-            addWalletLog('bad', 'No resumed runtime wallet payload is available.');
-            return;
-          }
-          walletRequestInFlight = true;
-          addWalletLog('info', 'Continuing resumed runtime wallet request.', walletPayloadDebug(payload, { bridge: runtimeBridgeSnapshot() }));
-          openWalletTransfer(payload)
-            .then(result => {
-              const txid = txIdFromWalletResult(result);
-              addWalletLog('ok', 'Resumed runtime wallet request submitted.', { txid: txid || '(wallet did not return txid)' });
-              if (ui?.preview) ui.preview.insertAdjacentHTML('beforeend', `<div class="xpm-wallet-result ok">Wallet request submitted${txid ? `: <span class="mono">${esc(txid)}</span>` : '.'}</div>`);
-            })
-            .catch(error => {
-              addWalletLog(walletUserCancelled(error) ? 'warn' : 'bad', walletUserCancelled(error) ? 'Resumed runtime wallet request cancelled.' : 'Resumed runtime wallet request failed.', walletErrorDebug(error));
-              if (ui?.preview) ui.preview.insertAdjacentHTML('beforeend', `<div class="xpm-wallet-result bad">${esc(walletErrorText(error))}</div>`);
-            })
-            .finally(() => { walletRequestInFlight = false; });
-          return;
-        }
-
-        const copyRuntimeButton = event.target.closest?.('[data-xpm-copy-runtime-url]');
-        if (copyRuntimeButton) {
-          event.preventDefault();
-          const url = lastRuntimeOpenUrl || buildExecutableRuntimeOpenUrl(lastWalletPayload);
-          if (!url) return;
-          navigator.clipboard.writeText(url)
-            .then(() => addWalletLog('ok', 'Copied Xtrata executable runtime URL.'))
-            .catch(error => addWalletLog('bad', 'Could not copy Xtrata executable runtime URL.', walletErrorDebug(error)));
-          return;
-        }
-
         const button = event.target.closest?.('[data-xpm-copy]');
         if (!button) return;
         event.preventDefault();
@@ -8572,7 +8343,7 @@
               <div class="xpm-section-title"><span class="xpm-section-heading">Program slot <button class="xpm-tip" type="button" data-tip="XBoard prepares a Stacks transfer request with the memo. Your wallet opens separately and you choose whether to send it." aria-label="Program slot help">?</button></span></div>
               <div class="xpm-panel">
                 <div class="xpm-wallet-warning">
-                  XBoard does not connect to or remember your wallet. v1.32 first installs and tries the Xtrata executable-runtime wallet bridge. If this inscription is trapped in a sandboxed preview, it opens an executable runtime link before falling back to the official Stacks Connect wallet selector or directly injected browser providers. Your wallet may ask you to unlock before review. Owner updates only count if the transaction is sent from the current slot owner wallet.
+                  XBoard does not connect to or remember your wallet. It first tries the Xtrata runtime bridge, then the official Stacks Connect wallet selector, then any directly injected browser provider. Your wallet may ask you to unlock before review. Owner updates only count if the transaction is sent from the current slot owner wallet.
                 </div>
                 <div id="xpm-origin-help"></div>
                 <div class="xpm-grid">
@@ -8731,7 +8502,7 @@
             <div class="xpm-section">
               <div class="xpm-section-title"><span class="xpm-section-heading">Xtrata Chunk Debug <button class="xpm-tip" type="button" data-tip="Debugs the Xtrata reconstruction path: read metadata, request chunk batches, concatenate bytes, create a Blob, and render by MIME type." aria-label="Xtrata chunk debug help">?</button></span></div>
               <div class="xpm-panel">
-                <div class="xpm-help">v1.32 tries to reconstruct inscriptions from Xtrata contract chunks first, then falls back to the runtime URL. Wallet actions now prefer Xtrata's executable runtime bridge and expose a runtime-open link when the board is embedded in a sandboxed inscription preview. Use the console filter tag XBOARD-SUMMARY for compact diagnostic summaries. These settings are deliberately visible so we can correct contract names/endpoints without touching the board code.</div>
+                <div class="xpm-help">v1.31.2 tries to reconstruct inscriptions from Xtrata contract chunks first, using Xtrata's same-origin Hiro proxy when hosted on xtrata.xyz, then falls back to the runtime URL. Repeated reconstruction failures are briefly cached and in-flight attempts are shared to reduce duplicate contract scans during board refreshes. Use the console filter tag XBOARD-SUMMARY for compact diagnostic summaries.</div>
                 <div class="xpm-grid" style="margin-top:10px;">
                   <div class="xpm-field">
                     <label for="xpm-xtrata-api-base">Stacks API Base</label>
@@ -8940,7 +8711,6 @@
       buildUi();
       hydrateXtrataDebugInputs();
       renderXtrataDebugLog();
-      installXtrataRuntimeWalletShim();
       blocks.forEach(createOverlay);
       bindEvents();
       bindFloatingTips();
@@ -8950,7 +8720,6 @@
       applyCachedBnsV2Names();
       applyVisuals();
       render();
-      window.setTimeout(() => renderRuntimeResumePrompt(), 250);
       startChainIndexer({ delay: CHAIN_SYNC_INITIAL_DELAY_MS });
 
       window.XBoardProgrammingModuleAPI = {
