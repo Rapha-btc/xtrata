@@ -1,0 +1,76 @@
+{
+  "manifest": {
+    "standard": "xtrata-schema-manifest",
+    "schemaVersion": "0.1.0",
+    "tier": "level-1",
+    "manifestId": "xtrata-template:schema:0.1.0",
+    "network": "mainnet",
+    "createdAt": "2026-06-05T00:00:00Z",
+    "updatedAt": "2026-06-05T00:00:00Z",
+    "status": "template",
+    "language": "en",
+    "canonicalUri": "xtrata://inscription/{manifestInscriptionId}",
+    "canonicalInscription": {
+      "contractId": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-1",
+      "tokenId": "{manifestInscriptionId}",
+      "finalHash": "sha256:{manifestHash}",
+      "mimeType": "application/json"
+    },
+    "supersedes": [],
+    "humanSummary": "Describes a reusable schema, validation profile or field model for other Xtrata manifests."
+  },
+  "schema": {
+    "schemaId": "{schema-id}",
+    "name": "{Schema Name}",
+    "version": "0.1.0",
+    "appliesTo": [
+      "xtrata-*"
+    ],
+    "description": "Reusable JSON schema / data model manifest."
+  },
+  "definition": {
+    "schemaUri": "xtrata://inscription/{jsonSchemaId}",
+    "schemaHash": "sha256:{schemaHash}",
+    "mimeType": "application/schema+json"
+  },
+  "fields": [
+    {
+      "path": "manifest.standard",
+      "type": "string",
+      "required": true,
+      "description": "Manifest standard identifier."
+    }
+  ],
+  "validationProfiles": [
+    {
+      "profileId": "strict",
+      "rules": [
+        "required-fields-present",
+        "no-unknown-critical-fields",
+        "hashes-match"
+      ]
+    }
+  ],
+  "examples": [
+    {
+      "label": "Example",
+      "uri": "xtrata://inscription/{exampleId}",
+      "hash": "sha256:{hash}"
+    }
+  ],
+  "migration": {
+    "compatibleVersions": [
+      "0.1.0"
+    ],
+    "supersedes": [],
+    "migrationInstructions": []
+  },
+  "security": {
+    "hashes": {
+      "manifestHash": "sha256:{manifestHash}"
+    },
+    "signatures": [],
+    "amendments": []
+  },
+  "extensions": {}
+}

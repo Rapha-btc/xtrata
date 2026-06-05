@@ -1,0 +1,116 @@
+{
+  "manifest": {
+    "standard": "xtrata-asset-token-manifest",
+    "schemaVersion": "0.1.0",
+    "tier": "level-2",
+    "manifestId": "xtrata-template:asset-token:0.1.0",
+    "network": "mainnet",
+    "createdAt": "2026-06-05T00:00:00Z",
+    "updatedAt": "2026-06-05T00:00:00Z",
+    "status": "template",
+    "language": "en",
+    "canonicalUri": "xtrata://inscription/{manifestInscriptionId}",
+    "canonicalInscription": {
+      "contractId": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-1",
+      "tokenId": "{manifestInscriptionId}",
+      "finalHash": "sha256:{manifestHash}",
+      "mimeType": "application/json"
+    },
+    "supersedes": [],
+    "humanSummary": "Describes a fungible, semi-fungible, wrapped, receipt or LP-style asset, including supply, rights, controls and backing."
+  },
+  "asset": {
+    "assetId": "{asset-id}",
+    "name": "{Asset Name}",
+    "symbol": "{SYMBOL}",
+    "type": "fungible-token",
+    "standard": "sip-010",
+    "description": "Canonical Xtrata description for this token or receipt asset.",
+    "contractId": "SP...token-v1",
+    "decimals": 6,
+    "canonicalNamespace": "{symbol}.x",
+    "display": {
+      "logo": "xtrata://inscription/{logoId}",
+      "color": "#000000",
+      "externalUrl": "https://example.com"
+    }
+  },
+  "supply": {
+    "maximumSupply": "{maxSupply}",
+    "currentSupplyReadOnly": "get-total-supply",
+    "mintingPolicy": "fixed-or-contract-controlled",
+    "burnPolicy": "allowed-by-contract"
+  },
+  "issuer": {
+    "name": "{Issuer}",
+    "wallets": [
+      "SP..."
+    ],
+    "identityManifest": "xtrata://inscription/{identityManifestId}"
+  },
+  "backingAndRedemption": {
+    "backed": false,
+    "backingAssets": [],
+    "redemptionRules": "None unless specified.",
+    "proofOfReserves": null
+  },
+  "permissions": {
+    "mintAuthorities": [
+      "SP..."
+    ],
+    "freezeEnabled": false,
+    "blacklistEnabled": false,
+    "adminFunctions": [
+      "set-token-uri"
+    ]
+  },
+  "markets": [
+    {
+      "marketplace": "{Market}",
+      "url": "https://example.com",
+      "verified": false
+    }
+  ],
+  "risks": {
+    "riskNotes": [
+      "Verify token contract before interaction."
+    ],
+    "knownRisks": [
+      "Issuer risk",
+      "Liquidity risk",
+      "Smart contract risk"
+    ]
+  },
+  "interoperability": {
+    "walletHints": {
+      "preferredDisplay": "token",
+      "safeIconMimeTypes": [
+        "image/png",
+        "image/svg+xml"
+      ]
+    },
+    "indexerHints": {
+      "balanceFunction": "get-balance",
+      "supplyFunction": "get-total-supply"
+    }
+  },
+  "validation": {
+    "schemaUri": "schemas/xtrata-asset-token-manifest.schema.json",
+    "validated": false,
+    "validationRules": [
+      "schema-valid",
+      "token-contract-verified",
+      "supply-policy-declared"
+    ]
+  },
+  "security": {
+    "verifiedContracts": [],
+    "verifiedWallets": [],
+    "hashes": {
+      "manifestHash": "sha256:{manifestHash}"
+    },
+    "signatures": [],
+    "amendments": []
+  },
+  "extensions": {}
+}

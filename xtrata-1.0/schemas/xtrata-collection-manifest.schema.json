@@ -1,0 +1,1451 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://xtrata.xyz/schemas/xtrata-collection-manifest.schema.json",
+  "title": "Xtrata Collection Manifest",
+  "description": "Draft JSON Schema for Xtrata Collection Manifests. The schema validates the stable control-plane fields needed by marketplaces, indexers, wallets, archives and future Xtrata tooling while leaving room for namespaced extensions.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "manifest",
+    "collection",
+    "people",
+    "assetRegistry",
+    "itemMap",
+    "reconstruction",
+    "marketplace",
+    "rights",
+    "validation",
+    "security",
+    "humanReadable"
+  ],
+  "properties": {
+    "manifest": {
+      "$ref": "#/$defs/manifestHeader"
+    },
+    "collection": {
+      "$ref": "#/$defs/collectionIdentity"
+    },
+    "people": {
+      "$ref": "#/$defs/people"
+    },
+    "provenance": {
+      "$ref": "#/$defs/provenance"
+    },
+    "assetRegistry": {
+      "$ref": "#/$defs/assetRegistry"
+    },
+    "itemMap": {
+      "$ref": "#/$defs/itemMap"
+    },
+    "traits": {
+      "$ref": "#/$defs/traits"
+    },
+    "generative": {
+      "$ref": "#/$defs/generative"
+    },
+    "runtime": {
+      "$ref": "#/$defs/runtime"
+    },
+    "reconstruction": {
+      "$ref": "#/$defs/reconstruction"
+    },
+    "marketplace": {
+      "$ref": "#/$defs/marketplace"
+    },
+    "minting": {
+      "$ref": "#/$defs/minting"
+    },
+    "resolverConfig": {
+      "$ref": "#/$defs/resolverConfig"
+    },
+    "rights": {
+      "$ref": "#/$defs/rights"
+    },
+    "audio": {
+      "$ref": "#/$defs/audio"
+    },
+    "software": {
+      "$ref": "#/$defs/software"
+    },
+    "snapshots": {
+      "$ref": "#/$defs/snapshots"
+    },
+    "interoperability": {
+      "$ref": "#/$defs/interoperability"
+    },
+    "validation": {
+      "$ref": "#/$defs/validation"
+    },
+    "security": {
+      "$ref": "#/$defs/security"
+    },
+    "humanReadable": {
+      "$ref": "#/$defs/humanReadable"
+    },
+    "extensions": {
+      "type": "object",
+      "description": "Namespaced extension data. Extension keys should identify the project, tool, marketplace or protocol that owns the custom data.",
+      "additionalProperties": true
+    }
+  },
+  "$defs": {
+    "nonEmptyString": {
+      "type": "string",
+      "minLength": 1
+    },
+    "isoDateTime": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "isoDate": {
+      "type": "string",
+      "format": "date"
+    },
+    "hash": {
+      "type": "string",
+      "pattern": "^(sha256|sha512|blake3):[0-9a-fA-F]{64,128}$"
+    },
+    "xtrataFinalHash": {
+      "type": "string",
+      "pattern": "^0x[0-9a-fA-F]{64}$"
+    },
+    "uri": {
+      "type": "string",
+      "minLength": 1
+    },
+    "principal": {
+      "type": "string",
+      "pattern": "^[A-Z0-9]{2,64}$"
+    },
+    "contractId": {
+      "type": "string",
+      "pattern": "^[A-Z0-9]{2,64}\\.[A-Za-z0-9][A-Za-z0-9._-]*$"
+    },
+    "uintString": {
+      "type": "string",
+      "pattern": "^[0-9]+$"
+    },
+    "basisPoints": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 10000
+    },
+    "manifestHeader": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "standard",
+        "schemaVersion",
+        "tier",
+        "manifestId",
+        "network",
+        "createdAt",
+        "status",
+        "canonicalUri",
+        "humanSummary"
+      ],
+      "properties": {
+        "standard": {
+          "const": "xtrata-collection-manifest"
+        },
+        "schemaVersion": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(-[A-Za-z0-9.-]+)?$"
+        },
+        "tier": {
+          "enum": [
+            "level-1",
+            "level-2",
+            "level-3"
+          ]
+        },
+        "manifestId": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "network": {
+          "enum": [
+            "mainnet",
+            "testnet",
+            "devnet"
+          ]
+        },
+        "createdAt": {
+          "$ref": "#/$defs/isoDateTime"
+        },
+        "updatedAt": {
+          "$ref": "#/$defs/isoDateTime"
+        },
+        "status": {
+          "enum": [
+            "draft",
+            "active",
+            "superseded",
+            "archived"
+          ]
+        },
+        "language": {
+          "type": "string",
+          "pattern": "^[a-z]{2}(-[A-Z]{2})?$"
+        },
+        "canonicalUri": {
+          "$ref": "#/$defs/uri"
+        },
+        "canonicalInscription": {
+          "$ref": "#/$defs/xtrataInscription"
+        },
+        "previousManifest": {
+          "$ref": "#/$defs/manifestPointer"
+        },
+        "supersedes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/manifestPointer"
+          }
+        },
+        "humanSummary": {
+          "$ref": "#/$defs/nonEmptyString"
+        }
+      }
+    },
+    "manifestPointer": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "manifestId",
+        "hash",
+        "uri"
+      ],
+      "properties": {
+        "manifestId": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "hash": {
+          "$ref": "#/$defs/hash"
+        },
+        "uri": {
+          "$ref": "#/$defs/uri"
+        }
+      }
+    },
+    "collectionIdentity": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "collectionId",
+        "name",
+        "symbol",
+        "description",
+        "category",
+        "supply",
+        "canonicalContracts",
+        "display"
+      ],
+      "properties": {
+        "collectionId": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "name": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "symbol": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "description": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "longDescription": {
+          "type": "string"
+        },
+        "category": {
+          "enum": [
+            "art",
+            "migration",
+            "audiovisual",
+            "music",
+            "generative",
+            "software",
+            "preservation",
+            "mixed"
+          ]
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "supply": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": [
+            "declared",
+            "supplyType",
+            "indexBase"
+          ],
+          "properties": {
+            "declared": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "minted": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "maximum": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "supplyType": {
+              "enum": [
+                "fixed",
+                "capped",
+                "open",
+                "dynamic"
+              ]
+            },
+            "indexBase": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "dates": {
+          "type": "object",
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/isoDateTime"
+              },
+              {
+                "$ref": "#/$defs/isoDate"
+              }
+            ]
+          }
+        },
+        "canonicalContracts": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "xtrataCore"
+          ],
+          "properties": {
+            "xtrataCore": {
+              "$ref": "#/$defs/contractId"
+            },
+            "collectionResolver": {
+              "$ref": "#/$defs/contractId"
+            },
+            "collectionMint": {
+              "$ref": "#/$defs/contractId"
+            },
+            "marketplace": {
+              "$ref": "#/$defs/contractId"
+            }
+          }
+        },
+        "display": {
+          "$ref": "#/$defs/display"
+        }
+      }
+    },
+    "display": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "collectionImage",
+        "thumbnailMode",
+        "marketplaceDescription"
+      ],
+      "properties": {
+        "collectionImage": {
+          "$ref": "#/$defs/assetReference"
+        },
+        "bannerImage": {
+          "$ref": "#/$defs/assetReference"
+        },
+        "thumbnailMode": {
+          "enum": [
+            "image",
+            "animation",
+            "audio",
+            "html",
+            "generated"
+          ]
+        },
+        "backgroundColor": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}$"
+        },
+        "externalUrl": {
+          "$ref": "#/$defs/uri"
+        },
+        "marketplaceDescription": {
+          "$ref": "#/$defs/nonEmptyString"
+        }
+      }
+    },
+    "people": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "creators"
+      ],
+      "properties": {
+        "creators": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/person"
+          }
+        },
+        "collaborators": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/person"
+          }
+        },
+        "contributors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/person"
+          }
+        },
+        "archivists": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/person"
+          }
+        },
+        "publishers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/person"
+          }
+        },
+        "launchPartners": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/partner"
+          }
+        }
+      }
+    },
+    "person": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "name",
+        "role"
+      ],
+      "properties": {
+        "name": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "role": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "wallets": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/principal"
+          }
+        },
+        "verifiedUrls": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/uri"
+          }
+        },
+        "social": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "creditLine": {
+          "type": "string"
+        }
+      }
+    },
+    "partner": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "name",
+        "role"
+      ],
+      "properties": {
+        "name": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "role": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "verifiedUrl": {
+          "$ref": "#/$defs/uri"
+        },
+        "wallets": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/principal"
+          }
+        },
+        "contractIds": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/contractId"
+          }
+        }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "type": {
+          "enum": [
+            "native-xtrata",
+            "migrated",
+            "preserved",
+            "derivative",
+            "hybrid"
+          ]
+        },
+        "originalCollection": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "migration": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "historicalContext": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      }
+    },
+    "assetRegistry": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "hashAlgorithm",
+        "assets"
+      ],
+      "properties": {
+        "hashAlgorithm": {
+          "enum": [
+            "sha256",
+            "sha512",
+            "blake3"
+          ]
+        },
+        "assets": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/asset"
+          }
+        }
+      }
+    },
+    "asset": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "assetId",
+        "type",
+        "uri",
+        "mimeType",
+        "hash",
+        "role"
+      ],
+      "properties": {
+        "assetId": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "type": {
+          "enum": [
+            "image",
+            "audio",
+            "video",
+            "html",
+            "json",
+            "code",
+            "data",
+            "module",
+            "archive"
+          ]
+        },
+        "uri": {
+          "$ref": "#/$defs/uri"
+        },
+        "xtrata": {
+          "$ref": "#/$defs/xtrataInscription"
+        },
+        "mimeType": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "sizeBytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "hash": {
+          "$ref": "#/$defs/hash"
+        },
+        "role": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "fallbackUris": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/uri"
+          }
+        },
+        "license": {
+          "type": "string"
+        },
+        "notes": {
+          "type": "string"
+        }
+      }
+    },
+    "assetReference": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "uri",
+        "mimeType",
+        "hash"
+      ],
+      "properties": {
+        "assetId": {
+          "type": "string"
+        },
+        "uri": {
+          "$ref": "#/$defs/uri"
+        },
+        "mimeType": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "hash": {
+          "$ref": "#/$defs/hash"
+        }
+      }
+    },
+    "xtrataInscription": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "contractId",
+        "tokenId"
+      ],
+      "properties": {
+        "contractId": {
+          "$ref": "#/$defs/contractId"
+        },
+        "tokenId": {
+          "$ref": "#/$defs/uintString"
+        },
+        "finalHash": {
+          "$ref": "#/$defs/xtrataFinalHash"
+        },
+        "mimeType": {
+          "$ref": "#/$defs/nonEmptyString"
+        }
+      }
+    },
+    "itemMap": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "mappingType",
+        "indexBase",
+        "count",
+        "coreContractId"
+      ],
+      "properties": {
+        "mappingType": {
+          "enum": [
+            "explicit",
+            "sequential",
+            "chunked",
+            "resolver",
+            "hybrid"
+          ]
+        },
+        "indexBase": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "coreContractId": {
+          "$ref": "#/$defs/contractId"
+        },
+        "explicitItems": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/item"
+          }
+        },
+        "sequentialRanges": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/sequentialRange"
+          }
+        },
+        "chunkedMaps": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/mapChunk"
+          }
+        },
+        "resolver": {
+          "$ref": "#/$defs/itemResolver"
+        }
+      }
+    },
+    "item": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "index",
+        "collectionItemId",
+        "xtrataInscription"
+      ],
+      "properties": {
+        "index": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "collectionItemId": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "name": {
+          "type": "string"
+        },
+        "xtrataInscription": {
+          "$ref": "#/$defs/xtrataInscription"
+        },
+        "sourceItem": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "metadata": {
+          "$ref": "#/$defs/assetReference"
+        },
+        "image": {
+          "$ref": "#/$defs/assetReference"
+        },
+        "animation": {
+          "$ref": "#/$defs/assetReference"
+        },
+        "exceptions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      }
+    },
+    "sequentialRange": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "rangeId",
+        "firstItemIndex",
+        "lastItemIndex",
+        "firstXtrataInscriptionId",
+        "lastXtrataInscriptionId",
+        "formula",
+        "verificationHash"
+      ],
+      "properties": {
+        "rangeId": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "firstItemIndex": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "lastItemIndex": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "firstXtrataInscriptionId": {
+          "$ref": "#/$defs/uintString"
+        },
+        "lastXtrataInscriptionId": {
+          "$ref": "#/$defs/uintString"
+        },
+        "formula": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "sourceFormula": {
+          "type": "string"
+        },
+        "exceptions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "verificationHash": {
+          "$ref": "#/$defs/hash"
+        }
+      }
+    },
+    "mapChunk": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "chunkId",
+        "firstItemIndex",
+        "lastItemIndex",
+        "uri",
+        "hash",
+        "itemCount"
+      ],
+      "properties": {
+        "chunkId": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "firstItemIndex": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "lastItemIndex": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "uri": {
+          "$ref": "#/$defs/uri"
+        },
+        "mimeType": {
+          "type": "string"
+        },
+        "hash": {
+          "$ref": "#/$defs/hash"
+        },
+        "itemCount": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "itemResolver": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "enabled"
+      ],
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "contractId": {
+          "$ref": "#/$defs/contractId"
+        },
+        "interface": {
+          "type": "string"
+        },
+        "coreContractFunction": {
+          "type": "string"
+        },
+        "countFunction": {
+          "type": "string"
+        },
+        "mapFunction": {
+          "type": "string"
+        },
+        "mapReturnType": {
+          "type": "string"
+        },
+        "notes": {
+          "type": "string"
+        }
+      }
+    },
+    "traits": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "required": [
+              "traitType",
+              "valueType"
+            ],
+            "properties": {
+              "traitType": {
+                "$ref": "#/$defs/nonEmptyString"
+              },
+              "valueType": {
+                "enum": [
+                  "string",
+                  "number",
+                  "integer",
+                  "boolean",
+                  "date"
+                ]
+              },
+              "displayType": {
+                "type": "string"
+              },
+              "required": {
+                "type": "boolean"
+              },
+              "allowedValues": {
+                "type": "array"
+              }
+            }
+          }
+        },
+        "rarityModel": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "perItemTraits": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "traitChunks": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/mapChunk"
+          }
+        }
+      }
+    },
+    "generative": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "enabled"
+      ],
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "generationType": {
+          "type": "string"
+        },
+        "seedPolicy": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "generatorCode": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/assetReference"
+          }
+        },
+        "rendering": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      }
+    },
+    "runtime": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "requirements": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "entrypoints": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "dependencies": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/assetReference"
+          }
+        },
+        "reproducibility": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      }
+    },
+    "reconstruction": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "strategy",
+        "coreContractId",
+        "requiredReadOnlyCalls",
+        "instructions"
+      ],
+      "properties": {
+        "strategy": {
+          "enum": [
+            "xtrata-core",
+            "xtrata-core-with-fallbacks",
+            "source-plus-xtrata",
+            "generator"
+          ]
+        },
+        "coreContractId": {
+          "$ref": "#/$defs/contractId"
+        },
+        "fallbackContracts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/contractId"
+          }
+        },
+        "requiredReadOnlyCalls": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "instructions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/nonEmptyString"
+          }
+        },
+        "sequentialInscriptionRanges": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/sequentialRange"
+          }
+        },
+        "validationReport": {
+          "$ref": "#/$defs/validationReport"
+        }
+      }
+    },
+    "marketplace": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "compatibility",
+        "fields"
+      ],
+      "properties": {
+        "compatibility": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "fields": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "adapters": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "royalties": {
+          "$ref": "#/$defs/royalties"
+        }
+      }
+    },
+    "royalties": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "basisPoints": {
+          "$ref": "#/$defs/basisPoints"
+        },
+        "recipient": {
+          "$ref": "#/$defs/principal"
+        },
+        "splits": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+              "recipient": {
+                "$ref": "#/$defs/principal"
+              },
+              "basisPoints": {
+                "$ref": "#/$defs/basisPoints"
+              },
+              "role": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "minting": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "resolverConfig": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "required": {
+          "type": "boolean"
+        },
+        "type": {
+          "enum": [
+            "none",
+            "standard-xtrata-collection-resolver",
+            "custom"
+          ]
+        },
+        "contractId": {
+          "$ref": "#/$defs/contractId"
+        },
+        "interface": {
+          "type": "string"
+        },
+        "readOnlyCalls": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "trustModel": {
+          "enum": [
+            "on-chain",
+            "manifest-only",
+            "hybrid"
+          ]
+        },
+        "notes": {
+          "type": "string"
+        }
+      }
+    },
+    "rights": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "license",
+        "rightsNotes"
+      ],
+      "properties": {
+        "license": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "licenseUri": {
+          "$ref": "#/$defs/uri"
+        },
+        "commercialUse": {
+          "enum": [
+            "allowed",
+            "disallowed",
+            "limited",
+            "unknown"
+          ]
+        },
+        "derivatives": {
+          "enum": [
+            "allowed",
+            "disallowed",
+            "limited",
+            "unknown"
+          ]
+        },
+        "attributionRequired": {
+          "type": "boolean"
+        },
+        "aiUsagePolicy": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "sampleProvenanceRequired": {
+          "type": "boolean"
+        },
+        "rightsNotes": {
+          "$ref": "#/$defs/nonEmptyString"
+        }
+      }
+    },
+    "audio": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "enabled"
+      ],
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "collectionType": {
+          "type": "string"
+        },
+        "bpm": {
+          "type": "number",
+          "minimum": 0
+        },
+        "key": {
+          "type": "string"
+        },
+        "durationSeconds": {
+          "type": "number",
+          "minimum": 0
+        },
+        "looping": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "mixes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "stems": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "playbackInstructions": {
+          "type": "string"
+        },
+        "sampleProvenance": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      }
+    },
+    "software": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "enabled"
+      ],
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "type": {
+          "type": "string"
+        },
+        "modules": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "permissions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "securityModel": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      }
+    },
+    "snapshots": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "interoperability": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "validation": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "schemaUri",
+        "validated",
+        "validator",
+        "validationRules"
+      ],
+      "properties": {
+        "schemaUri": {
+          "$ref": "#/$defs/uri"
+        },
+        "validated": {
+          "type": "boolean"
+        },
+        "validator": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "validationRules": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/nonEmptyString"
+          }
+        },
+        "reports": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/validationReport"
+          }
+        }
+      }
+    },
+    "validationReport": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "uri": {
+          "$ref": "#/$defs/uri"
+        },
+        "hash": {
+          "$ref": "#/$defs/hash"
+        },
+        "validatedAt": {
+          "$ref": "#/$defs/isoDateTime"
+        },
+        "validator": {
+          "type": "string"
+        }
+      }
+    },
+    "security": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "hashes"
+      ],
+      "properties": {
+        "verifiedWallets": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "verifiedContracts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "verifiedUrls": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "hashes": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": [
+            "manifestHash"
+          ],
+          "properties": {
+            "manifestHash": {
+              "$ref": "#/$defs/hash"
+            },
+            "itemMapHash": {
+              "$ref": "#/$defs/hash"
+            },
+            "assetRegistryHash": {
+              "$ref": "#/$defs/hash"
+            }
+          }
+        },
+        "signatures": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/signature"
+          }
+        },
+        "amendments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      }
+    },
+    "signature": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "signer",
+        "role",
+        "message",
+        "signature",
+        "signedAt",
+        "canonicalization"
+      ],
+      "properties": {
+        "signer": {
+          "$ref": "#/$defs/principal"
+        },
+        "role": {
+          "type": "string"
+        },
+        "message": {
+          "$ref": "#/$defs/hash"
+        },
+        "signature": {
+          "type": "string",
+          "pattern": "^0x[0-9a-fA-F]+$"
+        },
+        "signedAt": {
+          "$ref": "#/$defs/isoDateTime"
+        },
+        "canonicalization": {
+          "type": "string"
+        }
+      }
+    },
+    "humanReadable": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "collectorSummary",
+        "marketplaceSummary",
+        "archivistSummary",
+        "developerSummary"
+      ],
+      "properties": {
+        "collectorSummary": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "marketplaceSummary": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "archivistSummary": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "developerSummary": {
+          "$ref": "#/$defs/nonEmptyString"
+        }
+      }
+    }
+  }
+}

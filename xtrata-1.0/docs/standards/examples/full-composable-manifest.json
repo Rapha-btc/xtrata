@@ -1,0 +1,627 @@
+{
+  "manifest": {
+    "standard": "xtrata-collection-manifest",
+    "schemaVersion": "0.1.0",
+    "tier": "level-3",
+    "manifestId": "xtrata-manifest:bvst-audional-composable-demo:2026-06-05",
+    "network": "mainnet",
+    "createdAt": "2026-06-05T00:00:00Z",
+    "updatedAt": "2026-06-05T00:00:00Z",
+    "status": "draft",
+    "language": "en",
+    "canonicalUri": "xtrata://inscription/94000",
+    "canonicalInscription": {
+      "contractId": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v3-0-0",
+      "tokenId": "94000",
+      "finalHash": "0xcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
+      "mimeType": "application/json"
+    },
+    "supersedes": [],
+    "humanSummary": "Full composable manifest for a music, runtime and BVST-style Xtrata collection."
+  },
+  "collection": {
+    "collectionId": "bvst-audional-composable-demo",
+    "name": "BVST Audional Composable Demo",
+    "symbol": "BVSTAUD",
+    "description": "A composable Xtrata collection containing music stems, generator code and sandboxed runtime modules.",
+    "longDescription": "This example demonstrates Level 3 manifest fields for advanced music/data inscriptions, BVST-style software modules, deterministic generation and marketplace-safe runtime display.",
+    "category": "mixed",
+    "tags": [
+      "xtrata",
+      "audionals",
+      "bvst",
+      "runtime",
+      "composable"
+    ],
+    "supply": {
+      "declared": 128,
+      "minted": 64,
+      "maximum": 128,
+      "supplyType": "capped",
+      "indexBase": 0
+    },
+    "dates": {
+      "xtrataLaunch": "2026-06-05T00:00:00Z",
+      "reveal": "2026-06-12T00:00:00Z"
+    },
+    "canonicalContracts": {
+      "xtrataCore": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v3-0-0",
+      "collectionResolver": "SP2BVSTRESOLVER0000000000000000000000001.bvst-audional-resolver-v1",
+      "collectionMint": "SP2BVSTMINT00000000000000000000000000001.bvst-audional-mint-v1",
+      "marketplace": "SP2FAKFUNLAUNCH00000000000000000000000001.fakfun-market-v1"
+    },
+    "display": {
+      "collectionImage": {
+        "assetId": "bvst-cover",
+        "uri": "xtrata://inscription/94001",
+        "mimeType": "image/png",
+        "hash": "sha256:2525252525252525252525252525252525252525252525252525252525252525"
+      },
+      "bannerImage": {
+        "assetId": "bvst-banner",
+        "uri": "xtrata://inscription/94002",
+        "mimeType": "image/png",
+        "hash": "sha256:2626262626262626262626262626262626262626262626262626262626262626"
+      },
+      "thumbnailMode": "html",
+      "backgroundColor": "#060708",
+      "externalUrl": "https://labs.example/bvst-audional-demo",
+      "marketplaceDescription": "A composable music and runtime collection with verified Xtrata modules."
+    }
+  },
+  "people": {
+    "creators": [
+      {
+        "name": "Audional Systems Artist",
+        "role": "musician",
+        "wallets": [
+          "SP2AUDIONALARTIST0000000000000000000001"
+        ],
+        "creditLine": "Music and composition"
+      },
+      {
+        "name": "BVST Runtime Author",
+        "role": "developer",
+        "wallets": [
+          "SP2BVSTDEVELOPER00000000000000000000001"
+        ],
+        "creditLine": "Runtime modules and deterministic renderer"
+      }
+    ],
+    "contributors": [
+      {
+        "name": "Sample Archivist",
+        "role": "sample-clearance",
+        "wallets": [
+          "SP2SAMPLEARCHIVE000000000000000000000001"
+        ],
+        "creditLine": "Sample provenance documentation"
+      }
+    ],
+    "launchPartners": [
+      {
+        "name": "Fak.fun",
+        "role": "marketplace",
+        "verifiedUrl": "https://fak.fun",
+        "contractIds": [
+          "SP2FAKFUNLAUNCH00000000000000000000000001.fakfun-market-v1"
+        ]
+      }
+    ]
+  },
+  "provenance": {
+    "type": "native-xtrata",
+    "historicalContext": {
+      "summary": "This collection is designed as a native Xtrata composable data release rather than a migrated static NFT set.",
+      "timeline": [
+        {
+          "date": "2026-06-05",
+          "event": "Level 3 manifest drafted."
+        }
+      ],
+      "references": [
+        {
+          "label": "Runtime design notes",
+          "uri": "xtrata://inscription/94003",
+          "hash": "sha256:2727272727272727272727272727272727272727272727272727272727272727"
+        }
+      ]
+    }
+  },
+  "assetRegistry": {
+    "hashAlgorithm": "sha256",
+    "assets": [
+      {
+        "assetId": "bvst-cover",
+        "type": "image",
+        "uri": "xtrata://inscription/94001",
+        "mimeType": "image/png",
+        "sizeBytes": 256000,
+        "hash": "sha256:2525252525252525252525252525252525252525252525252525252525252525",
+        "role": "cover"
+      },
+      {
+        "assetId": "runtime-main",
+        "type": "html",
+        "uri": "xtrata://inscription/94010",
+        "mimeType": "text/html",
+        "sizeBytes": 32000,
+        "hash": "sha256:2828282828282828282828282828282828282828282828282828282828282828",
+        "role": "runtime"
+      },
+      {
+        "assetId": "renderer-js",
+        "type": "code",
+        "uri": "xtrata://inscription/94011",
+        "mimeType": "application/javascript",
+        "sizeBytes": 48000,
+        "hash": "sha256:2929292929292929292929292929292929292929292929292929292929292929",
+        "role": "generator"
+      },
+      {
+        "assetId": "drum-stem",
+        "type": "audio",
+        "uri": "xtrata://inscription/94012",
+        "mimeType": "audio/wav",
+        "sizeBytes": 4200000,
+        "hash": "sha256:3030303030303030303030303030303030303030303030303030303030303030",
+        "role": "stem"
+      },
+      {
+        "assetId": "bass-stem",
+        "type": "audio",
+        "uri": "xtrata://inscription/94013",
+        "mimeType": "audio/wav",
+        "sizeBytes": 3900000,
+        "hash": "sha256:3131313131313131313131313131313131313131313131313131313131313131",
+        "role": "stem"
+      },
+      {
+        "assetId": "bvst-module-core",
+        "type": "module",
+        "uri": "xtrata://inscription/94014",
+        "mimeType": "application/wasm",
+        "sizeBytes": 900000,
+        "hash": "sha256:3232323232323232323232323232323232323232323232323232323232323232",
+        "role": "module"
+      },
+      {
+        "assetId": "validation-report",
+        "type": "json",
+        "uri": "xtrata://inscription/94015",
+        "mimeType": "application/json",
+        "sizeBytes": 90000,
+        "hash": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+        "role": "validation-report"
+      }
+    ]
+  },
+  "itemMap": {
+    "mappingType": "resolver",
+    "indexBase": 0,
+    "count": 128,
+    "coreContractId": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v3-0-0",
+    "resolver": {
+      "enabled": true,
+      "contractId": "SP2BVSTRESOLVER0000000000000000000000001.bvst-audional-resolver-v1",
+      "interface": "xtrata-collection-resolver-v1",
+      "coreContractFunction": "get-locked-core-contract",
+      "countFunction": "get-minted-index-count",
+      "mapFunction": "get-minted-id",
+      "mapReturnType": "optional { token-id: uint }",
+      "notes": "The resolver is canonical for live-minted item-to-Xtrata-token mapping."
+    }
+  },
+  "traits": {
+    "schema": [
+      {
+        "traitType": "Tempo",
+        "valueType": "integer",
+        "displayType": "number",
+        "required": true
+      },
+      {
+        "traitType": "Runtime Mode",
+        "valueType": "string",
+        "displayType": "text",
+        "required": true,
+        "allowedValues": [
+          "Loop",
+          "Stem Mixer",
+          "Visualizer"
+        ]
+      }
+    ],
+    "rarityModel": {
+      "model": "generated",
+      "notes": "Rarity is computed from deterministic seed output after reveal."
+    },
+    "traitChunks": [
+      {
+        "chunkId": "bvst-traits-live",
+        "firstItemIndex": 0,
+        "lastItemIndex": 127,
+        "uri": "xtrata://inscription/94016",
+        "mimeType": "application/json",
+        "hash": "sha256:3434343434343434343434343434343434343434343434343434343434343434",
+        "itemCount": 128
+      }
+    ]
+  },
+  "generative": {
+    "enabled": true,
+    "generationType": "deterministic",
+    "seedPolicy": {
+      "seedSource": "xtrata-token-id",
+      "seedFormula": "seed = sha256(collectionId + ':' + xtrataTokenId)",
+      "immutable": true,
+      "exceptions": []
+    },
+    "generatorCode": [
+      {
+        "assetId": "renderer-js",
+        "uri": "xtrata://inscription/94011",
+        "mimeType": "application/javascript",
+        "hash": "sha256:2929292929292929292929292929292929292929292929292929292929292929"
+      }
+    ],
+    "rendering": {
+      "deterministic": true,
+      "viewport": {
+        "width": 1024,
+        "height": 1024
+      },
+      "outputMimeType": "text/html",
+      "referenceRenderer": "xtrata-browser-sandbox-es2020",
+      "referenceOutputs": [
+        {
+          "index": 0,
+          "hash": "sha256:3535353535353535353535353535353535353535353535353535353535353535"
+        }
+      ]
+    }
+  },
+  "runtime": {
+    "requirements": [
+      {
+        "type": "browser",
+        "name": "browser-es2020",
+        "version": ">=1",
+        "required": true
+      },
+      {
+        "type": "wasm",
+        "name": "bvst-host",
+        "version": "0.1.0",
+        "required": true
+      }
+    ],
+    "entrypoints": [
+      {
+        "name": "main",
+        "assetId": "runtime-main",
+        "path": "index.html",
+        "permissions": [
+          "read-inscriptions",
+          "audio-playback"
+        ],
+        "sandbox": "required"
+      }
+    ],
+    "dependencies": [
+      {
+        "assetId": "renderer-js",
+        "uri": "xtrata://inscription/94011",
+        "mimeType": "application/javascript",
+        "hash": "sha256:2929292929292929292929292929292929292929292929292929292929292929"
+      },
+      {
+        "assetId": "bvst-module-core",
+        "uri": "xtrata://inscription/94014",
+        "mimeType": "application/wasm",
+        "hash": "sha256:3232323232323232323232323232323232323232323232323232323232323232"
+      }
+    ],
+    "reproducibility": {
+      "instructions": "Load runtime-main in a sandbox, fetch declared module inscriptions, verify hashes, then initialize renderer-js with the token seed.",
+      "knownNonDeterminism": [],
+      "referenceEnvironment": "browser-es2020"
+    }
+  },
+  "audio": {
+    "enabled": true,
+    "collectionType": "generative-music",
+    "bpm": 120,
+    "key": "C minor",
+    "durationSeconds": 64,
+    "looping": {
+      "enabled": true,
+      "loopStartSeconds": 0,
+      "loopEndSeconds": 64
+    },
+    "mixes": [
+      {
+        "mixId": "runtime-mix",
+        "assetId": "runtime-main",
+        "format": "generated",
+        "hash": "sha256:2828282828282828282828282828282828282828282828282828282828282828"
+      }
+    ],
+    "stems": [
+      {
+        "stemId": "drums",
+        "assetId": "drum-stem",
+        "instrument": "drums",
+        "bpm": 120,
+        "key": "C minor",
+        "bars": 32,
+        "hash": "sha256:3030303030303030303030303030303030303030303030303030303030303030"
+      },
+      {
+        "stemId": "bass",
+        "assetId": "bass-stem",
+        "instrument": "bass",
+        "bpm": 120,
+        "key": "C minor",
+        "bars": 32,
+        "hash": "sha256:3131313131313131313131313131313131313131313131313131313131313131"
+      }
+    ],
+    "playbackInstructions": "Runtime selects stem combinations deterministically from the item seed. Playback should loop exactly 64 seconds unless user controls override.",
+    "sampleProvenance": [
+      {
+        "sampleId": "kick-001",
+        "source": "artist-recorded",
+        "license": "artist-owned",
+        "hash": "sha256:3636363636363636363636363636363636363636363636363636363636363636"
+      }
+    ]
+  },
+  "software": {
+    "enabled": true,
+    "type": "bvst",
+    "modules": [
+      {
+        "moduleId": "module-core",
+        "assetId": "bvst-module-core",
+        "entrypoint": "init",
+        "apiVersion": "0.1.0",
+        "hash": "sha256:3232323232323232323232323232323232323232323232323232323232323232"
+      }
+    ],
+    "permissions": [
+      {
+        "permission": "network",
+        "required": false,
+        "reason": "Runtime must be reconstructable without external network calls."
+      },
+      {
+        "permission": "audio-playback",
+        "required": true,
+        "reason": "Collection is music-oriented."
+      }
+    ],
+    "securityModel": {
+      "sandboxRequired": true,
+      "externalNetworkAllowed": false,
+      "fileSystemAllowed": false
+    }
+  },
+  "reconstruction": {
+    "strategy": "generator",
+    "coreContractId": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v3-0-0",
+    "fallbackContracts": [
+      "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-1"
+    ],
+    "requiredReadOnlyCalls": [
+      "get-inscription-meta",
+      "get-token-uri",
+      "get-dependencies",
+      "get-parents",
+      "get-chunk-batch",
+      "get-chunk"
+    ],
+    "instructions": [
+      "Call resolver get-locked-core-contract and get-minted-id(index).",
+      "Read the resolved Xtrata inscription metadata and chunks.",
+      "Fetch runtime dependencies from the manifest asset registry.",
+      "Verify all asset hashes before execution.",
+      "Run runtime-main in a sandbox and pass deterministic seed inputs."
+    ],
+    "validationReport": {
+      "uri": "xtrata://inscription/94015",
+      "hash": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+      "validatedAt": "2026-06-05T00:00:00Z",
+      "validator": "xtrata-manifest-validator"
+    }
+  },
+  "marketplace": {
+    "compatibility": {
+      "displayAs": "app",
+      "preferredMedia": "html",
+      "supportsAnimation": true,
+      "supportsAudio": true,
+      "supportsHtml": true,
+      "requiresRuntimeSandbox": true
+    },
+    "fields": {
+      "nameTemplate": "BVST Audional #{index}",
+      "descriptionTemplate": "Composable runtime music inscription {index}.",
+      "imageTemplate": "generated by runtime-main",
+      "animationTemplate": "xtrata://inscription/{xtrataTokenId}"
+    },
+    "adapters": [
+      {
+        "marketplace": "Fak.fun",
+        "collectionUrl": "https://fak.fun/collections/bvst-audional-demo",
+        "verified": false,
+        "notes": "Marketplace should sandbox HTML runtime previews."
+      }
+    ],
+    "royalties": {
+      "basisPoints": 750,
+      "recipient": "SP2AUDIONALARTIST0000000000000000000001",
+      "splits": [
+        {
+          "recipient": "SP2AUDIONALARTIST0000000000000000000001",
+          "basisPoints": 500,
+          "role": "musician"
+        },
+        {
+          "recipient": "SP2BVSTDEVELOPER00000000000000000000001",
+          "basisPoints": 250,
+          "role": "developer"
+        }
+      ]
+    }
+  },
+  "minting": {
+    "mode": "live-minted",
+    "collectionMintContract": "SP2BVSTMINT00000000000000000000000000001.bvst-audional-mint-v1",
+    "resolverContract": "SP2BVSTRESOLVER0000000000000000000000001.bvst-audional-resolver-v1",
+    "price": {
+      "asset": "STX",
+      "amount": "1000000"
+    },
+    "phases": [
+      {
+        "phaseId": 1,
+        "name": "Public",
+        "startBlock": 0,
+        "endBlock": 0,
+        "maxPerWallet": 2,
+        "allowlistMode": "public"
+      }
+    ]
+  },
+  "resolverConfig": {
+    "required": true,
+    "type": "standard-xtrata-collection-resolver",
+    "contractId": "SP2BVSTRESOLVER0000000000000000000000001.bvst-audional-resolver-v1",
+    "interface": "xtrata-collection-resolver-v1",
+    "readOnlyCalls": {
+      "getLockedCoreContract": "get-locked-core-contract",
+      "getMintedIndexCount": "get-minted-index-count",
+      "getMintedId": "get-minted-id"
+    },
+    "trustModel": "on-chain",
+    "notes": "Resolver is required because minting is live and only minted indexes should resolve."
+  },
+  "rights": {
+    "license": "Custom music and runtime license",
+    "commercialUse": "limited",
+    "derivatives": "limited",
+    "attributionRequired": true,
+    "aiUsagePolicy": {
+      "training": "disallowed",
+      "inference": "allowed",
+      "styleImitation": "disallowed",
+      "notes": "Runtime interaction is allowed; training on stems or generated outputs is not granted."
+    },
+    "sampleProvenanceRequired": true,
+    "rightsNotes": "Collectors may play and display the work. Stem extraction, redistribution and commercial sampling require separate permission."
+  },
+  "interoperability": {
+    "externalReferences": [
+      {
+        "type": "documentation",
+        "label": "Runtime integration guide",
+        "uri": "xtrata://inscription/94003",
+        "verified": true,
+        "hash": "sha256:2727272727272727272727272727272727272727272727272727272727272727"
+      }
+    ],
+    "walletHints": {
+      "preferredDisplay": "app",
+      "primaryAction": "run",
+      "safePreviewMimeTypes": [
+        "text/html",
+        "application/javascript",
+        "audio/wav"
+      ]
+    },
+    "indexerHints": {
+      "cachePolicy": "mutable-with-amendments",
+      "rangeMapping": false,
+      "chunkedMaps": false,
+      "expectedItemCount": 128
+    }
+  },
+  "validation": {
+    "schemaUri": "schemas/xtrata-collection-manifest.schema.json",
+    "validated": false,
+    "validator": "xtrata-manifest-validator",
+    "validationRules": [
+      "schema-valid",
+      "resolver-readonly-surface-present",
+      "runtime-dependencies-resolve",
+      "audio-stems-resolve",
+      "all-hashes-match",
+      "sandbox-required-for-html"
+    ],
+    "reports": [
+      {
+        "uri": "xtrata://inscription/94015",
+        "hash": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+        "validatedAt": "2026-06-05T00:00:00Z",
+        "validator": "xtrata-manifest-validator"
+      }
+    ]
+  },
+  "security": {
+    "verifiedWallets": [
+      {
+        "wallet": "SP2AUDIONALARTIST0000000000000000000001",
+        "role": "creator",
+        "verificationMethod": "signature"
+      },
+      {
+        "wallet": "SP2BVSTDEVELOPER00000000000000000000001",
+        "role": "developer",
+        "verificationMethod": "signature"
+      }
+    ],
+    "verifiedContracts": [
+      {
+        "contractId": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v3-0-0",
+        "role": "xtrata-core",
+        "network": "mainnet"
+      },
+      {
+        "contractId": "SP2BVSTRESOLVER0000000000000000000000001.bvst-audional-resolver-v1",
+        "role": "collection-resolver",
+        "network": "mainnet"
+      }
+    ],
+    "verifiedUrls": [
+      {
+        "url": "https://labs.example/bvst-audional-demo",
+        "role": "official-site",
+        "verifiedAt": "2026-06-05T00:00:00Z"
+      }
+    ],
+    "hashes": {
+      "manifestHash": "sha256:3737373737373737373737373737373737373737373737373737373737373737",
+      "itemMapHash": "sha256:3838383838383838383838383838383838383838383838383838383838383838",
+      "assetRegistryHash": "sha256:3939393939393939393939393939393939393939393939393939393939393939"
+    },
+    "signatures": [],
+    "amendments": []
+  },
+  "humanReadable": {
+    "collectorSummary": "A live-minted composable music and runtime collection.",
+    "marketplaceSummary": "Use the resolver for item mapping and sandbox runtime previews before rendering.",
+    "archivistSummary": "The manifest preserves stems, module hashes, runtime requirements and reproducibility instructions.",
+    "developerSummary": "Fetch resolver mapping, verify runtime dependencies, initialize deterministic seed inputs and run in a sandbox."
+  },
+  "extensions": {
+    "bvst": {
+      "hostApiVersion": "0.1.0",
+      "moduleNegotiation": "strict"
+    },
+    "audionals": {
+      "transport": "loop",
+      "stemSync": "bar-aligned"
+    }
+  }
+}

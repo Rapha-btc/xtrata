@@ -1,0 +1,103 @@
+{
+  "manifest": {
+    "standard": "xtrata-treasury-split-manifest",
+    "schemaVersion": "0.1.0",
+    "tier": "level-2",
+    "manifestId": "xtrata-template:treasury-split:0.1.0",
+    "network": "mainnet",
+    "createdAt": "2026-06-05T00:00:00Z",
+    "updatedAt": "2026-06-05T00:00:00Z",
+    "status": "template",
+    "language": "en",
+    "canonicalUri": "xtrata://inscription/{manifestInscriptionId}",
+    "canonicalInscription": {
+      "contractId": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-1",
+      "tokenId": "{manifestInscriptionId}",
+      "finalHash": "sha256:{manifestHash}",
+      "mimeType": "application/json"
+    },
+    "supersedes": [],
+    "humanSummary": "Describes revenue splits, royalty routing, team treasuries and payment histories for art, music, apps or financial systems."
+  },
+  "treasury": {
+    "treasuryId": "{treasury-id}",
+    "name": "{Treasury or Split Name}",
+    "type": "royalty-split",
+    "canonicalNamespace": "{treasury}.x",
+    "controllerContract": "SP...split-v1",
+    "description": "Payment and revenue split manifest."
+  },
+  "paymentAssets": [
+    {
+      "asset": "STX",
+      "assetType": "native",
+      "decimals": 6
+    }
+  ],
+  "recipients": [
+    {
+      "recipient": "SP...",
+      "name": "{Artist}",
+      "role": "artist",
+      "basisPoints": 5000,
+      "locked": true
+    },
+    {
+      "recipient": "SP...",
+      "name": "{Developer}",
+      "role": "developer",
+      "basisPoints": 2500,
+      "locked": true
+    },
+    {
+      "recipient": "SP...",
+      "name": "{Marketplace}",
+      "role": "marketplace",
+      "basisPoints": 2500,
+      "locked": true
+    }
+  ],
+  "rules": {
+    "totalBasisPoints": 10000,
+    "rounding": "remainder-to-treasury",
+    "payoutSchedule": "on-claim",
+    "amendmentPolicy": "requires-all-recipient-signatures-or-governance"
+  },
+  "linkedManifests": [
+    {
+      "role": "collection",
+      "uri": "xtrata://inscription/{collectionManifestId}",
+      "hash": "sha256:{hash}"
+    }
+  ],
+  "readOnlySurface": {
+    "requiredReadOnlyCalls": [
+      "get-recipient",
+      "get-split",
+      "get-accrued",
+      "get-paid"
+    ]
+  },
+  "history": {
+    "paymentReports": [],
+    "amendments": []
+  },
+  "validation": {
+    "schemaUri": "schemas/xtrata-treasury-split-manifest.schema.json",
+    "validated": false,
+    "validationRules": [
+      "schema-valid",
+      "basis-points-total-10000",
+      "recipients-valid-principals"
+    ]
+  },
+  "security": {
+    "verifiedWallets": [],
+    "verifiedContracts": [],
+    "signatures": [],
+    "hashes": {
+      "manifestHash": "sha256:{manifestHash}"
+    }
+  },
+  "extensions": {}
+}

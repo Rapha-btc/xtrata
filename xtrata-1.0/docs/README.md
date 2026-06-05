@@ -101,12 +101,17 @@ Artist guides
 	•	docs/artist-guides/README.md
 	•	docs/artist-guides/collection-launch-guide.md
 
+Standards
+	•	docs/standards/README.md
+	•	docs/standards/xtrata-collection-manifest-standard.md
+	•	docs/standards/xtrata-manifest-validation.md
+	•	schemas/xtrata-collection-manifest.schema.json
+
 SDK + builder track
 	•	docs/sdk/README.md
-	•	docs/sdk/roadmap.md
-	•	docs/sdk/js-package-plan.md
-	•	docs/sdk/reconstruction-library-plan.md
-	•	docs/sdk/example-repos-plan.md
+	•	docs/sdk/api-overview.md
+	•	docs/sdk/quickstart-first-30-minutes.md
+	•	docs/sdk/compatibility-matrix.md
 
 AI skills training track
 	•	docs/ai-skills/README.md

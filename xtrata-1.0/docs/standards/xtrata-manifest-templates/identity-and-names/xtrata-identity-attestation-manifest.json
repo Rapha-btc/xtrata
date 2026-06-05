@@ -1,0 +1,92 @@
+{
+  "manifest": {
+    "standard": "xtrata-identity-attestation-manifest",
+    "schemaVersion": "0.1.0",
+    "tier": "level-2",
+    "manifestId": "xtrata-template:identity-attestation:0.1.0",
+    "network": "mainnet",
+    "createdAt": "2026-06-05T00:00:00Z",
+    "updatedAt": "2026-06-05T00:00:00Z",
+    "status": "template",
+    "language": "en",
+    "canonicalUri": "xtrata://inscription/{manifestInscriptionId}",
+    "canonicalInscription": {
+      "contractId": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-1",
+      "tokenId": "{manifestInscriptionId}",
+      "finalHash": "sha256:{manifestHash}",
+      "mimeType": "application/json"
+    },
+    "supersedes": [],
+    "humanSummary": "Describes an identity, organisation, creator profile or attestation bundle linked to wallets, namespaces and signed claims."
+  },
+  "identity": {
+    "identityId": "{identity-id}",
+    "displayName": "{Name}",
+    "type": "person-or-organisation",
+    "canonicalNamespace": "{name}.x",
+    "description": "Canonical identity/attestation manifest."
+  },
+  "subjects": [
+    {
+      "subjectType": "wallet",
+      "principal": "SP...",
+      "role": "primary-controller"
+    }
+  ],
+  "linkedNames": [
+    {
+      "name": "{name}.x",
+      "registryContract": "SP000000000000000000002Q6VF78.xtrata-xns-registry-v1",
+      "role": "canonical-name",
+      "verified": false
+    }
+  ],
+  "publicKeys": [
+    {
+      "keyId": "primary",
+      "type": "stacks-address",
+      "value": "SP...",
+      "status": "active"
+    }
+  ],
+  "verifiedUrls": [
+    {
+      "url": "https://example.com",
+      "method": "signed-message-or-dns-text",
+      "verifiedAt": "2026-06-05T00:00:00Z"
+    }
+  ],
+  "attestations": [
+    {
+      "attestationId": "att-001",
+      "attestor": "SP...",
+      "claim": "Controls the linked namespace and wallet.",
+      "evidenceUri": "xtrata://inscription/{evidenceId}",
+      "hash": "sha256:{evidenceHash}",
+      "issuedAt": "2026-06-05T00:00:00Z",
+      "expiresAt": null,
+      "revoked": false
+    }
+  ],
+  "recovery": {
+    "enabled": false,
+    "method": null,
+    "recoveryPrincipals": []
+  },
+  "validation": {
+    "schemaUri": "schemas/xtrata-identity-attestation-manifest.schema.json",
+    "validated": false,
+    "validationRules": [
+      "schema-valid",
+      "linked-name-registry-check",
+      "signature-valid"
+    ]
+  },
+  "security": {
+    "verifiedWallets": [],
+    "signatures": [],
+    "amendments": [],
+    "revocations": []
+  },
+  "extensions": {}
+}

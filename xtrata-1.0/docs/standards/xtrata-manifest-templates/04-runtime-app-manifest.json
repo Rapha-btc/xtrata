@@ -1,0 +1,129 @@
+{
+  "manifest": {
+    "standard": "xtrata-runtime-app-manifest",
+    "schemaVersion": "0.1.0",
+    "tier": "level-3",
+    "manifestId": "xtrata-template:runtime-app:0.1.0",
+    "network": "mainnet",
+    "createdAt": "2026-06-05T00:00:00Z",
+    "updatedAt": "2026-06-05T00:00:00Z",
+    "status": "template",
+    "language": "en",
+    "canonicalUri": "xtrata://inscription/{manifestInscriptionId}",
+    "canonicalInscription": {
+      "contractId": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-1",
+      "tokenId": "{manifestInscriptionId}",
+      "finalHash": "sha256:{manifestHash}",
+      "mimeType": "application/json"
+    },
+    "supersedes": [],
+    "humanSummary": "Describes an interactive app, HTML runtime, renderer, game, wallet widget or sandboxed module."
+  },
+  "app": {
+    "appId": "{app-id}",
+    "name": "{App Name}",
+    "type": "interactive-runtime",
+    "canonicalNamespace": "{app}.x",
+    "description": "Standalone runtime/app manifest."
+  },
+  "runtime": {
+    "entrypoints": [
+      {
+        "name": "main",
+        "assetId": "runtime-main",
+        "path": "index.html",
+        "permissions": [
+          "read-inscriptions"
+        ],
+        "sandbox": "required"
+      }
+    ],
+    "requirements": [
+      {
+        "type": "browser",
+        "name": "browser-es2020",
+        "version": ">=1",
+        "required": true
+      }
+    ]
+  },
+  "assetRegistry": {
+    "assets": [
+      {
+        "assetId": "runtime-main",
+        "type": "html",
+        "uri": "xtrata://inscription/{runtimeId}",
+        "mimeType": "text/html",
+        "hash": "sha256:{hash}",
+        "role": "runtime"
+      }
+    ]
+  },
+  "dependencies": [
+    {
+      "assetId": "renderer-js",
+      "uri": "xtrata://inscription/{jsId}",
+      "mimeType": "application/javascript",
+      "hash": "sha256:{hash}"
+    }
+  ],
+  "permissions": {
+    "externalNetworkAllowed": false,
+    "fileSystemAllowed": false,
+    "audioPlaybackAllowed": false,
+    "walletConnectionAllowed": false,
+    "dangerousApisBlocked": [
+      "eval",
+      "document.cookie",
+      "localStorage"
+    ]
+  },
+  "determinism": {
+    "deterministic": true,
+    "seedPolicy": {
+      "seedSource": "xtrata-token-id-or-namehash",
+      "seedFormula": "sha256(appId + subjectId)"
+    },
+    "referenceOutputs": []
+  },
+  "reconstruction": {
+    "instructions": [
+      "Fetch entrypoint and dependencies.",
+      "Verify hashes.",
+      "Run in sandbox with declared permissions only."
+    ],
+    "requiredReadOnlyCalls": [
+      "get-inscription-meta",
+      "get-chunk"
+    ]
+  },
+  "interoperability": {
+    "walletHints": {
+      "preferredDisplay": "app",
+      "primaryAction": "run"
+    },
+    "indexerHints": {
+      "cachePolicy": "immutable-with-amendments"
+    }
+  },
+  "validation": {
+    "schemaUri": "schemas/xtrata-runtime-app-manifest.schema.json",
+    "validated": false,
+    "validationRules": [
+      "schema-valid",
+      "entrypoint-resolves",
+      "hashes-match",
+      "sandbox-required"
+    ]
+  },
+  "security": {
+    "verifiedContracts": [],
+    "verifiedWallets": [],
+    "hashes": {
+      "manifestHash": "sha256:{manifestHash}"
+    },
+    "signatures": [],
+    "amendments": []
+  },
+  "extensions": {}
+}

@@ -1,0 +1,710 @@
+{
+  "manifest": {
+    "standard": "xtrata-namespace-manifest",
+    "schemaVersion": "0.1.0",
+    "tier": "namespace-root",
+    "manifestId": "xtrata-namespace:x:2026-06-05",
+    "network": "mainnet",
+    "createdAt": "2026-06-05T00:00:00Z",
+    "updatedAt": "2026-06-05T00:00:00Z",
+    "status": "draft",
+    "language": "en",
+    "canonicalUri": "xtrata://inscription/TBD",
+    "canonicalInscription": {
+      "contractId": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-1",
+      "tokenId": "TBD",
+      "finalHash": "sha256:TBD",
+      "mimeType": "application/json"
+    },
+    "supersedes": [],
+    "humanSummary": "Root namespace manifest for Xtrata-native .x names, aliases, identity records, collection aliases, runtime aliases and modular manifest resolution."
+  },
+  "namespace": {
+    "namespaceId": "x",
+    "root": "x",
+    "displaySuffix": ".x",
+    "type": "xtrata-native",
+    "dnsStatus": "not-public-dns-tld",
+    "purpose": [
+      "human-readable names for Xtrata inscriptions",
+      "human-readable names for Xtrata collections",
+      "human-readable names for wallets and identities",
+      "human-readable names for software/runtime modules",
+      "human-readable names for audiovisual works, BVSTs, manifests and composable data objects"
+    ],
+    "nonGoals": [
+      "This manifest does not claim ownership of the public DNS .x top-level domain.",
+      "This manifest does not make .x resolve in normal browsers unless a compatible resolver, wallet, gateway, DNS bridge or browser extension is used."
+    ],
+    "canonicalExamples": [
+      "jim.x",
+      "dyle.x",
+      "froggies.x",
+      "song315.x",
+      "bvst.x",
+      "agent.x"
+    ],
+    "reservedNamesPolicy": {
+      "enabled": true,
+      "reservedBy": "xtrata-root-governance",
+      "reservedCategories": [
+        "protocol",
+        "security",
+        "marketplace",
+        "system",
+        "offensive",
+        "legal",
+        "founder",
+        "infrastructure"
+      ],
+      "reservedNamesManifestUri": "xtrata://inscription/TBD",
+      "reservedNamesHash": "sha256:TBD"
+    }
+  },
+  "trustModel": {
+    "summary": "The registry contract proves uniqueness and current ownership of a name. The namespace manifest defines the standard. Individual name resolver manifests hold rich records and can point to collection, preservation, marketplace, audiovisual or composable manifests.",
+    "uniquenessAuthority": "registry-contract",
+    "ownershipAuthority": "registry-contract",
+    "richRecordAuthority": "resolver-manifest-or-resolver-contract",
+    "historyAuthority": "on-chain-events-plus-inscribed-amendments",
+    "recommendedPattern": "registry-contract-proves-owner; resolver-manifest-defines-records; linked-manifests-define-targets",
+    "manifestOnlyAllowed": {
+      "enabled": true,
+      "allowedFor": [
+        "local aliases",
+        "collection-internal names",
+        "fixed preservation aliases",
+        "non-canonical display labels"
+      ],
+      "notAllowedFor": [
+        "globally unique .x ownership claims",
+        "wallet payment routing",
+        "identity verification",
+        "marketplace canonical ownership claims"
+      ]
+    }
+  },
+  "registry": {
+    "requiredForCanonicalNames": true,
+    "type": "clarity-contract",
+    "contractId": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-xns-registry-v1",
+    "network": "mainnet",
+    "nameNormalization": {
+      "case": "lowercase",
+      "unicode": "uts46-or-ascii-only-v0",
+      "allowedCharacters": "a-z, 0-9, hyphen",
+      "minimumLabelLength": 1,
+      "maximumLabelLength": 63,
+      "maximumFullNameLength": 253,
+      "forbiddenPatterns": [
+        "leading-hyphen",
+        "trailing-hyphen",
+        "empty-label",
+        "double-dot",
+        "unsupported-unicode-confusable"
+      ]
+    },
+    "hashing": {
+      "nameHashAlgorithm": "sha256",
+      "labelHashAlgorithm": "sha256",
+      "nameHashFormula": "nameHash = sha256(normalizedFullName)",
+      "labelHashFormula": "labelHash = sha256(normalizedLabel)"
+    },
+    "registrationModel": {
+      "mode": "first-come-first-served-with-reserved-names",
+      "paymentAsset": "STX",
+      "pricing": {
+        "model": "configurable",
+        "basePriceMicrostx": "TBD",
+        "premiumShortNamePolicy": "optional",
+        "renewalPriceMicrostx": "TBD"
+      },
+      "duration": {
+        "model": "configurable",
+        "defaultYears": 10,
+        "maximumYears": 100,
+        "permanentNamesAllowed": true,
+        "permanentNamesPolicy": "reserved-or-premium-or-governance-approved"
+      },
+      "antiSquatting": {
+        "commitRevealSupported": true,
+        "premiumNamesSupported": true,
+        "reservedNamesSupported": true,
+        "gracePeriodSupported": true
+      }
+    },
+    "readOnlyInterface": {
+      "getOwner": {
+        "function": "get-owner",
+        "input": "name-hash",
+        "returns": "optional principal"
+      },
+      "getResolver": {
+        "function": "get-resolver",
+        "input": "name-hash",
+        "returns": "optional resolver"
+      },
+      "getExpiry": {
+        "function": "get-expiry",
+        "input": "name-hash",
+        "returns": "optional uint"
+      },
+      "getNameRecord": {
+        "function": "get-name-record",
+        "input": "name-hash",
+        "returns": "optional { owner: principal, resolver: optional principal, resolver-uri: optional string-ascii, expiry: optional uint, status: string-ascii }"
+      },
+      "getReverseName": {
+        "function": "get-reverse-name",
+        "input": "principal",
+        "returns": "optional string-ascii"
+      },
+      "isNameAvailable": {
+        "function": "is-name-available",
+        "input": "normalized-name",
+        "returns": "bool"
+      }
+    },
+    "publicInterface": {
+      "register": {
+        "function": "register",
+        "inputs": [
+          "normalized-name",
+          "resolver-uri",
+          "duration"
+        ],
+        "requires": [
+          "payment",
+          "name-available",
+          "not-reserved"
+        ]
+      },
+      "setResolver": {
+        "function": "set-resolver",
+        "inputs": [
+          "name-hash",
+          "resolver-uri"
+        ],
+        "requires": [
+          "tx-sender-is-owner"
+        ]
+      },
+      "transfer": {
+        "function": "transfer",
+        "inputs": [
+          "name-hash",
+          "new-owner"
+        ],
+        "requires": [
+          "tx-sender-is-owner"
+        ]
+      },
+      "renew": {
+        "function": "renew",
+        "inputs": [
+          "name-hash",
+          "duration"
+        ],
+        "requires": [
+          "payment",
+          "not-permanent"
+        ]
+      },
+      "setReverseName": {
+        "function": "set-reverse-name",
+        "inputs": [
+          "name-hash"
+        ],
+        "requires": [
+          "tx-sender-is-owner"
+        ]
+      }
+    },
+    "events": [
+      "name-registered",
+      "resolver-updated",
+      "name-transferred",
+      "name-renewed",
+      "name-expired",
+      "reverse-name-updated"
+    ]
+  },
+  "resolverStandard": {
+    "standard": "xtrata-name-resolver",
+    "schemaVersion": "0.1.0",
+    "resolverTypes": [
+      "manifest",
+      "contract",
+      "hybrid"
+    ],
+    "recommendedResolverType": "hybrid",
+    "manifestResolver": {
+      "uriScheme": "xtrata://inscription/{tokenId}",
+      "hashRequired": true,
+      "mimeType": "application/json"
+    },
+    "contractResolverInterface": {
+      "getRecord": {
+        "function": "get-record",
+        "input": "name-hash, record-key",
+        "returns": "optional string-utf8"
+      },
+      "getRecordsHash": {
+        "function": "get-records-hash",
+        "input": "name-hash",
+        "returns": "optional buff"
+      },
+      "getManifestUri": {
+        "function": "get-manifest-uri",
+        "input": "name-hash",
+        "returns": "optional string-ascii"
+      }
+    },
+    "recordTypes": [
+      {
+        "key": "stx",
+        "type": "principal",
+        "description": "Primary Stacks address for this name."
+      },
+      {
+        "key": "btc",
+        "type": "string",
+        "description": "Primary Bitcoin address for this name."
+      },
+      {
+        "key": "xtrata.profile",
+        "type": "xtrata-uri",
+        "description": "Profile or identity inscription."
+      },
+      {
+        "key": "xtrata.avatar",
+        "type": "xtrata-uri",
+        "description": "Avatar, image or identity media inscription."
+      },
+      {
+        "key": "xtrata.collection",
+        "type": "xtrata-uri-list",
+        "description": "Canonical collection manifest references."
+      },
+      {
+        "key": "xtrata.content",
+        "type": "xtrata-uri",
+        "description": "Primary content inscription or manifest."
+      },
+      {
+        "key": "xtrata.runtime",
+        "type": "xtrata-uri",
+        "description": "Runtime, app, BVST or executable data manifest."
+      },
+      {
+        "key": "xtrata.manifest",
+        "type": "xtrata-uri",
+        "description": "Primary linked manifest."
+      },
+      {
+        "key": "url",
+        "type": "https-url",
+        "description": "Optional external website or gateway URL."
+      },
+      {
+        "key": "text",
+        "type": "string",
+        "description": "Human-readable public profile text."
+      },
+      {
+        "key": "publicKey",
+        "type": "string",
+        "description": "Public signing or encryption key."
+      },
+      {
+        "key": "did",
+        "type": "string",
+        "description": "Optional decentralized identifier."
+      }
+    ]
+  },
+  "nameRecordTemplate": {
+    "standard": "xtrata-name-record",
+    "schemaVersion": "0.1.0",
+    "name": "jim.x",
+    "normalizedName": "jim.x",
+    "namespace": "x",
+    "label": "jim",
+    "nameHash": "sha256:TBD",
+    "labelHash": "sha256:TBD",
+    "type": "personal",
+    "status": "active",
+    "registry": {
+      "contractId": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-xns-registry-v1",
+      "registeredAtBlock": 0,
+      "registrationTxId": "0xTBD",
+      "expiresAtBlock": null,
+      "permanent": true
+    },
+    "owner": {
+      "principal": "SP_OWNER_ADDRESS_TBD",
+      "verificationMethod": "registry-owner",
+      "ownerSinceBlock": 0
+    },
+    "resolver": {
+      "type": "manifest",
+      "uri": "xtrata://inscription/TBD",
+      "hash": "sha256:TBD",
+      "lastUpdatedAtBlock": 0,
+      "mutableBy": "registry-owner"
+    },
+    "records": {
+      "stx": "SP_OWNER_ADDRESS_TBD",
+      "btc": "bc1_ADDRESS_TBD",
+      "xtrata.profile": "xtrata://inscription/TBD",
+      "xtrata.avatar": "xtrata://inscription/TBD",
+      "xtrata.content": "xtrata://inscription/TBD",
+      "xtrata.manifest": "xtrata://inscription/TBD",
+      "url": "https://xtrata.xyz/name/jim.x",
+      "text": "Canonical Xtrata identity record for jim.x."
+    },
+    "linkedManifests": [
+      {
+        "role": "identity-profile",
+        "standard": "xtrata-profile-manifest",
+        "uri": "xtrata://inscription/TBD",
+        "hash": "sha256:TBD",
+        "required": false
+      },
+      {
+        "role": "collection",
+        "standard": "xtrata-collection-manifest",
+        "uri": "xtrata://inscription/TBD",
+        "hash": "sha256:TBD",
+        "required": false
+      },
+      {
+        "role": "runtime",
+        "standard": "xtrata-collection-manifest",
+        "uri": "xtrata://inscription/TBD",
+        "hash": "sha256:TBD",
+        "required": false
+      }
+    ],
+    "subnames": {
+      "enabled": true,
+      "policy": "owner-controlled",
+      "examples": [
+        "music.jim.x",
+        "vault.jim.x",
+        "agent.jim.x"
+      ],
+      "delegation": {
+        "allowed": true,
+        "requiresOwnerSignature": true,
+        "subnameRegistry": "same-registry-or-linked-subregistry"
+      }
+    },
+    "transfer": {
+      "transferable": true,
+      "requiresOwnerSignature": true,
+      "marketplaceTransferAllowed": true,
+      "notes": "Transfers must update the canonical registry owner. Resolver manifests alone cannot transfer canonical ownership."
+    },
+    "recovery": {
+      "enabled": true,
+      "method": "nominated-recovery-wallet",
+      "recoveryWallet": "SP_RECOVERY_ADDRESS_TBD",
+      "delayBlocks": 1008,
+      "notes": "Recovery is optional and should be explicit. Names without recovery remain fully sovereign but may be lost with the owner key."
+    },
+    "history": {
+      "amendments": [],
+      "previousResolvers": [],
+      "previousOwners": []
+    }
+  },
+  "linkedManifestRoles": {
+    "supportedStandards": [
+      "xtrata-collection-manifest",
+      "xtrata-preservation-manifest",
+      "xtrata-audiovisual-preservation-manifest",
+      "xtrata-composable-manifest",
+      "xtrata-profile-manifest",
+      "xtrata-software-manifest",
+      "xtrata-agent-manifest"
+    ],
+    "roles": [
+      {
+        "role": "canonical-target",
+        "description": "The main thing this name resolves to."
+      },
+      {
+        "role": "identity-profile",
+        "description": "A profile, person, artist, organisation or agent identity manifest."
+      },
+      {
+        "role": "collection",
+        "description": "A collection manifest such as DYLE, Froggies or another art drop."
+      },
+      {
+        "role": "item",
+        "description": "A specific item, inscription or token."
+      },
+      {
+        "role": "runtime",
+        "description": "A BVST, app, agent, software module or executable data manifest."
+      },
+      {
+        "role": "archive",
+        "description": "A preservation or audiovisual archive manifest."
+      },
+      {
+        "role": "marketplace",
+        "description": "A marketplace adapter, launch or trading context."
+      }
+    ],
+    "collectionManifestExtensionTemplate": {
+      "extensions": {
+        "xns": {
+          "names": [
+            {
+              "name": "dyle.x",
+              "role": "canonical-collection-name",
+              "registryContractId": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-xns-registry-v1",
+              "resolverUri": "xtrata://inscription/TBD",
+              "nameHash": "sha256:TBD",
+              "verified": false
+            }
+          ]
+        }
+      }
+    }
+  },
+  "resolution": {
+    "algorithmVersion": "0.1.0",
+    "defaultResolutionOrder": [
+      "normalize name",
+      "hash normalized name",
+      "query registry get-name-record(nameHash)",
+      "verify name exists and is active",
+      "verify current owner if ownership is relevant",
+      "load resolver URI from registry",
+      "fetch resolver manifest from Xtrata",
+      "verify resolver manifest hash if supplied by registry",
+      "read requested record key from resolver manifest",
+      "load any linked target manifest",
+      "verify linked target manifest hash",
+      "resolve final inscription, collection, runtime or external URL"
+    ],
+    "pathPatterns": [
+      {
+        "pattern": "{name}.x",
+        "meaning": "resolve primary name record"
+      },
+      {
+        "pattern": "{name}.x/profile",
+        "meaning": "resolve profile record"
+      },
+      {
+        "pattern": "{name}.x/avatar",
+        "meaning": "resolve avatar record"
+      },
+      {
+        "pattern": "{name}.x/collection",
+        "meaning": "resolve canonical collection manifest"
+      },
+      {
+        "pattern": "{name}.x/item/{index}",
+        "meaning": "resolve item index through the linked collection manifest"
+      },
+      {
+        "pattern": "{name}.x/runtime",
+        "meaning": "resolve runtime or app manifest"
+      },
+      {
+        "pattern": "{subname}.{name}.x",
+        "meaning": "resolve delegated subname"
+      }
+    ],
+    "failureModes": [
+      {
+        "code": "name-not-found",
+        "message": "The registry has no active record for this name."
+      },
+      {
+        "code": "name-expired",
+        "message": "The registry record exists but has expired."
+      },
+      {
+        "code": "resolver-missing",
+        "message": "The name exists but no resolver is set."
+      },
+      {
+        "code": "resolver-hash-mismatch",
+        "message": "The fetched resolver manifest does not match the expected hash."
+      },
+      {
+        "code": "target-hash-mismatch",
+        "message": "A linked manifest or target inscription failed hash verification."
+      }
+    ]
+  },
+  "reverseResolution": {
+    "enabled": true,
+    "purpose": "Allow a wallet or principal to declare its preferred .x name.",
+    "trustRule": "Reverse resolution is valid only if the forward registry owner of the name matches the wallet declaring the reverse name.",
+    "records": [
+      {
+        "principal": "SP_OWNER_ADDRESS_TBD",
+        "name": "jim.x",
+        "nameHash": "sha256:TBD",
+        "verified": false
+      }
+    ]
+  },
+  "interoperability": {
+    "gatewayHints": {
+      "preferredGatewayPattern": "https://xtrata.xyz/name/{name}",
+      "fallbackGatewayPattern": "https://xtrata.xyz/x/{label}",
+      "contentNegotiation": [
+        "application/json",
+        "text/html"
+      ]
+    },
+    "walletHints": {
+      "primaryAction": "resolve",
+      "safeRecordTypes": [
+        "stx",
+        "btc",
+        "xtrata.profile",
+        "xtrata.avatar",
+        "xtrata.collection",
+        "xtrata.content",
+        "url"
+      ],
+      "dangerousRecordTypes": [
+        "javascript",
+        "html-runtime"
+      ],
+      "runtimeSandboxRequired": true
+    },
+    "indexerHints": {
+      "cachePolicy": "mutable-with-registry-events",
+      "cacheInvalidationEvents": [
+        "resolver-updated",
+        "name-transferred",
+        "name-expired",
+        "name-renewed"
+      ],
+      "canonicalLookupKey": "nameHash",
+      "secondaryLookupKeys": [
+        "normalizedName",
+        "owner",
+        "resolverUri"
+      ]
+    },
+    "marketplaceHints": {
+      "displayAs": "name",
+      "saleable": true,
+      "transferRequiresRegistryUpdate": true,
+      "showLinkedCollections": true,
+      "showVerifiedOwner": true
+    }
+  },
+  "rightsAndPolicy": {
+    "ownership": "Ownership means control of the registry record for the name, not ownership of external trademarks, public DNS domains or third-party intellectual property.",
+    "trademarkPolicy": "TBD",
+    "disputePolicy": "TBD",
+    "contentPolicy": "Resolver records may point to content, but content legality and rights are governed by the linked manifest and applicable law.",
+    "aiUsagePolicy": {
+      "training": "not-applicable-to-namespace-records",
+      "inference": "allowed",
+      "styleImitation": "not-applicable",
+      "notes": "AI usage policies should be specified in linked content, collection, audiovisual or software manifests."
+    }
+  },
+  "security": {
+    "verifiedContracts": [
+      {
+        "contractId": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-xns-registry-v1",
+        "role": "namespace-registry",
+        "network": "mainnet",
+        "verified": false
+      },
+      {
+        "contractId": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-1",
+        "role": "xtrata-core",
+        "network": "mainnet",
+        "verified": true
+      }
+    ],
+    "verifiedWallets": [
+      {
+        "wallet": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X",
+        "role": "namespace-publisher",
+        "verificationMethod": "signature",
+        "verified": false
+      }
+    ],
+    "signatures": [
+      {
+        "signer": "SP_NAMESPACE_PUBLISHER_TBD",
+        "signature": "TBD",
+        "signedPayloadHash": "sha256:TBD",
+        "role": "namespace-standard-publisher"
+      }
+    ],
+    "hashes": {
+      "manifestHash": "sha256:TBD",
+      "registryInterfaceHash": "sha256:TBD",
+      "resolverStandardHash": "sha256:TBD",
+      "reservedNamesHash": "sha256:TBD"
+    },
+    "threatModel": [
+      "duplicate manifest claims without registry ownership",
+      "typosquatting",
+      "unicode confusables",
+      "resolver hijacking",
+      "stale indexer cache",
+      "malicious runtime targets",
+      "external URL phishing",
+      "lost owner keys"
+    ],
+    "requiredControls": [
+      "canonical registry lookup before trusting any .x ownership claim",
+      "hash verification for resolver manifests",
+      "runtime sandboxing for executable targets",
+      "clear UI warnings for unverified external URLs",
+      "reverse lookup verification before displaying a name as wallet identity",
+      "normalization and confusable-character protection"
+    ]
+  },
+  "validation": {
+    "schemaUri": "schemas/xtrata-namespace-manifest.schema.json",
+    "validated": false,
+    "validator": "xtrata-manifest-validator",
+    "validationRules": [
+      "schema-valid",
+      "namespace-root-present",
+      "registry-contract-present-for-canonical-names",
+      "normalization-rules-present",
+      "hashing-rules-present",
+      "resolver-standard-present",
+      "name-record-template-present",
+      "linked-manifest-extension-template-present",
+      "security-threat-model-present"
+    ],
+    "reports": []
+  },
+  "humanReadable": {
+    "plainEnglishSummary": "This manifest defines how Xtrata-native .x names work. A registry contract proves who owns each name. A resolver manifest explains what that name points to. Other Xtrata manifests can link themselves to names through the xns extension.",
+    "developerSummary": "Normalize the name, hash it, read the registry record, fetch the resolver manifest, verify hashes, then resolve linked manifests or records.",
+    "marketplaceSummary": "Display .x names only after registry verification. Names may be saleable if the registry supports transfer. Linked collections should be loaded through the resolver manifest.",
+    "walletSummary": "Use .x names for display and sending only after forward and reverse resolution checks pass.",
+    "archivistSummary": "The namespace manifest records the naming rules and resolver standard; historical changes should be captured through registry events and inscribed amendments."
+  },
+  "extensions": {
+    "xns": {
+      "rootNamespaceVersion": "0.1.0",
+      "compatibleManifestStandards": [
+        "xtrata-collection-manifest@0.1.0"
+      ]
+    }
+  }
+}

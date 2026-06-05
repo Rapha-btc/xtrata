@@ -1,0 +1,85 @@
+{
+  "manifest": {
+    "standard": "xtrata-oracle-index-manifest",
+    "schemaVersion": "0.1.0",
+    "tier": "level-2",
+    "manifestId": "xtrata-template:oracle-index:0.1.0",
+    "network": "mainnet",
+    "createdAt": "2026-06-05T00:00:00Z",
+    "updatedAt": "2026-06-05T00:00:00Z",
+    "status": "template",
+    "language": "en",
+    "canonicalUri": "xtrata://inscription/{manifestInscriptionId}",
+    "canonicalInscription": {
+      "contractId": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-1",
+      "tokenId": "{manifestInscriptionId}",
+      "finalHash": "sha256:{manifestHash}",
+      "mimeType": "application/json"
+    },
+    "supersedes": [],
+    "humanSummary": "Describes oracle feeds, indexer outputs, snapshots, external state attestations and staleness policies."
+  },
+  "oracleOrIndex": {
+    "id": "{oracle-id}",
+    "name": "{Oracle or Index Name}",
+    "type": "price-feed-or-index",
+    "canonicalNamespace": "{oracle}.x",
+    "description": "Canonical source description for indexed or externally attested data."
+  },
+  "publisher": {
+    "principal": "SP...",
+    "identityManifest": "xtrata://inscription/{identityManifestId}",
+    "signingKey": "{publicKey}"
+  },
+  "dataFeeds": [
+    {
+      "feedId": "stx-usd",
+      "valueType": "decimal",
+      "source": "external-market-aggregate",
+      "updateFrequencySeconds": 300,
+      "stalenessPolicySeconds": 900,
+      "unit": "USD"
+    }
+  ],
+  "publication": {
+    "method": "xtrata-inscription-or-contract-state",
+    "latestPointerFunction": "get-latest-feed",
+    "historyUri": "xtrata://inscription/{historyId}"
+  },
+  "verification": {
+    "signatureRequired": true,
+    "hashAlgorithm": "sha256",
+    "proofMethod": "signed-feed-payload",
+    "fallbackFeeds": []
+  },
+  "consumers": [
+    {
+      "contractId": "SP...consumer-v1",
+      "role": "defi-protocol"
+    }
+  ],
+  "risks": {
+    "knownRisks": [
+      "Stale data",
+      "Publisher failure",
+      "Manipulated source data"
+    ],
+    "failureMode": "consumer-contract-must-reject-stale-values"
+  },
+  "validation": {
+    "schemaUri": "schemas/xtrata-oracle-index-manifest.schema.json",
+    "validated": false,
+    "validationRules": [
+      "schema-valid",
+      "publisher-signature-valid",
+      "staleness-policy-declared"
+    ]
+  },
+  "security": {
+    "verifiedWallets": [],
+    "verifiedContracts": [],
+    "signatures": [],
+    "amendments": []
+  },
+  "extensions": {}
+}

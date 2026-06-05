@@ -1,0 +1,184 @@
+{
+  "manifest": {
+    "standard": "xtrata-financial-protocol-manifest",
+    "schemaVersion": "0.1.0",
+    "tier": "level-3",
+    "manifestId": "xtrata-template:financial-protocol:0.1.0",
+    "network": "mainnet",
+    "createdAt": "2026-06-05T00:00:00Z",
+    "updatedAt": "2026-06-05T00:00:00Z",
+    "status": "template",
+    "language": "en",
+    "canonicalUri": "xtrata://inscription/{manifestInscriptionId}",
+    "canonicalInscription": {
+      "contractId": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-1",
+      "tokenId": "{manifestInscriptionId}",
+      "finalHash": "sha256:{manifestHash}",
+      "mimeType": "application/json"
+    },
+    "supersedes": [],
+    "humanSummary": "Describes a DeFi or financial protocol so wallets, indexers and auditors can resolve contracts, assets, permissions, risks and read-only surfaces."
+  },
+  "protocol": {
+    "protocolId": "{protocol-id}",
+    "name": "{Protocol Name}",
+    "type": "liquidity-pool",
+    "category": "defi",
+    "description": "Canonical manifest for a financial protocol deployed through or referenced by Xtrata.",
+    "canonicalNamespace": "{protocol}.x",
+    "canonicalContracts": {
+      "router": "SP...router-v1",
+      "poolFactory": "SP...factory-v1",
+      "feeCollector": "SP...fees-v1",
+      "governance": "SP...governance-v1"
+    },
+    "deployment": {
+      "chain": "stacks",
+      "network": "mainnet",
+      "deployedAtBlock": 0,
+      "deploymentTxId": "0x..."
+    }
+  },
+  "assets": {
+    "supportedAssets": [
+      {
+        "symbol": "STX",
+        "assetType": "native",
+        "contractId": null,
+        "decimals": 6,
+        "role": "base-asset"
+      },
+      {
+        "symbol": "sBTC",
+        "assetType": "sip-010",
+        "contractId": "SP...sbtc-token",
+        "decimals": 8,
+        "role": "quote-asset"
+      }
+    ],
+    "lpOrReceiptTokens": [
+      {
+        "symbol": "XLP",
+        "contractId": "SP...lp-token-v1",
+        "decimals": 6,
+        "supplyPolicy": "minted-on-deposit-burned-on-withdraw"
+      }
+    ]
+  },
+  "financialModel": {
+    "feeModel": {
+      "swapFeeBasisPoints": 30,
+      "protocolFeeBasisPoints": 5,
+      "recipient": "SP..."
+    },
+    "collateralModel": null,
+    "interestRateModel": null,
+    "rewardModel": null,
+    "invariants": [
+      "Contract state is canonical for balances and positions.",
+      "Manifest describes surfaces and dependencies only."
+    ]
+  },
+  "readOnlySurface": {
+    "requiredReadOnlyCalls": [
+      "get-pool-info",
+      "get-reserves",
+      "get-user-position",
+      "get-fees",
+      "get-admins"
+    ],
+    "indexerQueries": [
+      "positions-by-wallet",
+      "volume-by-pool",
+      "fee-accruals"
+    ]
+  },
+  "writeSurface": {
+    "publicFunctions": [
+      "deposit",
+      "withdraw",
+      "swap",
+      "claim-fees"
+    ],
+    "adminFunctions": [
+      "set-fee",
+      "pause",
+      "resume",
+      "set-oracle"
+    ],
+    "dangerousFunctions": [
+      "upgrade-contract",
+      "emergency-withdraw"
+    ]
+  },
+  "permissions": {
+    "adminPrincipals": [
+      {
+        "principal": "SP...",
+        "role": "protocol-admin",
+        "powers": [
+          "pause",
+          "set-fee"
+        ]
+      }
+    ],
+    "upgradeability": {
+      "upgradeable": true,
+      "method": "governance-timelock",
+      "timelockBlocks": 1008
+    },
+    "emergencyControls": {
+      "pausable": true,
+      "withdrawalEscapeHatch": false
+    }
+  },
+  "oracles": [
+    {
+      "oracleId": "primary-price-feed",
+      "manifest": "xtrata://inscription/{oracleManifestId}",
+      "stalenessPolicySeconds": 3600
+    }
+  ],
+  "auditsAndRisk": {
+    "audits": [
+      {
+        "auditor": "{Auditor}",
+        "uri": "xtrata://inscription/{auditReportId}",
+        "hash": "sha256:{auditHash}",
+        "date": "YYYY-MM-DD"
+      }
+    ],
+    "knownRisks": [
+      "Smart contract risk",
+      "Oracle risk",
+      "Liquidity risk",
+      "Admin key risk"
+    ],
+    "riskRating": "experimental-unaudited"
+  },
+  "walletAndMarketplaceHints": {
+    "displayAs": "financial-protocol",
+    "primaryAction": "view-positions",
+    "showRiskWarning": true
+  },
+  "validation": {
+    "schemaUri": "schemas/xtrata-financial-protocol-manifest.schema.json",
+    "validated": false,
+    "validationRules": [
+      "schema-valid",
+      "contracts-verified",
+      "admin-surface-declared",
+      "oracle-dependencies-declared"
+    ]
+  },
+  "security": {
+    "verifiedContracts": [],
+    "verifiedWallets": [],
+    "hashes": {
+      "manifestHash": "sha256:{manifestHash}"
+    },
+    "signatures": [],
+    "amendments": []
+  },
+  "extensions": {}
+}

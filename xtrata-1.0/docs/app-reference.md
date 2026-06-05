@@ -143,6 +143,11 @@ Purpose: one-stop map of where code lives and which files to touch for common up
 - `docs/ai-skills/aibtc-agent-training.md` is the track-specific guide for aibtc MCP agents.
 - `docs/ai-skills/generic-agent-training.md` is the track-specific guide for non-aibtc AI agents and frameworks.
 - `docs/product-contract-ui-reference.md` maps first-party product ownership and UI boundaries for core, market, commerce, vault, and collection-sale contracts.
+- `docs/standards/README.md` indexes protocol/product standards for third-party integration.
+- `docs/standards/xtrata-collection-manifest-standard.md` defines the Xtrata Collection Manifest standard for collection identity, item mapping, provenance, reconstruction, marketplace display, validation, rights, and preservation context.
+- `docs/standards/xtrata-manifest-validation.md` defines expected validator behavior, validation levels, error codes, canonicalization, signatures, and validation report shape.
+- `schemas/xtrata-collection-manifest.schema.json` is the draft machine-readable schema for Xtrata Collection Manifest validation.
+- `docs/standards/examples/*.json` contains example manifests for marketplace, preservation, audiovisual, and full composable collection use cases.
 - `docs/sdk/README.md` defines SDK mission, package boundaries, and implementation posture.
 - `docs/sdk/test-gates.md` defines required tests and release-quality gates.
 - `docs/sdk/changelog.md` tracks completed delivery iterations.
