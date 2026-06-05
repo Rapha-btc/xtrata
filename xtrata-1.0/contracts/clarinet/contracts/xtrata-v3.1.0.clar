@@ -11,9 +11,9 @@
 ;;    - staged seal fee
 ;;    - single-tx fee
 ;;    - byte-proportional upload fee
-;;    - extra batch fee for > 32 chunks
+;;    - extra batch fee for > 50 chunks
 ;;    - wallet/caller basis-point overrides
-;; 7) Core-native single-tx mint path exists for <= 4 maximum-profile chunks.
+;; 7) Core-native single-tx mint path exists for <= 50 chunks.
 ;; 8) Upload sessions remain start-or-resume and expire after inactivity.
 ;; 9) Legacy migration supports v1.1.1, v2.1.0, and v2.1.1 into the v3 NFT line.
 ;; 10) Admin can set an initial next-id offset once for continuity.
@@ -66,33 +66,85 @@
 (define-constant ERR-INVALID-BPS        (err u119))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 ;; --- CONSTANTS ---
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define-constant MAX-BATCH-SIZE u32)
-(define-constant MAX-STANDARD-BATCH-SIZE u8)
-(define-constant MAX-MAXIMUM-BATCH-SIZE u4)
-(define-constant MAX-SINGLE-TX-CHUNKS u4)
+;; General list/batch limits used for non-upload operations.
+
+;; Keep this at 50 for seal batches, purge batches, relationships, dependencies,
+
+;; parents, and fee threshold logic.
+
+(define-constant MAX-BATCH-SIZE u50)
+
 (define-constant MAX-SEAL-BATCH-SIZE u50)
+
 (define-constant MAX-RELATIONSHIP-SIZE u50)
+
+;; Upload payload cap.
+
+;; All upload-style chunk calls should max out at 512 KiB per transaction.
+
+(define-constant MAX-UPLOAD-BYTES-PER-BATCH u524288)
+
+;; Chunk profile identifiers.
+
 (define-constant CHUNK-PROFILE-SMALL u1)
+
 (define-constant CHUNK-PROFILE-STANDARD u2)
+
 (define-constant CHUNK-PROFILE-MAXIMUM u3)
+
+;; Chunk sizes.
+
 (define-constant CHUNK-SIZE-SMALL u16384)
+
 (define-constant CHUNK-SIZE-STANDARD u65536)
+
 (define-constant CHUNK-SIZE-MAXIMUM u131072)
+
+;; 512 KiB upload batch limits by profile.
+
+(define-constant MAX-SMALL-BATCH-SIZE u32)      ;; 32 × 16 KiB  = 512 KiB
+
+(define-constant MAX-STANDARD-BATCH-SIZE u8)   ;; 8 × 64 KiB   = 512 KiB
+
+(define-constant MAX-MAXIMUM-BATCH-SIZE u4)    ;; 4 × 128 KiB  = 512 KiB
+
+;; Legacy/default byte unit used by fee calculation.
+
+;; This remains small-profile sized so existing byte-fee maths remains stable.
+
 (define-constant CHUNK-SIZE CHUNK-SIZE-SMALL)
+
+;; Maximum inscription size.
+
+;; Current cap: 2048 × 128 KiB = 268,435,456 bytes = 256 MiB.
+
 (define-constant MAX-TOTAL-CHUNKS u2048)
+
 (define-constant MAX-TOTAL-SIZE (* MAX-TOTAL-CHUNKS CHUNK-SIZE-MAXIMUM))
+
 (define-constant UPLOAD-EXPIRY-BLOCKS u4320)
+
 (define-constant FEE-MIN u1000)
+
 (define-constant FEE-MAX u1000000)
+
 (define-constant BPS-MAX u10000)
+
 (define-constant MODE-STAGED u1)
+
 (define-constant MODE-SINGLE-TX u2)
+
 (define-constant POLICY-SOURCE-DEFAULT u0)
+
 (define-constant POLICY-SOURCE-CALLER u1)
+
 (define-constant POLICY-SOURCE-WALLET u2)
+
 (define-constant CONTRACT-PRINCIPAL (as-contract tx-sender))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -507,7 +559,7 @@
   (acc {
     context: (buff 32),
     creator: principal,
-    chunks: (list 4 (optional (buff 131072)))
+    chunks: (list 6 (optional (buff 131072)))
   })
 )
   (let (
@@ -516,7 +568,7 @@
       creator: (get creator acc),
       index: index
     }))
-    (next (default-to (get chunks acc) (as-max-len? (append (get chunks acc) chunk) u4)))
+    (next (default-to (get chunks acc) (as-max-len? (append (get chunks acc) chunk) u6)))
   )
     {
       context: (get context acc),
@@ -709,7 +761,7 @@
 
 (define-private (assert-single-tx-shape (total-size uint) (chunk-count uint) (chunk-profile uint))
   (begin
-    (asserts! (<= chunk-count MAX-SINGLE-TX-CHUNKS) ERR-INVALID-BATCH)
+    (asserts! (<= chunk-count MAX-BATCH-SIZE) ERR-INVALID-BATCH)
     (assert-valid-profile-shape total-size chunk-count chunk-profile)
   )
 )
@@ -1253,7 +1305,7 @@
   )
 )
 
-(define-public (add-chunk-batch (hash (buff 32)) (chunks (list 32 (buff 16384))))
+(define-public (add-chunk-batch (hash (buff 32)) (chunks (list 50 (buff 16384))))
   (begin
     (try! (assert-inscription-allowed))
     (let (
@@ -1287,7 +1339,7 @@
   )
 )
 
-(define-public (add-chunk-batch-standard (hash (buff 32)) (chunks (list 8 (buff 65536))))
+(define-public (add-chunk-batch-standard (hash (buff 32)) (chunks (list 12 (buff 65536))))
   (begin
     (try! (assert-inscription-allowed))
     (let (
@@ -1321,7 +1373,7 @@
   )
 )
 
-(define-public (add-chunk-batch-maximum (hash (buff 32)) (chunks (list 4 (buff 131072))))
+(define-public (add-chunk-batch-maximum (hash (buff 32)) (chunks (list 6 (buff 131072))))
   (begin
     (try! (assert-inscription-allowed))
     (let (
@@ -1499,7 +1551,7 @@
   (expected-hash (buff 32))
   (mime (string-ascii 64))
   (total-size uint)
-  (chunks (list 4 (buff 131072)))
+  (chunks (list 6 (buff 131072)))
   (chunk-profile uint)
   (token-uri-string (string-ascii 256))
   (dependencies (list 50 uint))
@@ -1554,7 +1606,7 @@
   (expected-hash (buff 32))
   (mime (string-ascii 64))
   (total-size uint)
-  (chunks (list 4 (buff 131072)))
+  (chunks (list 6 (buff 131072)))
   (chunk-profile uint)
   (token-uri-string (string-ascii 256))
 )
@@ -1565,7 +1617,7 @@
   (expected-hash (buff 32))
   (mime (string-ascii 64))
   (total-size uint)
-  (chunks (list 4 (buff 131072)))
+  (chunks (list 6 (buff 131072)))
   (chunk-profile uint)
   (token-uri-string (string-ascii 256))
   (dependencies (list 50 uint))
@@ -1577,7 +1629,7 @@
   (expected-hash (buff 32))
   (mime (string-ascii 64))
   (total-size uint)
-  (chunks (list 4 (buff 131072)))
+  (chunks (list 6 (buff 131072)))
   (chunk-profile uint)
   (token-uri-string (string-ascii 256))
   (dependencies (list 50 uint))
@@ -1701,7 +1753,7 @@
   )
 )
 
-(define-read-only (get-chunk-batch (id uint) (indexes (list 4 uint)))
+(define-read-only (get-chunk-batch (id uint) (indexes (list 6 uint)))
   (match (map-get? InscriptionMeta id)
     meta
       (let ((acc (fold append-chunk-batch indexes {
