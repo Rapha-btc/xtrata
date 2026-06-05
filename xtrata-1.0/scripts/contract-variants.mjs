@@ -98,25 +98,48 @@ const VARIANT_SETS = [
     ]
   },
   {
-    id: 'xtrata-v3.1.1',
+    id: 'xtrata-v3.2.0',
     variants: [
       {
         name: 'clarinet',
         trait: 'local',
-        file: 'contracts/clarinet/contracts/xtrata-v3.1.1.clar',
-        fallback: 'contracts/other/xtrata-v3.1.1.clar'
+        file: 'contracts/clarinet/contracts/xtrata-v3.2.0.clar',
+        fallback: 'contracts/other/xtrata-v3.2.0.clar'
       },
       {
         name: 'testnet',
         trait: 'testnet',
-        file: 'contracts/other/xtrata-v3.1.1.clar',
-        fallback: 'contracts/clarinet/contracts/xtrata-v3.1.1.clar'
+        file: 'contracts/other/xtrata-v3.2.0.clar',
+        fallback: 'contracts/clarinet/contracts/xtrata-v3.2.0.clar'
       },
       {
         name: 'mainnet',
         trait: 'mainnet',
-        file: 'contracts/live/xtrata-v3.1.1.clar',
-        fallback: 'contracts/other/xtrata-v3.1.1.clar'
+        file: 'contracts/live/xtrata-v3.2.0.clar',
+        fallback: 'contracts/other/xtrata-v3.2.0.clar'
+      }
+    ]
+  },
+  {
+    id: 'xtrata-v3.2.1',
+    variants: [
+      {
+        name: 'clarinet',
+        trait: 'local',
+        file: 'contracts/clarinet/contracts/xtrata-v3.2.1.clar',
+        fallback: 'contracts/other/xtrata-v3.2.1.clar'
+      },
+      {
+        name: 'testnet',
+        trait: 'testnet',
+        file: 'contracts/other/xtrata-v3.2.1.clar',
+        fallback: 'contracts/clarinet/contracts/xtrata-v3.2.1.clar'
+      },
+      {
+        name: 'mainnet',
+        trait: 'mainnet',
+        file: 'contracts/live/xtrata-v3.2.1.clar',
+        fallback: 'contracts/other/xtrata-v3.2.1.clar'
       }
     ]
   },
@@ -138,6 +161,27 @@ const VARIANT_SETS = [
         name: 'mainnet',
         file: 'contracts/live/xtrata-small-mint-v1.0.clar',
         fallback: 'contracts/other/xtrata-small-mint-v1.0.clar'
+      }
+    ]
+  },
+  {
+    id: 'xtrata-small-mint-v1.1',
+    syncMode: 'plain',
+    variants: [
+      {
+        name: 'clarinet',
+        file: 'contracts/clarinet/contracts/xtrata-small-mint-v1.1.clar',
+        fallback: 'contracts/other/xtrata-small-mint-v1.1.clar'
+      },
+      {
+        name: 'testnet',
+        file: 'contracts/other/xtrata-small-mint-v1.1.clar',
+        fallback: 'contracts/clarinet/contracts/xtrata-small-mint-v1.1.clar'
+      },
+      {
+        name: 'mainnet',
+        file: 'contracts/live/xtrata-small-mint-v1.1.clar',
+        fallback: 'contracts/other/xtrata-small-mint-v1.1.clar'
       }
     ]
   },

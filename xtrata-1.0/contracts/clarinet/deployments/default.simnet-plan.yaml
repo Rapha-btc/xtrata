@@ -197,13 +197,18 @@ plan:
             path: contracts/xtrata-small-mint-v1.0.clar
             clarity-version: 3
         - emulated-contract-publish:
-            contract-name: xtrata-v1-1-0
+            contract-name: xtrata-small-mint-v1-1
             emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            path: contracts/xtrata-v1.1.0.clar
+            path: contracts/xtrata-small-mint-v1.1.clar
             clarity-version: 3
       epoch: "3.3"
     - id: 2
       transactions:
+        - emulated-contract-publish:
+            contract-name: xtrata-v1-1-0
+            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            path: contracts/xtrata-v1.1.0.clar
+            clarity-version: 3
         - emulated-contract-publish:
             contract-name: xtrata-v2-1-1
             emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
@@ -215,14 +220,14 @@ plan:
             path: contracts/xtrata-v3.0.0.clar
             clarity-version: 3
         - emulated-contract-publish:
-            contract-name: xtrata-v3-1-0
+            contract-name: xtrata-v3-2-0
             emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            path: contracts/xtrata-v3.1.0.clar
+            path: contracts/xtrata-v3.2.0.clar
             clarity-version: 3
         - emulated-contract-publish:
-            contract-name: xtrata-v3-1-1
+            contract-name: xtrata-v3-2-1
             emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            path: contracts/xtrata-v3.1.1.clar
+            path: contracts/xtrata-v3.2.1.clar
             clarity-version: 3
         - emulated-contract-publish:
             contract-name: xtrata-vault

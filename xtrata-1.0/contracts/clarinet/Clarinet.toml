@@ -56,18 +56,23 @@ path = 'contracts/xtrata-v3.0.0.clar'
 clarity_version = 3
 epoch = 'latest'
 
-[contracts.xtrata-v3-1-0]
-path = 'contracts/xtrata-v3.1.0.clar'
+[contracts.xtrata-v3-2-0]
+path = 'contracts/xtrata-v3.2.0.clar'
 clarity_version = 3
 epoch = 'latest'
 
-[contracts.xtrata-v3-1-1]
-path = 'contracts/xtrata-v3.1.1.clar'
+[contracts.xtrata-v3-2-1]
+path = 'contracts/xtrata-v3.2.1.clar'
 clarity_version = 3
 epoch = 'latest'
 
 [contracts.xtrata-small-mint-v1-0]
 path = 'contracts/xtrata-small-mint-v1.0.clar'
+clarity_version = 3
+epoch = 'latest'
+
+[contracts.xtrata-small-mint-v1-1]
+path = 'contracts/xtrata-small-mint-v1.1.clar'
 clarity_version = 3
 epoch = 'latest'
 

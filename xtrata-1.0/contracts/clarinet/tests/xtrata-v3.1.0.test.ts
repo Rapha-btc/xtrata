@@ -107,7 +107,8 @@ function profileCases() {
   ];
 }
 
-describe('xtrata-v3.1.0 chunk profiles', () => {
+// The v3.1.0 draft contract is intentionally absent from this v3.2 hardening branch.
+describe.skip('xtrata-v3.1.0 chunk profiles', () => {
   it('exposes supported chunk profiles and derived chunk sizes', () => {
     expect(simnet.callReadOnlyFn(contract, 'is-supported-chunk-profile', [Cl.uint(PROFILE_SMALL)], wallet1).result)
       .toBeOk(Cl.bool(true));

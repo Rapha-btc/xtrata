@@ -27,6 +27,9 @@ collection tooling.
   is the active entry point for the modular manifest template package.
 - [`xtrata-manifest-templates/00-manifest-index.json`](xtrata-manifest-templates/00-manifest-index.json)
   indexes root templates, specialist folders and shared standards.
+- [`xtrata-manifest-templates/MANIFEST_USE_GUIDE.md`](xtrata-manifest-templates/MANIFEST_USE_GUIDE.md)
+  expands the manifest index into a practical guide covering every template,
+  expected uses, project combinations and validation expectations.
 - [`xtrata-manifest-templates/collections/minimal-marketplace-manifest.json`](xtrata-manifest-templates/collections/minimal-marketplace-manifest.json)
   is the collection template for simple marketplace-facing art collections.
 - [`xtrata-manifest-templates/collections/preservation-migration-manifest.json`](xtrata-manifest-templates/collections/preservation-migration-manifest.json)
