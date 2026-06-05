@@ -19,6 +19,7 @@ These are the strongest direct-link candidates for a public homepage.
 | First-time users | [`docs/xtrata-quickstart.md`](xtrata-quickstart.md) | Fast app walkthrough for inscribing a file. |
 | Builders, indexers, marketplaces | [`docs/xtrata-inscription-handbook.md`](xtrata-inscription-handbook.md) | Main integration guide for reading, reconstructing, and displaying Xtrata inscriptions. |
 | Collection migration partners | [`docs/xtrata-backup-migration-service.md`](xtrata-backup-migration-service.md) | Service blueprint for moving IPFS-backed collections into SIP-009 contracts with Xtrata backup pointers. |
+| Marketplaces, collection teams, archivists | [`docs/standards/xtrata-collection-manifest-standard.md`](standards/xtrata-collection-manifest-standard.md) | Collection-level manifest standard for item mapping, provenance, reconstruction, marketplace display, rights, validation, and preservation. |
 | SDK users | [`docs/sdk/README.md`](sdk/README.md) | SDK entry point with package boundaries, active quickstarts, and release posture. |
 | SDK users | [`docs/sdk/quickstart-first-30-minutes.md`](sdk/quickstart-first-30-minutes.md) | Beginner SDK onboarding path. |
 | SDK users | [`docs/sdk/api-overview.md`](sdk/api-overview.md) | Fastest way to choose the right SDK API surface. |
@@ -92,6 +93,7 @@ Historical SDK planning docs:
 | --- | --- |
 | [`docs/README.md`](README.md) | Broad repo/product overview. |
 | [`docs/app-reference.md`](app-reference.md) | Internal code map and SDK-first operating rules. |
+| [`docs/xtrata-wallet-integration-guide.md`](xtrata-wallet-integration-guide.md) | Shared wallet integration guide for hosted apps and embedded runtimes. |
 | [`docs/assumptions.md`](assumptions.md) | Network and session assumptions. |
 | [`docs/xtrata-quickstart.md`](xtrata-quickstart.md) | End-user quickstart for first inscription. |
 | [`docs/xtrata-inscription-handbook.md`](xtrata-inscription-handbook.md) | Primary technical guide for inscription data, reads, reconstruction, and display. |
@@ -101,6 +103,23 @@ Historical SDK planning docs:
 | [`docs/product-contract-ui-reference.md`](product-contract-ui-reference.md) | Product role map for core, market, commerce, vault, and collection-sale contracts. |
 | [`docs/xtrata-v3-migration-reference.md`](xtrata-v3-migration-reference.md) | v3 migration design reference. |
 | [`docs/release-notes-xtrata-v1.1.0.md`](release-notes-xtrata-v1.1.0.md) | v1.1.0 release notes. |
+
+## Standards Docs
+
+Standards docs define reusable integration surfaces for Xtrata collections,
+marketplaces, indexers, wallets, preservation projects, and future protocol
+tooling.
+
+| Path | Role |
+| --- | --- |
+| [`docs/standards/README.md`](standards/README.md) | Standards folder index and intended-use notes. |
+| [`docs/standards/xtrata-collection-manifest-standard.md`](standards/xtrata-collection-manifest-standard.md) | Draft standard for Xtrata Collection Manifests, including schema, tiers, sequential collection mapping, resolver relationships, use cases, validation rules, and security guidance. |
+| [`docs/standards/xtrata-manifest-validation.md`](standards/xtrata-manifest-validation.md) | Validator guidance for schema checks, item map validation, Xtrata reconstruction checks, signatures, amendments, error codes, and validation reports. |
+| [`schemas/xtrata-collection-manifest.schema.json`](../schemas/xtrata-collection-manifest.schema.json) | Draft JSON Schema for Xtrata Collection Manifests. |
+| [`docs/standards/examples/minimal-marketplace-manifest.json`](standards/examples/minimal-marketplace-manifest.json) | Level 1 marketplace manifest example for a simple Xtrata-native art collection. |
+| [`docs/standards/examples/preservation-migration-manifest.json`](standards/examples/preservation-migration-manifest.json) | Level 2 sequential preservation and migration manifest example. |
+| [`docs/standards/examples/audiovisual-preservation-manifest.json`](standards/examples/audiovisual-preservation-manifest.json) | Level 2 audiovisual preservation manifest example with audio and generation context. |
+| [`docs/standards/examples/full-composable-manifest.json`](standards/examples/full-composable-manifest.json) | Level 3 composable manifest example for Audionals, BVST-style modules, runtime dependencies, and resolver-backed item mapping. |
 
 ## Current Core Contract Docs
 
@@ -129,6 +148,7 @@ The current core contract documentation set lives under
 | [`docs/artist-guides/collection-launch-guide.md`](artist-guides/collection-launch-guide.md) | Collection launch walkthrough. |
 | [`docs/artist-guides/collection-template-deploy-guide.md`](artist-guides/collection-template-deploy-guide.md) | Collection template deployment guide. |
 | [`docs/artist-guides/collection-mint-setup-flow-blueprint.md`](artist-guides/collection-mint-setup-flow-blueprint.md) | Setup flow blueprint for collection mints. |
+| [`docs/standards/xtrata-collection-manifest-standard.md`](standards/xtrata-collection-manifest-standard.md) | Collection manifest standard for marketplace-facing item maps, provenance, rights, reconstruction, and preservation context. |
 
 ## AI Agent Training Docs
 
@@ -246,6 +266,7 @@ For a compact homepage documentation section, group links as:
    - `docs/artist-guides/README.md`
    - `docs/artist-guides/collection-launch-guide.md`
    - `docs/artist-guides/collection-template-deploy-guide.md`
+   - `docs/standards/xtrata-collection-manifest-standard.md`
 4. Integrate contracts
    - `docs/contract-inventory.md`
    - `docs/xtrata-v2.1.0/api-reference.md`

@@ -1,0 +1,114 @@
+{
+  "manifest": {
+    "standard": "xtrata-data-vault-manifest",
+    "schemaVersion": "0.1.0",
+    "tier": "level-2",
+    "manifestId": "xtrata-template:data-vault:0.1.0",
+    "network": "mainnet",
+    "createdAt": "2026-06-05T00:00:00Z",
+    "updatedAt": "2026-06-05T00:00:00Z",
+    "status": "template",
+    "language": "en",
+    "canonicalUri": "xtrata://inscription/{manifestInscriptionId}",
+    "canonicalInscription": {
+      "contractId": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-1",
+      "tokenId": "{manifestInscriptionId}",
+      "finalHash": "sha256:{manifestHash}",
+      "mimeType": "application/json"
+    },
+    "supersedes": [],
+    "humanSummary": "Describes a structured data vault, archive, dataset, encrypted bundle or machine-readable data store."
+  },
+  "vault": {
+    "vaultId": "{vault-id}",
+    "name": "{Vault Name}",
+    "type": "archive",
+    "category": "data-storage",
+    "description": "Canonical Xtrata data vault manifest.",
+    "canonicalNamespace": "{vault}.x"
+  },
+  "dataModel": {
+    "schemaManifest": "xtrata://inscription/{schemaManifestId}",
+    "schemaHash": "sha256:{schemaHash}",
+    "recordType": "json-records",
+    "indexingStrategy": "chunked"
+  },
+  "assetRegistry": {
+    "hashAlgorithm": "sha256",
+    "assets": [
+      {
+        "assetId": "data-chunk-000",
+        "type": "json",
+        "uri": "xtrata://inscription/{chunkId}",
+        "mimeType": "application/json",
+        "sizeBytes": 0,
+        "hash": "sha256:{chunkHash}",
+        "role": "data-chunk"
+      }
+    ]
+  },
+  "chunks": [
+    {
+      "chunkId": "chunk-000",
+      "firstRecordIndex": 0,
+      "lastRecordIndex": 999,
+      "uri": "xtrata://inscription/{chunkId}",
+      "hash": "sha256:{chunkHash}",
+      "recordCount": 1000
+    }
+  ],
+  "access": {
+    "encrypted": false,
+    "encryption": null,
+    "publicRead": true,
+    "writePolicy": "owner-or-contract-controlled",
+    "redactionPolicy": "append-only-corrections"
+  },
+  "provenance": {
+    "createdBy": "SP...",
+    "source": "native-xtrata",
+    "sourceHash": "sha256:{sourceHash}",
+    "notes": "Use hash verification before consuming records."
+  },
+  "reconstruction": {
+    "instructions": [
+      "Load schema manifest.",
+      "Load chunk registry.",
+      "Fetch chunk inscriptions.",
+      "Verify hashes.",
+      "Parse records according to schema."
+    ],
+    "requiredReadOnlyCalls": [
+      "get-inscription-meta",
+      "get-chunk"
+    ]
+  },
+  "interoperability": {
+    "walletHints": {
+      "preferredDisplay": "data-vault",
+      "primaryAction": "inspect"
+    },
+    "indexerHints": {
+      "cachePolicy": "immutable-or-amendment-aware",
+      "expectedRecordCount": "{count}"
+    }
+  },
+  "validation": {
+    "schemaUri": "schemas/xtrata-data-vault-manifest.schema.json",
+    "validated": false,
+    "validationRules": [
+      "schema-valid",
+      "chunks-cover-record-range",
+      "all-hashes-match"
+    ]
+  },
+  "security": {
+    "verifiedWallets": [],
+    "hashes": {
+      "manifestHash": "sha256:{manifestHash}"
+    },
+    "signatures": [],
+    "amendments": []
+  },
+  "extensions": {}
+}

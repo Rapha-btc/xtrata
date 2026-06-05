@@ -1,0 +1,97 @@
+{
+  "manifest": {
+    "standard": "xtrata-governance-manifest",
+    "schemaVersion": "0.1.0",
+    "tier": "level-3",
+    "manifestId": "xtrata-template:governance:0.1.0",
+    "network": "mainnet",
+    "createdAt": "2026-06-05T00:00:00Z",
+    "updatedAt": "2026-06-05T00:00:00Z",
+    "status": "template",
+    "language": "en",
+    "canonicalUri": "xtrata://inscription/{manifestInscriptionId}",
+    "canonicalInscription": {
+      "contractId": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-1",
+      "tokenId": "{manifestInscriptionId}",
+      "finalHash": "sha256:{manifestHash}",
+      "mimeType": "application/json"
+    },
+    "supersedes": [],
+    "humanSummary": "Describes governance contracts, voting rules, proposal surfaces, timelocks, upgrade policies and treasuries."
+  },
+  "governance": {
+    "governanceId": "{governance-id}",
+    "name": "{Governance Name}",
+    "type": "dao-or-protocol-governance",
+    "canonicalNamespace": "{dao}.x",
+    "governanceContract": "SP...governance-v1",
+    "description": "Governance manifest for protocol, collection, namespace or treasury control."
+  },
+  "voting": {
+    "votingToken": "SP...token-v1",
+    "votingPowerFunction": "get-votes",
+    "proposalThreshold": "0",
+    "quorumBasisPoints": 1000,
+    "approvalThresholdBasisPoints": 5000,
+    "votingPeriodBlocks": 1008,
+    "timelockBlocks": 144
+  },
+  "proposalSurface": {
+    "createFunction": "create-proposal",
+    "voteFunction": "vote",
+    "executeFunction": "execute",
+    "cancelFunction": "cancel",
+    "proposalMetadataUriFormat": "xtrata://inscription/{proposalManifestId}"
+  },
+  "roles": [
+    {
+      "principal": "SP...",
+      "role": "guardian",
+      "powers": [
+        "pause",
+        "cancel-malicious-proposal"
+      ]
+    }
+  ],
+  "controlledContracts": [
+    {
+      "contractId": "SP...controlled-v1",
+      "role": "controlled-protocol-contract",
+      "upgradeable": true
+    }
+  ],
+  "treasuries": [
+    {
+      "treasuryManifest": "xtrata://inscription/{treasuryManifestId}",
+      "role": "protocol-treasury"
+    }
+  ],
+  "risks": {
+    "knownRisks": [
+      "Governance capture",
+      "Low quorum",
+      "Admin guardian risk"
+    ],
+    "emergencyPowersDeclared": true
+  },
+  "validation": {
+    "schemaUri": "schemas/xtrata-governance-manifest.schema.json",
+    "validated": false,
+    "validationRules": [
+      "schema-valid",
+      "governance-contract-verified",
+      "roles-declared",
+      "timelock-declared"
+    ]
+  },
+  "security": {
+    "verifiedContracts": [],
+    "verifiedWallets": [],
+    "hashes": {
+      "manifestHash": "sha256:{manifestHash}"
+    },
+    "signatures": [],
+    "amendments": []
+  },
+  "extensions": {}
+}

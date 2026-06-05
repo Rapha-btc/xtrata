@@ -1,0 +1,88 @@
+{
+  "manifest": {
+    "standard": "xtrata-rights-license-manifest",
+    "schemaVersion": "0.1.0",
+    "tier": "level-2",
+    "manifestId": "xtrata-template:rights-license:0.1.0",
+    "network": "mainnet",
+    "createdAt": "2026-06-05T00:00:00Z",
+    "updatedAt": "2026-06-05T00:00:00Z",
+    "status": "template",
+    "language": "en",
+    "canonicalUri": "xtrata://inscription/{manifestInscriptionId}",
+    "canonicalInscription": {
+      "contractId": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-1",
+      "tokenId": "{manifestInscriptionId}",
+      "finalHash": "sha256:{manifestHash}",
+      "mimeType": "application/json"
+    },
+    "supersedes": [],
+    "humanSummary": "Describes rights, licenses, commercial terms, AI policies, sample provenance and permitted uses."
+  },
+  "rights": {
+    "rightsId": "{rights-id}",
+    "name": "{Rights Package Name}",
+    "license": "Custom",
+    "canonicalNamespace": "{rights}.x",
+    "summary": "Reusable rights/license manifest."
+  },
+  "scope": {
+    "appliesTo": [
+      {
+        "role": "collection",
+        "uri": "xtrata://inscription/{manifestId}",
+        "hash": "sha256:{hash}"
+      }
+    ],
+    "territory": "worldwide",
+    "duration": "perpetual-unless-revoked-by-terms"
+  },
+  "permissions": {
+    "display": true,
+    "personalUse": true,
+    "commercialUse": "limited",
+    "derivatives": "limited",
+    "redistribution": false,
+    "stemExtraction": false,
+    "sublicensing": false
+  },
+  "aiUsagePolicy": {
+    "training": "disallowed",
+    "inference": "allowed",
+    "styleImitation": "disallowed",
+    "datasetInclusion": "disallowed",
+    "notes": "AI terms must be checked before machine use."
+  },
+  "attribution": {
+    "required": true,
+    "creditLine": "{Credit Line}"
+  },
+  "sampleProvenance": [
+    {
+      "sampleId": "sample-001",
+      "source": "artist-recorded",
+      "license": "artist-owned",
+      "hash": "sha256:{hash}"
+    }
+  ],
+  "legal": {
+    "humanReadableUri": "xtrata://inscription/{legalTextId}",
+    "machineReadableUri": "xtrata://inscription/{machineTermsId}",
+    "jurisdiction": "unspecified"
+  },
+  "validation": {
+    "schemaUri": "schemas/xtrata-rights-license-manifest.schema.json",
+    "validated": false,
+    "validationRules": [
+      "schema-valid",
+      "scope-present",
+      "ai-policy-present"
+    ]
+  },
+  "security": {
+    "verifiedWallets": [],
+    "signatures": [],
+    "amendments": []
+  },
+  "extensions": {}
+}

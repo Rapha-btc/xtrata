@@ -1,0 +1,46 @@
+{
+  "package": "xtrata-manifest-templates",
+  "version": "0.1.0",
+  "createdAt": "2026-06-05T00:00:00Z",
+  "purpose": "Modular Xtrata manifest template set for collections, namespaces, data vaults, runtime apps, finance, identity, governance, rights, agents and cross-chain mappings.",
+  "rootLevelFiles": [
+    {
+      "path": "01-collection-minimal-marketplace-manifest.json",
+      "use": "Most common/simple collection or marketplace launch template."
+    },
+    {
+      "path": "02-namespace-manifest.json",
+      "use": "Xtrata .x namespace standard and name-resolution layer."
+    },
+    {
+      "path": "03-data-vault-manifest.json",
+      "use": "Generic storage/archive/dataset template."
+    },
+    {
+      "path": "04-runtime-app-manifest.json",
+      "use": "Interactive HTML/app/runtime template."
+    },
+    {
+      "path": "05-financial-protocol-manifest.json",
+      "use": "DeFi/financial protocol template."
+    },
+    {
+      "path": "06-asset-token-manifest.json",
+      "use": "Token, wrapped asset, receipt or LP token template."
+    },
+    {
+      "path": "07-treasury-split-manifest.json",
+      "use": "Revenue split, royalty split or treasury payment template."
+    }
+  ],
+  "folders": {
+    "collections": "Art collections, preservation migrations, AV archives and full composable collection examples.",
+    "identity-and-names": "Namespace and identity/attestation manifests.",
+    "finance": "Financial protocol, asset/token, treasury split and oracle/index manifests.",
+    "data": "Data vaults, append-only event logs and cross-chain/bridge mappings.",
+    "runtime-and-agents": "Runtime apps, BVST/composable examples and AI agent memory manifests.",
+    "governance-and-rights": "Governance/DAO and rights/license manifests.",
+    "schemas": "Reusable schema manifest template."
+  },
+  "designPrinciple": "Contracts enforce state and value movement. Manifests describe, verify, organise, reconstruct and make systems legible to wallets, indexers, marketplaces and users."
+}

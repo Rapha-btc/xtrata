@@ -8,6 +8,10 @@
 /opus/ /opus-file-generator/ 301
 /opus/* /opus-file-generator/:splat 301
 /opus-file-generator /opus-file-generator/ 301
+/x-board /recursive-apps/x-board/xboard-version-testing/ 302
+/x-board/ /recursive-apps/x-board/xboard-version-testing/ 302
+/x-board/:version /recursive-apps/x-board/xboard-version-testing/:version.html 200
+/x-board/:version.html /recursive-apps/x-board/xboard-version-testing/:version.html 200
 /workspace/* /workspace 200
 /admin /workspace 200
 /admin/* /workspace 200

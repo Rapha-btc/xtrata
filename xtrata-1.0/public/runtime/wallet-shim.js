@@ -42,6 +42,13 @@
     'stx_connect',
     'connect',
     'wallet_connect',
+    'stx_transferStx',
+    'stx_transferSTX',
+    'stx_transfer',
+    'stx_sendTransfer',
+    'sendTransfer',
+    'transferStx',
+    'openSTXTransfer',
     'stx_callContract',
     'stx_callContractV2',
     'stx_disconnect',
@@ -453,6 +460,18 @@
     return method === 'stx_callContract' || method === 'stx_callContractV2';
   }
 
+  function isStxTransferMethod(method) {
+    return (
+      method === 'stx_transferStx' ||
+      method === 'stx_transferSTX' ||
+      method === 'stx_transfer' ||
+      method === 'stx_sendTransfer' ||
+      method === 'sendTransfer' ||
+      method === 'transferStx' ||
+      method === 'openSTXTransfer'
+    );
+  }
+
   function pickDelegatedRequest(root, originalRequest) {
     if (!root || typeof root !== 'object') return null;
     var queue = [root];
@@ -794,6 +813,18 @@
         return Promise.reject(
           createShimError(
             'Wallet contract call requires host wallet bridge support.',
+            -32601
+          )
+        );
+      }
+      return requestHostBridge(lower, params);
+    }
+
+    if (isStxTransferMethod(lower)) {
+      if (!hasHostBridge()) {
+        return Promise.reject(
+          createShimError(
+            'Wallet STX transfer requires host wallet bridge support.',
             -32601
           )
         );

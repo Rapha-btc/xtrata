@@ -1,0 +1,81 @@
+{
+  "manifest": {
+    "standard": "xtrata-event-log-manifest",
+    "schemaVersion": "0.1.0",
+    "tier": "level-2",
+    "manifestId": "xtrata-template:event-log:0.1.0",
+    "network": "mainnet",
+    "createdAt": "2026-06-05T00:00:00Z",
+    "updatedAt": "2026-06-05T00:00:00Z",
+    "status": "template",
+    "language": "en",
+    "canonicalUri": "xtrata://inscription/{manifestInscriptionId}",
+    "canonicalInscription": {
+      "contractId": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-1",
+      "tokenId": "{manifestInscriptionId}",
+      "finalHash": "sha256:{manifestHash}",
+      "mimeType": "application/json"
+    },
+    "supersedes": [],
+    "humanSummary": "Describes append-only event logs for protocol activity, provenance, snapshots, claims, governance or audit trails."
+  },
+  "eventLog": {
+    "logId": "{log-id}",
+    "name": "{Event Log Name}",
+    "type": "append-only",
+    "canonicalNamespace": "{log}.x",
+    "description": "Canonical event log manifest."
+  },
+  "eventSchema": {
+    "schemaManifest": "xtrata://inscription/{schemaManifestId}",
+    "eventTypes": [
+      "created",
+      "updated",
+      "claimed",
+      "transferred",
+      "validated"
+    ]
+  },
+  "segments": [
+    {
+      "segmentId": "segment-000",
+      "firstEventIndex": 0,
+      "lastEventIndex": 999,
+      "uri": "xtrata://inscription/{segmentId}",
+      "hash": "sha256:{hash}",
+      "eventCount": 1000
+    }
+  ],
+  "appendPolicy": {
+    "appendOnly": true,
+    "publisher": "SP...",
+    "signatureRequired": true,
+    "corrections": "append-correction-events"
+  },
+  "reconstruction": {
+    "instructions": [
+      "Load segments in order.",
+      "Verify hash chain.",
+      "Apply corrections as new events, never deletion."
+    ],
+    "hashChain": {
+      "enabled": true,
+      "algorithm": "sha256"
+    }
+  },
+  "validation": {
+    "schemaUri": "schemas/xtrata-event-log-manifest.schema.json",
+    "validated": false,
+    "validationRules": [
+      "schema-valid",
+      "segments-contiguous",
+      "hash-chain-valid"
+    ]
+  },
+  "security": {
+    "verifiedWallets": [],
+    "signatures": [],
+    "amendments": []
+  },
+  "extensions": {}
+}

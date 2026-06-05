@@ -1,0 +1,100 @@
+{
+  "manifest": {
+    "standard": "xtrata-agent-memory-manifest",
+    "schemaVersion": "0.1.0",
+    "tier": "level-3",
+    "manifestId": "xtrata-template:agent-memory:0.1.0",
+    "network": "mainnet",
+    "createdAt": "2026-06-05T00:00:00Z",
+    "updatedAt": "2026-06-05T00:00:00Z",
+    "status": "template",
+    "language": "en",
+    "canonicalUri": "xtrata://inscription/{manifestInscriptionId}",
+    "canonicalInscription": {
+      "contractId": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-1",
+      "tokenId": "{manifestInscriptionId}",
+      "finalHash": "sha256:{manifestHash}",
+      "mimeType": "application/json"
+    },
+    "supersedes": [],
+    "humanSummary": "Describes an AI agent identity, immutable memory log, tool permissions, data sources and signed outputs."
+  },
+  "agent": {
+    "agentId": "{agent-id}",
+    "name": "{Agent Name}",
+    "type": "ai-agent",
+    "canonicalNamespace": "agent.{owner}.x",
+    "controller": "SP...",
+    "description": "Agent identity and memory manifest."
+  },
+  "model": {
+    "provider": "unspecified",
+    "modelName": "{model}",
+    "modelVersion": "{version}",
+    "weightsUri": null,
+    "systemPromptHash": "sha256:{hash}"
+  },
+  "memory": {
+    "strategy": "append-only-inscribed-memory",
+    "memoryLogs": [
+      {
+        "logId": "memory-000",
+        "uri": "xtrata://inscription/{memoryId}",
+        "hash": "sha256:{hash}",
+        "recordCount": 0
+      }
+    ],
+    "redactionPolicy": "append-correction-not-delete"
+  },
+  "dataSources": [
+    {
+      "sourceId": "vault-001",
+      "manifest": "xtrata://inscription/{dataVaultManifestId}",
+      "permission": "read"
+    }
+  ],
+  "toolPermissions": [
+    {
+      "tool": "read-inscriptions",
+      "allowed": true
+    },
+    {
+      "tool": "send-transactions",
+      "allowed": false
+    },
+    {
+      "tool": "external-network",
+      "allowed": false
+    }
+  ],
+  "outputSigning": {
+    "required": true,
+    "signingKey": "{publicKey}",
+    "outputLogUri": "xtrata://inscription/{outputLogId}"
+  },
+  "safetyAndLimits": {
+    "financialActionsAllowed": false,
+    "adminActionsAllowed": false,
+    "humanApprovalRequiredFor": [
+      "transactions",
+      "identity-updates",
+      "financial-claims"
+    ]
+  },
+  "validation": {
+    "schemaUri": "schemas/xtrata-agent-memory-manifest.schema.json",
+    "validated": false,
+    "validationRules": [
+      "schema-valid",
+      "controller-present",
+      "memory-hashes-present",
+      "tool-permissions-declared"
+    ]
+  },
+  "security": {
+    "verifiedWallets": [],
+    "signatures": [],
+    "amendments": []
+  },
+  "extensions": {}
+}

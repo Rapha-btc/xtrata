@@ -1,5 +1,9 @@
 import { useEffect, useMemo, useState, type ChangeEvent, type MouseEvent } from 'react';
-import { showContractCall, showContractDeploy } from './lib/wallet/connect';
+import {
+  showContractCall,
+  showContractDeploy,
+  showStxTransfer
+} from './lib/wallet/connect';
 import { hexToBytes } from '@stacks/common';
 import { useQueryClient } from '@tanstack/react-query';
 import {
@@ -240,6 +244,18 @@ const RUNTIME_WALLET_CONTRACT_CALL_METHODS = new Set([
   'stx_callContractV2'
 ]);
 
+const RUNTIME_WALLET_STX_TRANSFER_METHODS = new Set([
+  'stx_transferStx',
+  'stx_transferSTX',
+  'stx_transfer',
+  'stx_sendTransfer',
+  'sendTransfer',
+  'transferStx',
+  'openSTXTransfer'
+]);
+
+const RUNTIME_STX_MEMO_MAX_BYTES = 34;
+
 type RuntimeWalletBridgeRequestMessage = {
   type: string;
   requestId?: unknown;
@@ -269,6 +285,13 @@ type RuntimeWalletContractCallRequest = {
   network: NetworkType;
   postConditionMode: PostConditionMode;
   postConditions?: PostCondition[];
+};
+
+type RuntimeWalletStxTransferRequest = {
+  recipient: string;
+  amount: string;
+  memo: string;
+  network: NetworkType;
 };
 
 const createRuntimeWalletBridgeError = (
@@ -389,6 +412,22 @@ const parseRuntimeContractIdentifier = (value: string) => {
     contractAddress: trimmed.slice(0, separator).trim(),
     contractName: trimmed.slice(separator + 1).trim()
   };
+};
+
+const validateRuntimePrincipal = (value: string, label: string) => {
+  const parsedContract = parseRuntimeContractIdentifier(value);
+  if (parsedContract) {
+    if (!validateStacksAddress(parsedContract.contractAddress)) {
+      throw createRuntimeWalletBridgeError(`${label} contract address is invalid.`, -32602);
+    }
+    if (!parsedContract.contractName) {
+      throw createRuntimeWalletBridgeError(`${label} contract name is required.`, -32602);
+    }
+    return;
+  }
+  if (!validateStacksAddress(value)) {
+    throw createRuntimeWalletBridgeError(`${label} is invalid.`, -32602);
+  }
 };
 
 const parseRuntimePostCondition = (value: unknown): PostCondition => {
@@ -530,6 +569,46 @@ const parseRuntimeContractCallRequest = (
     network: normalizeRuntimeNetwork(record.network, fallbackNetwork),
     postConditionMode: parseRuntimePostConditionMode(record.postConditionMode),
     postConditions: parseRuntimePostConditions(record.postConditions)
+  };
+};
+
+const parseRuntimeStxTransferRequest = (
+  params: unknown,
+  fallbackNetwork: NetworkType
+): RuntimeWalletStxTransferRequest => {
+  const payload = Array.isArray(params) ? params[0] : params;
+  if (!payload || typeof payload !== 'object') {
+    throw createRuntimeWalletBridgeError('STX transfer params are missing.', -32602);
+  }
+
+  const record = payload as Record<string, unknown>;
+  const recipient = String(record.recipient ?? record.to ?? '').trim();
+  if (!recipient) {
+    throw createRuntimeWalletBridgeError('STX transfer recipient is required.', -32602);
+  }
+  validateRuntimePrincipal(recipient, 'STX transfer recipient');
+
+  const amount = normalizeRuntimeUint(
+    record.amount ?? record.amountUstx ?? record.microstx,
+    'STX transfer amount'
+  );
+  if (BigInt(amount) <= 0n) {
+    throw createRuntimeWalletBridgeError('STX transfer amount must be greater than zero.', -32602);
+  }
+
+  const memo = String(record.memo ?? '').replace(/\u0000/g, '').trim();
+  if (new TextEncoder().encode(memo).length > RUNTIME_STX_MEMO_MAX_BYTES) {
+    throw createRuntimeWalletBridgeError(
+      `STX transfer memo must be ${RUNTIME_STX_MEMO_MAX_BYTES} bytes or less.`,
+      -32602
+    );
+  }
+
+  return {
+    recipient,
+    amount,
+    memo,
+    network: normalizeRuntimeNetwork(record.network, fallbackNetwork)
   };
 };
 
@@ -1000,6 +1079,37 @@ export default function App() {
                   )
                 )
             });
+          });
+        }
+
+        if (RUNTIME_WALLET_STX_TRANSFER_METHODS.has(method)) {
+          const request = parseRuntimeStxTransferRequest(
+            payload.params,
+            fallbackNetwork
+          );
+
+          return await new Promise((resolve, reject) => {
+            showStxTransfer(
+              {
+                recipient: request.recipient,
+                amount: request.amount,
+                memo: request.memo,
+                network: request.network,
+                appDetails: {
+                  name: 'xtrata',
+                  icon:
+                    'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="%23f97316"/><path d="M18 20h28v6H18zm0 12h28v6H18zm0 12h28v6H18z" fill="white"/></svg>'
+                },
+                onFinish: (result) => resolve(result),
+                onCancel: () =>
+                  reject(
+                    createRuntimeWalletBridgeError(
+                      'Wallet transaction was cancelled by the user.',
+                      4001
+                    )
+                  )
+              }
+            );
           });
         }
 

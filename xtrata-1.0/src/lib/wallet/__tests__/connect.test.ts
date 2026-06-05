@@ -47,6 +47,25 @@ describe('wallet connect helpers', () => {
     expect(params.postConditions?.[0]).toMatch(/^[0-9a-f]+$/);
   });
 
+  it('builds SIP-030 STX transfer params for runtime wallet bridge requests', () => {
+    const params = __testing.buildStxTransferParams({
+      recipient: ADDRESS,
+      amount: 10000n,
+      memo: 'XB:14:315',
+      network: 'mainnet',
+      stxAddress: ADDRESS
+    });
+
+    expect(params).toMatchObject({
+      recipient: ADDRESS,
+      amount: '10000',
+      memo: 'XB:14:315',
+      network: 'mainnet',
+      address: ADDRESS,
+      sponsored: false
+    });
+  });
+
   it('normalizes tx ids from SIP-030 responses', () => {
     expect(__testing.normalizeTxResult({ txid: '0xabc123' })).toMatchObject({
       txId: '0xabc123',
@@ -64,6 +83,12 @@ describe('wallet connect helpers', () => {
     ).toMatchObject({
       txId: '0xdef456',
       txid: '0xdef456'
+    });
+  });
+
+  it('keeps non-standard wallet finish payloads available for callbacks', () => {
+    expect(__testing.normalizeTxResultForCallback({ pending: true })).toEqual({
+      pending: true
     });
   });
 

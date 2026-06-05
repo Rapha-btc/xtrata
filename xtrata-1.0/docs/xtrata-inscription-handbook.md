@@ -205,6 +205,9 @@ For display:
 - Always use SIP-009 ownership (`get-owner`).
 - Prefer metadata in `get-token-uri`, but treat it as optional.
 - Always be able to reconstruct on-chain bytes from chunks.
+- For collection-level identity, provenance, item mapping, display rules,
+  rights, preservation context, and resolver documentation, use
+  `docs/standards/xtrata-collection-manifest-standard.md`.
 - Cache metadata and chunk bytes locally to reduce rate limits.
 - Use `get-chunk-batch` for efficiency.
 - Avoid aggressive polling; batch reads and cache results.

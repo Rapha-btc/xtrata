@@ -1,0 +1,86 @@
+{
+  "manifest": {
+    "standard": "xtrata-bridge-crosschain-manifest",
+    "schemaVersion": "0.1.0",
+    "tier": "level-2",
+    "manifestId": "xtrata-template:bridge-crosschain:0.1.0",
+    "network": "mainnet",
+    "createdAt": "2026-06-05T00:00:00Z",
+    "updatedAt": "2026-06-05T00:00:00Z",
+    "status": "template",
+    "language": "en",
+    "canonicalUri": "xtrata://inscription/{manifestInscriptionId}",
+    "canonicalInscription": {
+      "contractId": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-1",
+      "tokenId": "{manifestInscriptionId}",
+      "finalHash": "sha256:{manifestHash}",
+      "mimeType": "application/json"
+    },
+    "supersedes": [],
+    "humanSummary": "Describes migrations, mirrors, wrapped assets, cross-chain references and proof mappings."
+  },
+  "bridgeOrMigration": {
+    "id": "{bridge-id}",
+    "name": "{Bridge or Migration Name}",
+    "type": "migration-or-mirror",
+    "canonicalNamespace": "{bridge}.x",
+    "description": "Cross-chain or cross-protocol mapping manifest."
+  },
+  "source": {
+    "chain": "bitcoin-or-ethereum-or-stacks",
+    "network": "mainnet",
+    "contractOrProtocol": "{source}",
+    "identifier": "{source-id}",
+    "snapshotBlock": 0,
+    "sourceUri": "ipfs://or-https://or-chain-ref",
+    "sourceHash": "sha256:{hash}"
+  },
+  "destination": {
+    "chain": "stacks",
+    "protocol": "xtrata",
+    "contractId": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-1",
+    "manifestUri": "xtrata://inscription/{manifestId}",
+    "manifestHash": "sha256:{hash}"
+  },
+  "mapping": {
+    "mappingType": "explicit-or-sequential-or-proof-based",
+    "mapUri": "xtrata://inscription/{mapId}",
+    "mapHash": "sha256:{hash}",
+    "exceptions": []
+  },
+  "proofs": [
+    {
+      "proofId": "proof-001",
+      "proofType": "merkle-or-signed-attestation",
+      "uri": "xtrata://inscription/{proofId}",
+      "hash": "sha256:{hash}",
+      "verifier": "SP..."
+    }
+  ],
+  "claiming": {
+    "claimable": false,
+    "claimContract": null,
+    "holderSnapshotUri": "xtrata://inscription/{snapshotId}",
+    "replayProtection": "source-id-plus-destination-id"
+  },
+  "validation": {
+    "schemaUri": "schemas/xtrata-bridge-crosschain-manifest.schema.json",
+    "validated": false,
+    "validationRules": [
+      "schema-valid",
+      "source-destination-present",
+      "mapping-hash-present",
+      "proofs-verify"
+    ]
+  },
+  "security": {
+    "verifiedContracts": [],
+    "verifiedWallets": [],
+    "hashes": {
+      "manifestHash": "sha256:{manifestHash}"
+    },
+    "signatures": [],
+    "amendments": []
+  },
+  "extensions": {}
+}
