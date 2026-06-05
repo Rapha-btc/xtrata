@@ -98,6 +98,29 @@ const VARIANT_SETS = [
     ]
   },
   {
+    id: 'xtrata-v3.1.1',
+    variants: [
+      {
+        name: 'clarinet',
+        trait: 'local',
+        file: 'contracts/clarinet/contracts/xtrata-v3.1.1.clar',
+        fallback: 'contracts/other/xtrata-v3.1.1.clar'
+      },
+      {
+        name: 'testnet',
+        trait: 'testnet',
+        file: 'contracts/other/xtrata-v3.1.1.clar',
+        fallback: 'contracts/clarinet/contracts/xtrata-v3.1.1.clar'
+      },
+      {
+        name: 'mainnet',
+        trait: 'mainnet',
+        file: 'contracts/live/xtrata-v3.1.1.clar',
+        fallback: 'contracts/other/xtrata-v3.1.1.clar'
+      }
+    ]
+  },
+  {
     id: 'xtrata-small-mint-v1.0',
     syncMode: 'plain',
     variants: [

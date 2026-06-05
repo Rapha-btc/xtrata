@@ -1,9 +1,9 @@
-;; xtrata-v3.1.0 comparison contract
+;; xtrata-v3.1.1 comparison contract
 ;;
-;; Core posture (v3.1.0):
+;; Core posture (v3.1.1):
 ;; 1) Open participation: anyone can inscribe once unpaused.
 ;; 2) No on-chain dedupe enforcement: repeated identical content can mint more than once.
-;; 3) Advisory hash lookup remains available via first-seen hash -> token-id.
+;; 3) Advisory hash lookup remains available via first-seen rolling chunk hash -> token-id.
 ;; 4) Dependencies and parents are stored separately.
 ;; 5) Parents are ownership-gated at seal time; dependencies are not.
 ;; 6) Fee policy is byte-aware and policy-aware:
@@ -11,9 +11,12 @@
 ;;    - staged seal fee
 ;;    - single-tx fee
 ;;    - byte-proportional upload fee
-;;    - extra batch fee for > 50 chunks
+;;    - logical extra batch fee for > 50 chunks
 ;;    - wallet/caller basis-point overrides
-;; 7) Core-native single-tx mint path exists for payloads up to 512 KiB.
+;; 7) Core-native single-tx mint paths are profile-specific:
+;;    - mint-single-tx-small:    32 x 16 KiB  = 512 KiB max
+;;    - mint-single-tx-standard: 8 x 64 KiB   = 512 KiB max
+;;    - mint-single-tx-maximum:  4 x 128 KiB  = 512 KiB max
 ;; 8) Upload sessions remain start-or-resume and expire after inactivity.
 ;; 9) Legacy migration supports v1.1.1, v2.1.0, and v2.1.1 into the v3 NFT line.
 ;; 10) Admin can set an initial next-id offset once for continuity.
@@ -21,6 +24,17 @@
 ;;     - u1 small:    16 KiB,  max 32 chunks per upload batch = 512 KiB
 ;;     - u2 standard: 64 KiB,  max 8 chunks per upload batch  = 512 KiB
 ;;     - u3 maximum: 128 KiB, max 4 chunks per upload batch  = 512 KiB
+;; 12) Profile-specific total-size caps:
+;;     - small:    2048 x 16 KiB  = 32 MiB
+;;     - standard: 2048 x 64 KiB  = 128 MiB
+;;     - maximum:  2048 x 128 KiB = 256 MiB
+;; 13) final-hash / rolling-chunk-hash is the Xtrata rolling hash:
+;;     h0 = 32 zero bytes; hN = sha256(hN-1 || chunkN). It is not the
+;;     normal sha256(full reconstructed file) unless a client separately
+;;     proves those values coincide.
+;; 14) Direct-minter flow only. Delegated uploader, collection, thumbnail,
+;;     preview and manifest semantics stay in signed intents and manifest /
+;;     sibling inscriptions until those standards are final.
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; --- SIP-009 TRAIT ---
@@ -119,13 +133,22 @@
 
 (define-constant CHUNK-SIZE CHUNK-SIZE-SMALL)
 
-;; Maximum inscription size.
-
-;; Current cap: 2048 x 128 KiB = 268,435,456 bytes = 256 MiB.
+;; Maximum inscription sizes by profile.
 
 (define-constant MAX-TOTAL-CHUNKS u2048)
 
-(define-constant MAX-TOTAL-SIZE (* MAX-TOTAL-CHUNKS CHUNK-SIZE-MAXIMUM))
+(define-constant MAX-SMALL-TOTAL-SIZE (* MAX-TOTAL-CHUNKS CHUNK-SIZE-SMALL))
+
+(define-constant MAX-STANDARD-TOTAL-SIZE (* MAX-TOTAL-CHUNKS CHUNK-SIZE-STANDARD))
+
+(define-constant MAX-MAXIMUM-TOTAL-SIZE (* MAX-TOTAL-CHUNKS CHUNK-SIZE-MAXIMUM))
+
+(define-constant MAX-TOTAL-SIZE MAX-MAXIMUM-TOTAL-SIZE)
+
+;; Read-only chunk batch remains conservative because the Chunks map stores
+;; values as (buff 131072), making larger optional-list response types too big.
+
+(define-constant MAX-READ-CHUNK-BATCH-SIZE u4)
 
 (define-constant UPLOAD-EXPIRY-BLOCKS u4320)
 
@@ -185,10 +208,14 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define-map TokenURIs uint (string-ascii 256))
+;; First-seen advisory lookup by Xtrata rolling chunk hash, not sha256(file).
 (define-map HashToId (buff 32) uint)
 (define-map AllowedCallers principal bool)
 (define-map MintedIndex uint uint)
 
+;; final-hash is retained for compatibility with earlier Xtrata core APIs.
+;; In v3.1.1 it means the Xtrata rolling chunk hash:
+;; sha256(0x00..00 || chunk0), then sha256(previous || chunkN).
 (define-map InscriptionMeta uint
   {
     owner: principal,
@@ -220,6 +247,7 @@
     total-chunks: uint,
     chunk-profile: uint,
     current-index: uint,
+    ;; Running Xtrata rolling chunk hash for the chunks accepted so far.
     running-hash: (buff 32),
     last-touched: uint,
     purge-index: uint
@@ -343,6 +371,26 @@
   )
 )
 
+(define-private (max-total-size-for-profile (profile uint))
+  (if (is-eq profile CHUNK-PROFILE-SMALL)
+    MAX-SMALL-TOTAL-SIZE
+    (if (is-eq profile CHUNK-PROFILE-STANDARD)
+      MAX-STANDARD-TOTAL-SIZE
+      MAX-MAXIMUM-TOTAL-SIZE
+    )
+  )
+)
+
+(define-private (upload-batch-limit-for-profile (profile uint))
+  (if (is-eq profile CHUNK-PROFILE-SMALL)
+    MAX-SMALL-BATCH-SIZE
+    (if (is-eq profile CHUNK-PROFILE-STANDARD)
+      MAX-STANDARD-BATCH-SIZE
+      MAX-MAXIMUM-BATCH-SIZE
+    )
+  )
+)
+
 (define-private (assert-supported-chunk-profile (profile uint))
   (begin
     (asserts! (is-supported-chunk-profile-value profile) ERR-INVALID-BATCH)
@@ -368,7 +416,7 @@
       (asserts! (> total-size u0) ERR-INVALID-BATCH)
       (asserts! (> total-chunks u0) ERR-INVALID-BATCH)
       (asserts! (<= total-chunks MAX-TOTAL-CHUNKS) ERR-INVALID-BATCH)
-      (asserts! (<= total-size MAX-TOTAL-SIZE) ERR-INVALID-BATCH)
+      (asserts! (<= total-size (max-total-size-for-profile profile)) ERR-INVALID-BATCH)
       (asserts! (<= total-size (* total-chunks chunk-size)) ERR-INVALID-BATCH)
       (asserts! (> total-size (* (- total-chunks u1) chunk-size)) ERR-INVALID-BATCH)
       (ok true)
@@ -719,7 +767,7 @@
     (print {
       event: "inscription-finalized",
       protocol: "xtrata-core",
-      version: "v3.1.0",
+      version: "v3.1.1",
       inscription-id: new-id,
       owner: tx-sender,
       creator: creator,
@@ -727,7 +775,7 @@
       total-chunks: total-chunks,
       chunk-profile: chunk-profile,
       chunk-size: (chunk-size-for-profile chunk-profile),
-      content-hash: final-hash,
+      rolling-chunk-hash: final-hash,
       content-type: mime-type,
       token-uri: token-uri-string,
       finalized: true,
@@ -759,11 +807,9 @@
   )
 )
 
-(define-private (assert-single-tx-shape (total-size uint) (chunk-count uint) (chunk-profile uint))
+(define-private (assert-single-tx-shape (total-size uint) (chunk-count uint) (chunk-profile uint) (max-chunks uint))
   (begin
-    ;; Single-tx mint uses the largest possible chunk type in its argument shape,
-    ;; so cap it at 4 x 128 KiB = 512 KiB.
-    (asserts! (<= chunk-count MAX-MAXIMUM-BATCH-SIZE) ERR-INVALID-BATCH)
+    (asserts! (<= chunk-count max-chunks) ERR-INVALID-BATCH)
     (assert-valid-profile-shape total-size chunk-count chunk-profile)
   )
 )
@@ -1181,6 +1227,19 @@
 ;; --- CORE LOGIC ---
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(define-public (begin-or-resume
+  (expected-hash (buff 32))
+  (mime (string-ascii 64))
+  (total-size uint)
+  (total-chunks uint)
+  (chunk-profile uint)
+)
+  (begin
+    (try! (begin-inscription expected-hash mime total-size total-chunks chunk-profile))
+    (ok (map-get? UploadState { owner: tx-sender, hash: expected-hash }))
+  )
+)
+
 (define-public (begin-or-get
   (expected-hash (buff 32))
   (mime (string-ascii 64))
@@ -1190,7 +1249,7 @@
 )
   (begin
     (try! (begin-inscription expected-hash mime total-size total-chunks chunk-profile))
-    (ok none)
+    (ok (map-get? UploadState { owner: tx-sender, hash: expected-hash }))
   )
 )
 
@@ -1238,14 +1297,14 @@
           (print {
             event: "inscription-created",
             protocol: "xtrata-core",
-            version: "v3.1.0",
+            version: "v3.1.1",
             owner: tx-sender,
             creator: tx-sender,
             total-size: total-size,
             total-chunks: total-chunks,
             chunk-profile: chunk-profile,
             chunk-size: (chunk-size-for-profile chunk-profile),
-            content-hash: expected-hash,
+            rolling-chunk-hash: expected-hash,
             content-type: mime,
             finalized: false,
             created-height: stacks-block-height
@@ -1549,95 +1608,256 @@
   (seal-internal expected-hash token-uri-string dependencies parents (var-get next-id))
 )
 
-(define-private (mint-single-tx-internal
+(define-private (mint-single-tx-finish
   (expected-hash (buff 32))
   (mime (string-ascii 64))
   (total-size uint)
-  (chunks (list 4 (buff 131072)))
+  (chunk-count uint)
   (chunk-profile uint)
   (token-uri-string (string-ascii 256))
   (dependencies (list 50 uint))
   (parents (list 50 uint))
+  (result { idx: uint, run-hash: (buff 32), target-hash: (buff 32), creator: principal, total-size: uint, total-chunks: uint, chunk-size: uint, ok: bool })
 )
-  (let (
-    (chunk-count (len chunks))
+  (let ((fee (single-tx-fee tx-sender (some contract-caller) total-size chunk-count)))
+    (begin
+      (asserts! (get ok result) ERR-INVALID-BATCH)
+      (asserts! (is-eq (get run-hash result) expected-hash) ERR-HASH-MISMATCH)
+      (try! (maybe-pay (get amount fee)))
+      (commit-inscription
+        (var-get next-id)
+        expected-hash
+        tx-sender
+        mime
+        total-size
+        chunk-count
+        chunk-profile
+        (get run-hash result)
+        token-uri-string
+        dependencies
+        parents
+      )
+    )
   )
+)
+
+(define-private (mint-single-tx-small-internal
+  (expected-hash (buff 32))
+  (mime (string-ascii 64))
+  (total-size uint)
+  (chunks (list 32 (buff 16384)))
+  (token-uri-string (string-ascii 256))
+  (dependencies (list 50 uint))
+  (parents (list 50 uint))
+)
+  (let ((chunk-count (len chunks)))
     (begin
       (try! (assert-inscription-allowed))
-      (try! (assert-single-tx-shape total-size chunk-count chunk-profile))
+      (try! (assert-single-tx-shape total-size chunk-count CHUNK-PROFILE-SMALL MAX-SMALL-BATCH-SIZE))
       (asserts! (> (len token-uri-string) u0) ERR-INVALID-URI)
       (asserts! (validate-dependencies dependencies) ERR-DEPENDENCY-MISSING)
       (try! (validate-parents parents))
-      (let (
-        (fee (single-tx-fee tx-sender (some contract-caller) total-size chunk-count))
-        (result (fold process-chunk chunks {
+      (mint-single-tx-finish
+        expected-hash
+        mime
+        total-size
+        chunk-count
+        CHUNK-PROFILE-SMALL
+        token-uri-string
+        dependencies
+        parents
+        (fold process-chunk chunks {
           idx: u0,
           run-hash: 0x0000000000000000000000000000000000000000000000000000000000000000,
           target-hash: expected-hash,
           creator: tx-sender,
           total-size: total-size,
           total-chunks: chunk-count,
-          chunk-size: (chunk-size-for-profile chunk-profile),
+          chunk-size: CHUNK-SIZE-SMALL,
           ok: true
-        }))
-      )
-        (begin
-          (asserts! (get ok result) ERR-INVALID-BATCH)
-          (asserts! (is-eq (get run-hash result) expected-hash) ERR-HASH-MISMATCH)
-          (try! (maybe-pay (get amount fee)))
-          (commit-inscription
-            (var-get next-id)
-            expected-hash
-            tx-sender
-            mime
-            total-size
-            chunk-count
-            chunk-profile
-            (get run-hash result)
-            token-uri-string
-            dependencies
-            parents
-          )
-        )
+        })
       )
     )
   )
 )
 
-(define-public (mint-single-tx
+(define-private (mint-single-tx-standard-internal
   (expected-hash (buff 32))
   (mime (string-ascii 64))
   (total-size uint)
-  (chunks (list 4 (buff 131072)))
-  (chunk-profile uint)
-  (token-uri-string (string-ascii 256))
-)
-  (mint-single-tx-internal expected-hash mime total-size chunks chunk-profile token-uri-string (list) (list))
-)
-
-(define-public (mint-single-tx-recursive
-  (expected-hash (buff 32))
-  (mime (string-ascii 64))
-  (total-size uint)
-  (chunks (list 4 (buff 131072)))
-  (chunk-profile uint)
-  (token-uri-string (string-ascii 256))
-  (dependencies (list 50 uint))
-)
-  (mint-single-tx-internal expected-hash mime total-size chunks chunk-profile token-uri-string dependencies (list))
-)
-
-(define-public (mint-single-tx-with-relationships
-  (expected-hash (buff 32))
-  (mime (string-ascii 64))
-  (total-size uint)
-  (chunks (list 4 (buff 131072)))
-  (chunk-profile uint)
+  (chunks (list 8 (buff 65536)))
   (token-uri-string (string-ascii 256))
   (dependencies (list 50 uint))
   (parents (list 50 uint))
 )
-  (mint-single-tx-internal expected-hash mime total-size chunks chunk-profile token-uri-string dependencies parents)
+  (let ((chunk-count (len chunks)))
+    (begin
+      (try! (assert-inscription-allowed))
+      (try! (assert-single-tx-shape total-size chunk-count CHUNK-PROFILE-STANDARD MAX-STANDARD-BATCH-SIZE))
+      (asserts! (> (len token-uri-string) u0) ERR-INVALID-URI)
+      (asserts! (validate-dependencies dependencies) ERR-DEPENDENCY-MISSING)
+      (try! (validate-parents parents))
+      (mint-single-tx-finish
+        expected-hash
+        mime
+        total-size
+        chunk-count
+        CHUNK-PROFILE-STANDARD
+        token-uri-string
+        dependencies
+        parents
+        (fold process-chunk chunks {
+          idx: u0,
+          run-hash: 0x0000000000000000000000000000000000000000000000000000000000000000,
+          target-hash: expected-hash,
+          creator: tx-sender,
+          total-size: total-size,
+          total-chunks: chunk-count,
+          chunk-size: CHUNK-SIZE-STANDARD,
+          ok: true
+        })
+      )
+    )
+  )
+)
+
+(define-private (mint-single-tx-maximum-internal
+  (expected-hash (buff 32))
+  (mime (string-ascii 64))
+  (total-size uint)
+  (chunks (list 4 (buff 131072)))
+  (token-uri-string (string-ascii 256))
+  (dependencies (list 50 uint))
+  (parents (list 50 uint))
+)
+  (let ((chunk-count (len chunks)))
+    (begin
+      (try! (assert-inscription-allowed))
+      (try! (assert-single-tx-shape total-size chunk-count CHUNK-PROFILE-MAXIMUM MAX-MAXIMUM-BATCH-SIZE))
+      (asserts! (> (len token-uri-string) u0) ERR-INVALID-URI)
+      (asserts! (validate-dependencies dependencies) ERR-DEPENDENCY-MISSING)
+      (try! (validate-parents parents))
+      (mint-single-tx-finish
+        expected-hash
+        mime
+        total-size
+        chunk-count
+        CHUNK-PROFILE-MAXIMUM
+        token-uri-string
+        dependencies
+        parents
+        (fold process-chunk chunks {
+          idx: u0,
+          run-hash: 0x0000000000000000000000000000000000000000000000000000000000000000,
+          target-hash: expected-hash,
+          creator: tx-sender,
+          total-size: total-size,
+          total-chunks: chunk-count,
+          chunk-size: CHUNK-SIZE-MAXIMUM,
+          ok: true
+        })
+      )
+    )
+  )
+)
+
+(define-public (mint-single-tx-small
+  (expected-hash (buff 32))
+  (mime (string-ascii 64))
+  (total-size uint)
+  (chunks (list 32 (buff 16384)))
+  (token-uri-string (string-ascii 256))
+)
+  (mint-single-tx-small-internal expected-hash mime total-size chunks token-uri-string (list) (list))
+)
+
+(define-public (mint-single-tx-standard
+  (expected-hash (buff 32))
+  (mime (string-ascii 64))
+  (total-size uint)
+  (chunks (list 8 (buff 65536)))
+  (token-uri-string (string-ascii 256))
+)
+  (mint-single-tx-standard-internal expected-hash mime total-size chunks token-uri-string (list) (list))
+)
+
+(define-public (mint-single-tx-maximum
+  (expected-hash (buff 32))
+  (mime (string-ascii 64))
+  (total-size uint)
+  (chunks (list 4 (buff 131072)))
+  (token-uri-string (string-ascii 256))
+)
+  (mint-single-tx-maximum-internal expected-hash mime total-size chunks token-uri-string (list) (list))
+)
+
+(define-public (mint-single-tx-small-recursive
+  (expected-hash (buff 32))
+  (mime (string-ascii 64))
+  (total-size uint)
+  (chunks (list 32 (buff 16384)))
+  (token-uri-string (string-ascii 256))
+  (dependencies (list 50 uint))
+)
+  (mint-single-tx-small-internal expected-hash mime total-size chunks token-uri-string dependencies (list))
+)
+
+(define-public (mint-single-tx-standard-recursive
+  (expected-hash (buff 32))
+  (mime (string-ascii 64))
+  (total-size uint)
+  (chunks (list 8 (buff 65536)))
+  (token-uri-string (string-ascii 256))
+  (dependencies (list 50 uint))
+)
+  (mint-single-tx-standard-internal expected-hash mime total-size chunks token-uri-string dependencies (list))
+)
+
+(define-public (mint-single-tx-maximum-recursive
+  (expected-hash (buff 32))
+  (mime (string-ascii 64))
+  (total-size uint)
+  (chunks (list 4 (buff 131072)))
+  (token-uri-string (string-ascii 256))
+  (dependencies (list 50 uint))
+)
+  (mint-single-tx-maximum-internal expected-hash mime total-size chunks token-uri-string dependencies (list))
+)
+
+(define-public (mint-single-tx-small-with-relationships
+  (expected-hash (buff 32))
+  (mime (string-ascii 64))
+  (total-size uint)
+  (chunks (list 32 (buff 16384)))
+  (token-uri-string (string-ascii 256))
+  (dependencies (list 50 uint))
+  (parents (list 50 uint))
+)
+  (mint-single-tx-small-internal expected-hash mime total-size chunks token-uri-string dependencies parents)
+)
+
+(define-public (mint-single-tx-standard-with-relationships
+  (expected-hash (buff 32))
+  (mime (string-ascii 64))
+  (total-size uint)
+  (chunks (list 8 (buff 65536)))
+  (token-uri-string (string-ascii 256))
+  (dependencies (list 50 uint))
+  (parents (list 50 uint))
+)
+  (mint-single-tx-standard-internal expected-hash mime total-size chunks token-uri-string dependencies parents)
+)
+
+(define-public (mint-single-tx-maximum-with-relationships
+  (expected-hash (buff 32))
+  (mime (string-ascii 64))
+  (total-size uint)
+  (chunks (list 4 (buff 131072)))
+  (token-uri-string (string-ascii 256))
+  (dependencies (list 50 uint))
+  (parents (list 50 uint))
+)
+  (mint-single-tx-maximum-internal expected-hash mime total-size chunks token-uri-string dependencies parents)
 )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1657,6 +1877,10 @@
     meta (some (get final-hash meta))
     none
   )
+)
+
+(define-read-only (get-rolling-chunk-hash (id uint))
+  (get-inscription-hash id)
 )
 
 (define-read-only (get-inscription-creator (id uint))
@@ -1707,9 +1931,42 @@
 
 (define-read-only (get-supported-chunk-profiles)
   (ok (list
-    { profile: CHUNK-PROFILE-SMALL, label: "small", chunk-size: CHUNK-SIZE-SMALL, advanced: false }
-    { profile: CHUNK-PROFILE-STANDARD, label: "standard", chunk-size: CHUNK-SIZE-STANDARD, advanced: false }
-    { profile: CHUNK-PROFILE-MAXIMUM, label: "maximum", chunk-size: CHUNK-SIZE-MAXIMUM, advanced: true }
+    {
+      profile: CHUNK-PROFILE-SMALL,
+      label: "small",
+      chunk-size: CHUNK-SIZE-SMALL,
+      max-chunks: MAX-TOTAL-CHUNKS,
+      max-size: MAX-SMALL-TOTAL-SIZE,
+      upload-batch-max-chunks: MAX-SMALL-BATCH-SIZE,
+      upload-batch-max-bytes: MAX-UPLOAD-BYTES-PER-BATCH,
+      single-tx-max-chunks: MAX-SMALL-BATCH-SIZE,
+      single-tx-max-bytes: MAX-UPLOAD-BYTES-PER-BATCH,
+      advanced: false
+    }
+    {
+      profile: CHUNK-PROFILE-STANDARD,
+      label: "standard",
+      chunk-size: CHUNK-SIZE-STANDARD,
+      max-chunks: MAX-TOTAL-CHUNKS,
+      max-size: MAX-STANDARD-TOTAL-SIZE,
+      upload-batch-max-chunks: MAX-STANDARD-BATCH-SIZE,
+      upload-batch-max-bytes: MAX-UPLOAD-BYTES-PER-BATCH,
+      single-tx-max-chunks: MAX-STANDARD-BATCH-SIZE,
+      single-tx-max-bytes: MAX-UPLOAD-BYTES-PER-BATCH,
+      advanced: false
+    }
+    {
+      profile: CHUNK-PROFILE-MAXIMUM,
+      label: "maximum",
+      chunk-size: CHUNK-SIZE-MAXIMUM,
+      max-chunks: MAX-TOTAL-CHUNKS,
+      max-size: MAX-MAXIMUM-TOTAL-SIZE,
+      upload-batch-max-chunks: MAX-MAXIMUM-BATCH-SIZE,
+      upload-batch-max-bytes: MAX-UPLOAD-BYTES-PER-BATCH,
+      single-tx-max-chunks: MAX-MAXIMUM-BATCH-SIZE,
+      single-tx-max-bytes: MAX-UPLOAD-BYTES-PER-BATCH,
+      advanced: true
+    }
   ))
 )
 
@@ -1724,7 +1981,8 @@
         chunk-count: (get total-chunks meta),
         chunk-profile: (get chunk-profile meta),
         chunk-size: (chunk-size-for-profile (get chunk-profile meta)),
-        content-hash: (get final-hash meta),
+        rolling-chunk-hash: (get final-hash meta),
+        hash-algorithm: "xtrata-rolling-sha256",
         content-type: (get mime-type meta),
         token-uri: (map-get? TokenURIs id),
         dependencies: (get-dependencies id),
@@ -1767,6 +2025,10 @@
       )
     (list)
   )
+)
+
+(define-read-only (get-chunk-read-batch-limit)
+  (ok MAX-READ-CHUNK-BATCH-SIZE)
 )
 
 (define-read-only (get-dependencies (id uint))
@@ -1813,7 +2075,10 @@
 )
   (begin
     (try! (assert-valid-mode mode))
-    (try! (assert-valid-profile-shape total-size total-chunks chunk-profile))
+    (try! (if (is-eq mode MODE-SINGLE-TX)
+      (assert-single-tx-shape total-size total-chunks chunk-profile (upload-batch-limit-for-profile chunk-profile))
+      (assert-valid-profile-shape total-size total-chunks chunk-profile)
+    ))
     (let (
       (policy (resolve-fee-policy payer caller))
       (size-fee (size-fee-for-bytes total-size))
