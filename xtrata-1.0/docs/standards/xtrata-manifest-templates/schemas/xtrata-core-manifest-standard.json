@@ -1,0 +1,128 @@
+{
+  "standard": "xtrata-core-manifest-standard",
+  "schemaVersion": "0.1.0",
+  "status": "draft",
+  "createdAt": "2026-06-05T00:00:00Z",
+  "purpose": "Shared baseline that all Xtrata manifest types should follow so marketplaces, wallets, indexers and agents can resolve them consistently.",
+  "requiredTopLevel": {
+    "allManifestFiles": [
+      "manifest",
+      "validation",
+      "security"
+    ],
+    "recommended": [
+      "extensions"
+    ]
+  },
+  "requiredManifestFields": [
+    "standard",
+    "schemaVersion",
+    "tier",
+    "manifestId",
+    "network",
+    "createdAt",
+    "updatedAt",
+    "status",
+    "language",
+    "canonicalUri",
+    "canonicalInscription",
+    "supersedes",
+    "humanSummary"
+  ],
+  "canonicalInscriptionFields": [
+    "contractId",
+    "tokenId",
+    "finalHash",
+    "mimeType"
+  ],
+  "allowedManifestStatus": [
+    "template",
+    "draft",
+    "active",
+    "deprecated",
+    "superseded"
+  ],
+  "allowedNetworks": [
+    "mainnet",
+    "testnet",
+    "devnet"
+  ],
+  "hashPolicy": {
+    "preferred": "sha256:<hex>",
+    "acceptedForXtrataCoreFinalHash": "0x<32-byte-hex>",
+    "rule": "Every canonical asset, manifest and item map should be hash-addressable or explicitly marked TBD in templates only."
+  },
+  "xtrataUriPolicy": {
+    "canonicalFormat": "xtrata://inscription/{tokenId}",
+    "contractSpecificFormat": "xtrata://{network}/{contractId}/{tokenId}",
+    "rule": "Where ambiguity is possible, include contractId in the object even if the short URI is used."
+  },
+  "collectionMappingStandards": {
+    "purpose": "Allow pre-inscribed, sequential, chunked and live-minted collections to resolve through one marketplace model.",
+    "requiredCollectionFields": [
+      "collection",
+      "assetRegistry",
+      "itemMap",
+      "reconstruction",
+      "marketplace",
+      "resolverConfig"
+    ],
+    "allowedItemMapTypes": [
+      "explicit",
+      "sequential-range",
+      "chunked-explicit",
+      "resolver"
+    ],
+    "canonicalResolution": "manifest inscription or collection resolver -> collection index -> Xtrata core token-id/inscription-id -> verified on-chain content",
+    "minimumItemMapFields": [
+      "mappingType",
+      "indexBase",
+      "count",
+      "coreContractId"
+    ],
+    "explicitRequires": [
+      "explicitItems"
+    ],
+    "sequentialRangeRequires": [
+      "sequentialRanges"
+    ],
+    "resolverRequires": [
+      "resolver.enabled",
+      "resolver.contractId",
+      "resolver.interface",
+      "resolver.coreContractFunction",
+      "resolver.countFunction",
+      "resolver.mapFunction"
+    ],
+    "resolverInterfaceV1": [
+      "get-locked-core-contract",
+      "get-minted-index-count",
+      "get-minted-count",
+      "get-minted-id"
+    ]
+  },
+  "securityStandards": {
+    "required": [
+      "security.hashes"
+    ],
+    "recommended": [
+      "security.verifiedWallets",
+      "security.verifiedContracts",
+      "security.signatures",
+      "security.amendments"
+    ],
+    "rule": "Manifests should be immutable snapshots. Later corrections should use supersedes/amendments rather than mutating history."
+  },
+  "validationStandards": {
+    "required": [
+      "validation.schemaUri",
+      "validation.validated",
+      "validation.validationRules"
+    ],
+    "recommended": [
+      "validation.reports"
+    ],
+    "rule": "Every specialised manifest should point at a schema or schema-manifest and declare the checks required for safe use."
+  },
+  "designPrinciple": "Manifest = what the thing is. Contract = what the thing does. Xtrata core inscription = canonical on-chain content. token-uri is supplemental, not the content source of truth."
+}

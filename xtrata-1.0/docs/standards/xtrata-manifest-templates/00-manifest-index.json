@@ -42,5 +42,19 @@
     "governance-and-rights": "Governance/DAO and rights/license manifests.",
     "schemas": "Reusable schema manifest template."
   },
-  "designPrinciple": "Contracts enforce state and value movement. Manifests describe, verify, organise, reconstruct and make systems legible to wallets, indexers, marketplaces and users."
+  "designPrinciple": "Contracts enforce state and value movement. Manifests describe, verify, organise, reconstruct and make systems legible to wallets, indexers, marketplaces and users.",
+  "coreStandards": [
+    {
+      "path": "CORE-STANDARDS.md",
+      "use": "Human-readable common standards for all Xtrata manifests."
+    },
+    {
+      "path": "schemas/xtrata-core-manifest-standard.json",
+      "use": "Machine-readable baseline standard for validators and repo agents."
+    },
+    {
+      "path": "MANIFEST_ALIGNMENT_REPORT.md",
+      "use": "Alignment scan and recommendations for bringing the manifest set to v1.0."
+    }
+  ]
 }

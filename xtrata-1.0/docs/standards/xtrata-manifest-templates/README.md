@@ -35,3 +35,10 @@ For example:
 - A resolver/name manifest explains what `jim.x` points to.
 - A collection/runtime/data/finance manifest describes the target system.
 
+
+## Core standards added
+
+- `CORE-STANDARDS.md` - human-readable shared rules for all manifest templates.
+- `MANIFEST_ALIGNMENT_REPORT.md` - current alignment scan and recommendations.
+- `schemas/xtrata-core-manifest-standard.json` - machine-readable baseline standard for validators and repo agents.
+
