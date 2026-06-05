@@ -116,10 +116,12 @@ tooling.
 | [`docs/standards/xtrata-collection-manifest-standard.md`](standards/xtrata-collection-manifest-standard.md) | Draft standard for Xtrata Collection Manifests, including schema, tiers, sequential collection mapping, resolver relationships, use cases, validation rules, and security guidance. |
 | [`docs/standards/xtrata-manifest-validation.md`](standards/xtrata-manifest-validation.md) | Validator guidance for schema checks, item map validation, Xtrata reconstruction checks, signatures, amendments, error codes, and validation reports. |
 | [`schemas/xtrata-collection-manifest.schema.json`](../schemas/xtrata-collection-manifest.schema.json) | Draft JSON Schema for Xtrata Collection Manifests. |
-| [`docs/standards/examples/minimal-marketplace-manifest.json`](standards/examples/minimal-marketplace-manifest.json) | Level 1 marketplace manifest example for a simple Xtrata-native art collection. |
-| [`docs/standards/examples/preservation-migration-manifest.json`](standards/examples/preservation-migration-manifest.json) | Level 2 sequential preservation and migration manifest example. |
-| [`docs/standards/examples/audiovisual-preservation-manifest.json`](standards/examples/audiovisual-preservation-manifest.json) | Level 2 audiovisual preservation manifest example with audio and generation context. |
-| [`docs/standards/examples/full-composable-manifest.json`](standards/examples/full-composable-manifest.json) | Level 3 composable manifest example for Audionals, BVST-style modules, runtime dependencies, and resolver-backed item mapping. |
+| [`docs/standards/xtrata-manifest-templates/README.md`](standards/xtrata-manifest-templates/README.md) | Active modular manifest template package entry point for collections, namespaces, data vaults, runtimes, finance, identity, governance, rights and agents. |
+| [`docs/standards/xtrata-manifest-templates/00-manifest-index.json`](standards/xtrata-manifest-templates/00-manifest-index.json) | Machine-readable index of root templates, specialist folders and shared template standards. |
+| [`docs/standards/xtrata-manifest-templates/collections/minimal-marketplace-manifest.json`](standards/xtrata-manifest-templates/collections/minimal-marketplace-manifest.json) | Collection template for a simple Xtrata-native art marketplace launch. |
+| [`docs/standards/xtrata-manifest-templates/collections/preservation-migration-manifest.json`](standards/xtrata-manifest-templates/collections/preservation-migration-manifest.json) | Collection template for sequential preservation and migration. |
+| [`docs/standards/xtrata-manifest-templates/collections/audiovisual-preservation-manifest.json`](standards/xtrata-manifest-templates/collections/audiovisual-preservation-manifest.json) | Collection template for audiovisual preservation with audio and generation context. |
+| [`docs/standards/xtrata-manifest-templates/collections/full-composable-manifest.json`](standards/xtrata-manifest-templates/collections/full-composable-manifest.json) | Collection template for Audionals, BVST-style modules, runtime dependencies and resolver-backed item mapping. |
 
 ## Current Core Contract Docs
 

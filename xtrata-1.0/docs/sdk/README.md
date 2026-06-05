@@ -24,6 +24,8 @@ contract's 50-chunk fee bucket.
 - `docs/sdk/api-overview.md`
 - `docs/reconstruction-spec.md`
 - `docs/sdk/compatibility-matrix.md`
+- `docs/standards/xtrata-manifest-templates/README.md`
+- `docs/standards/xtrata-manifest-templates/00-manifest-index.json`
 - `docs/sdk/test-gates.md`
 - `docs/sdk/changelog.md`
 - `docs/sdk/release-notes-template.md`
