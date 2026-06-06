@@ -11,4 +11,4 @@ coverage
 costs-reports.json
 node_modules
 
-contracts/clarinet/deployments/*.testnet-plan.yaml
+deployments/*.testnet-plan.yaml
