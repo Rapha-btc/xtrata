@@ -9,6 +9,7 @@ import { StacksTestnet, createApiKeyMiddleware, createFetchFn } from '@stacks/ne
 import { generateNewAccount, generateWallet, getStxAddress } from '@stacks/wallet-sdk';
 import {
   AnchorMode,
+  ClarityVersion,
   PostConditionMode,
   TransactionVersion,
   broadcastTransaction,
@@ -31,6 +32,7 @@ const repoRoot = path.resolve(__dirname, '..');
 const reportsDir = path.join(repoRoot, 'reports');
 const jsonReportPath = path.join(reportsDir, 'testnet-v3.2.1-rehearsal.json');
 const markdownReportPath = path.join(reportsDir, 'testnet-v3.2.1-rehearsal.md');
+const latestEnvPath = path.join(reportsDir, 'testnet-v3.2.1-latest-env.sh');
 
 const CHUNK_SIZE = 16_384;
 const CORE_UPLOAD_LIMIT = 32;
@@ -77,7 +79,9 @@ const CONTRACTS = [
 
 const usage = `Usage:
   npm run testnet:v3.2.1:deploy -- [--broadcast]
+  npm run testnet:v3.2.1:fresh-deploy -- [--broadcast]
   npm run testnet:v3.2.1:smoke -- [--broadcast]
+  npm run testnet:v3.2.1:fresh-rehearsal -- [--broadcast]
   npm run testnet:v3.2.1:remaining -- [--broadcast]
   npm run testnet:v3.2.1:reconstruct -- [--broadcast]
   npm run testnet:v3.2.1:report
@@ -104,6 +108,13 @@ Optional:
   XTRATA_TESTNET_CONFIRMATION_ATTEMPTS=${DEFAULT_CONFIRMATION_ATTEMPTS}
   XTRATA_TESTNET_CONFIRMATION_INTERVAL_MS=${DEFAULT_CONFIRMATION_INTERVAL_MS}
   XTRATA_TESTNET_FIXED_FEE_USTX=<uint, optional fixed tx fee for smoke/rehearsal calls>
+
+Fresh deployment commands use mnemonic-derived funded role rotation by default:
+  deployer index 2, wallet A index 0, wallet B index 1
+They ignore XTRATA_TESTNET_CONTRACT_ADDRESS so a previously deployed contract
+address cannot accidentally be reused.
+Set XTRATA_TESTNET_FRESH_KEEP_ROLE_INDEXES=1 only when intentionally choosing
+different role indexes for a fresh namespace.
 `;
 
 const nowIso = () => new Date().toISOString();
@@ -115,6 +126,37 @@ const parseArgs = (argv) => {
     broadcast: argv.includes('--broadcast'),
     help: argv.includes('--help') || argv.includes('-h')
   };
+};
+
+const isFreshCommand = (command) => command === 'fresh-deploy' || command === 'fresh-rehearsal';
+
+const applyFreshRoleDefaults = (command) => {
+  if (!isFreshCommand(command)) {
+    return null;
+  }
+  if (!process.env.XTRATA_TESTNET_MNEMONIC?.trim()) {
+    throw new Error('Fresh deployment commands require XTRATA_TESTNET_MNEMONIC so funded account roles can be rotated.');
+  }
+  if (
+    process.env.XTRATA_TESTNET_DEPLOYER_KEY?.trim() ||
+    process.env.XTRATA_TESTNET_WALLET_A_KEY?.trim() ||
+    process.env.XTRATA_TESTNET_WALLET_B_KEY?.trim()
+  ) {
+    throw new Error('Fresh deployment role rotation requires mnemonic-derived keys, not explicit private key overrides.');
+  }
+
+  const defaults = {
+    XTRATA_TESTNET_DEPLOYER_INDEX: '2',
+    XTRATA_TESTNET_WALLET_A_INDEX: '0',
+    XTRATA_TESTNET_WALLET_B_INDEX: '1'
+  };
+  const keepExistingIndexes = envFlag('XTRATA_TESTNET_FRESH_KEEP_ROLE_INDEXES', false);
+  for (const [name, value] of Object.entries(defaults)) {
+    if (!keepExistingIndexes || !process.env[name]?.trim()) {
+      process.env[name] = value;
+    }
+  }
+  return defaults;
 };
 
 const envFlag = (name, defaultValue = false) => {
@@ -270,14 +312,15 @@ const createHiroFetch = () => {
   return createFetchFn(fetch, createApiKeyMiddleware({ apiKey }));
 };
 
-const createContext = async (broadcast) => {
+const createContext = async (broadcast, options = {}) => {
   const apiUrl = process.env.XTRATA_TESTNET_API_URL?.trim() || DEFAULT_API_URL;
   const hiroFetch = createHiroFetch();
   const network = new StacksTestnet({ url: apiUrl, fetchFn: hiroFetch });
   const keys = await getKeys();
   const deployerAddress = keys.deployer ? addressFromKey(keys.deployer) : null;
-  const contractAddress =
-    process.env.XTRATA_TESTNET_CONTRACT_ADDRESS?.trim() || deployerAddress || DRY_RUN_PLACEHOLDER_ADDRESS;
+  const contractAddress = options.ignoreContractAddressEnv
+    ? deployerAddress || DRY_RUN_PLACEHOLDER_ADDRESS
+    : process.env.XTRATA_TESTNET_CONTRACT_ADDRESS?.trim() || deployerAddress || DRY_RUN_PLACEHOLDER_ADDRESS;
   const walletAAddress = keys.walletA ? addressFromKey(keys.walletA) : null;
   const walletBAddress = keys.walletB ? addressFromKey(keys.walletB) : null;
 
@@ -336,6 +379,11 @@ const createContext = async (broadcast) => {
     failures: [],
     recommendation: 'needs another testnet pass'
   };
+  if (options.freshDeployment) {
+    report.warnings.push(
+      'Fresh deployment mode: ignoring XTRATA_TESTNET_CONTRACT_ADDRESS and using the rotated deployer address as the contract namespace.'
+    );
+  }
 
   return { apiUrl, network, hiroFetch, keys, contractAddress, report, plannedNextTokenIds: new Map() };
 };
@@ -461,6 +509,7 @@ const deployContract = async (ctx, contract) => {
         codeBody,
         senderKey: deployerKey,
         network: ctx.network,
+        clarityVersion: ClarityVersion.Clarity3,
         anchorMode: AnchorMode.Any,
         postConditionMode: PostConditionMode.Allow,
         ...fixedFeeOption()
@@ -837,6 +886,15 @@ const addCase = (ctx, name, status, detail = {}) => {
     at: nowIso(),
     name,
     status,
+    evidence:
+      detail.evidence ??
+      (status === 'passed'
+        ? ctx.report.mode === 'broadcast'
+          ? 'confirmed-on-chain'
+          : 'dry-run-planned'
+        : status === 'skipped'
+          ? 'skipped-in-this-run'
+          : 'unverified'),
     ...detail
   });
 };
@@ -1074,14 +1132,14 @@ const runSmoke = async (ctx) => {
 const runRemaining = async (ctx) => {
   await runAdminSetupSafe(ctx);
 
-  addCase(ctx, 'direct single-call 32 chunks', 'passed', {
-    note: 'Already passed in an earlier broadcast smoke run; skipped here to avoid repeating large testnet transactions.'
+  addCase(ctx, 'direct single-call 32 chunks', 'skipped', {
+    note: 'Skipped in remaining mode to avoid repeating large testnet transactions. This does not satisfy mainnet readiness.'
   });
-  addCase(ctx, 'staged 33 chunks as 32 + 1', 'passed', {
-    note: 'Already passed in an earlier broadcast smoke run; skipped here to avoid repeating large testnet transactions.'
+  addCase(ctx, 'staged 33 chunks as 32 + 1', 'skipped', {
+    note: 'Skipped in remaining mode to avoid repeating large testnet transactions. This does not satisfy mainnet readiness.'
   });
-  addCase(ctx, 'advisory dedupe duplicate same-hash mints', 'passed', {
-    note: 'Already passed in an earlier broadcast smoke run; skipped here to avoid repeating large testnet transactions.'
+  addCase(ctx, 'advisory dedupe duplicate same-hash mints', 'skipped', {
+    note: 'Skipped in remaining mode to avoid repeating large testnet transactions. This does not satisfy mainnet readiness.'
   });
 
   const dependencyToken = await directMint(ctx, 'walletB', payloadBytes(321, 0x2a), `${DEFAULT_TOKEN_URI},remaining-dep-source`);
@@ -1198,8 +1256,12 @@ const evaluateRecommendation = (report) => {
     'migration from v2.1.0',
     'migration from v2.1.1'
   ];
-  const passed = new Set(report.testCases.filter((test) => test.status === 'passed').map((test) => test.name));
-  return required.every((name) => passed.has(name)) ? 'ready for mainnet' : 'needs another testnet pass';
+  const confirmed = new Set(
+    report.testCases
+      .filter((test) => test.status === 'passed' && test.evidence === 'confirmed-on-chain')
+      .map((test) => test.name)
+  );
+  return required.every((name) => confirmed.has(name)) ? 'ready for mainnet' : 'needs another testnet pass';
 };
 
 const renderMarkdown = (report) => {
@@ -1252,6 +1314,7 @@ ${rows(report.testCases, (test) => {
     test.firstSeenTokenId ? `first ${test.firstSeenTokenId}` : '',
     test.chunkCount ? `${test.chunkCount} chunks` : '',
     test.expected ? test.expected : '',
+    test.evidence ? `evidence ${test.evidence}` : '',
     test.note ? test.note : ''
   ].filter(Boolean).join('; ');
   return `| ${test.name} | ${test.status} | ${details} |`;
@@ -1278,6 +1341,24 @@ const writeReports = async (ctx) => {
   await mkdir(reportsDir, { recursive: true });
   await writeFile(jsonReportPath, `${JSON.stringify(ctx.report, null, 2)}\n`);
   await writeFile(markdownReportPath, renderMarkdown(ctx.report));
+  if (ctx.report.mode !== 'broadcast') {
+    return;
+  }
+  const envLines = [
+    '# Non-secret testnet rehearsal exports generated by scripts/testnet-v3.2.1-rehearsal.mjs',
+    `export XTRATA_TESTNET_CONTRACT_ADDRESS=${ctx.contractAddress}`,
+    ctx.report.keyDerivation?.indexes?.deployer !== undefined
+      ? `export XTRATA_TESTNET_DEPLOYER_INDEX=${ctx.report.keyDerivation.indexes.deployer}`
+      : null,
+    ctx.report.keyDerivation?.indexes?.walletA !== undefined
+      ? `export XTRATA_TESTNET_WALLET_A_INDEX=${ctx.report.keyDerivation.indexes.walletA}`
+      : null,
+    ctx.report.keyDerivation?.indexes?.walletB !== undefined
+      ? `export XTRATA_TESTNET_WALLET_B_INDEX=${ctx.report.keyDerivation.indexes.walletB}`
+      : null,
+    ''
+  ].filter((line) => line !== null);
+  await writeFile(latestEnvPath, `${envLines.join('\n')}`);
 };
 
 const main = async () => {
@@ -1286,7 +1367,11 @@ const main = async () => {
     console.log(usage);
     return;
   }
-  const ctx = await createContext(options.broadcast);
+  applyFreshRoleDefaults(options.command);
+  const ctx = await createContext(options.broadcast, {
+    freshDeployment: isFreshCommand(options.command),
+    ignoreContractAddressEnv: isFreshCommand(options.command)
+  });
   if (options.broadcast) {
     for (const name of ['deployer', 'walletA', 'walletB']) {
       requireBroadcastKey(ctx, name);
@@ -1296,7 +1381,7 @@ const main = async () => {
   }
 
   try {
-    if (options.command === 'deploy') {
+    if (options.command === 'deploy' || options.command === 'fresh-deploy') {
       await runDeploy(ctx);
     } else if (options.command === 'smoke') {
       await runSmoke(ctx);
@@ -1309,7 +1394,7 @@ const main = async () => {
         jsonReportPath: path.relative(repoRoot, jsonReportPath),
         markdownReportPath: path.relative(repoRoot, markdownReportPath)
       });
-    } else if (options.command === 'rehearsal') {
+    } else if (options.command === 'rehearsal' || options.command === 'fresh-rehearsal') {
       await runDeploy(ctx);
       await runSmoke(ctx);
     } else {

@@ -9,7 +9,8 @@ safety, correctness, deployment, or long-term operability.
 
 ## Files In This Review Packet
 
-- `contracts/other/xtrata-v3.2.1.clar` - main core contract candidate.
+- `contracts/other/xtrata-v3.2.1.clar` - local/testnet core contract variant.
+- `contracts/live/xtrata-v3.2.1.clar` - mainnet core contract variant.
 - `contracts/other/xtrata-small-mint-v1.1.clar` - small-mint helper candidate.
 - `contracts/clarinet/tests/xtrata-v3.2.1.test.ts` - local Clarinet coverage.
 - `scripts/testnet-v3.2.1-rehearsal.mjs` - testnet rehearsal automation.

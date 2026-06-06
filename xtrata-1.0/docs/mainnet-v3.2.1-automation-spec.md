@@ -32,6 +32,9 @@ XTRATA_MAINNET_API_URL=https://api.hiro.so
 XTRATA_MAINNET_HIRO_API_KEY=<optional-api-key>
 XTRATA_MAINNET_DEPLOYER_ADDRESS=<expected-admin-address>
 XTRATA_MAINNET_OLD_CORE=SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-1
+XTRATA_MAINNET_LEGACY_V1_1_1=SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v1-1-1
+XTRATA_MAINNET_LEGACY_V2_1_0=SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-0
+XTRATA_MAINNET_LEGACY_V2_1_1=SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-1
 XTRATA_MAINNET_CORE=SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v3-2-1
 XTRATA_MAINNET_HELPER=SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-small-mint-v1-1
 XTRATA_MAINNET_ROYALTY_RECIPIENT=<mainnet-address>
@@ -116,10 +119,11 @@ Fail before broadcast if:
 - expected admin does not match old core or v3.2.1 core `get-admin`;
 - helper owner-only setup calls are not being sent by the approved operator;
 - old core is not reachable;
+- any migratable legacy core is not reachable;
 - v3.2.1 is not reachable;
 - helper is not reachable;
 - v3.2.1 has already minted and `set-next-id` is still requested;
-- computed next ID is missing or lower than the old live line;
+- computed next ID is missing or lower than any migratable legacy line;
 - royalty recipient is missing;
 - announcement file is missing or empty;
 - announcement file cannot fit the chosen mint route;
@@ -176,6 +180,8 @@ The JSON report should include:
     "helperPaused": true,
     "oldNextTokenId": 0,
     "oldLastTokenId": 0,
+    "legacyMaxNextTokenId": 0,
+    "legacyMaxLastTokenId": 0,
     "coreNextTokenId": 0,
     "coreLastTokenId": 0,
     "coreMintedCount": 0,

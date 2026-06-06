@@ -635,6 +635,30 @@ describe('xtrata-v3.2.1 fixed 16 KiB core', () => {
       .toBeOk(Cl.uint(v211Id + 1n));
   });
 
+  it('rejects cross-contract migration when two legacy sources share the same token id', () => {
+    unwrapOk(setPaused(v2_1_0, false));
+    unwrapOk(setPaused(v2_1_1, false));
+    unwrapOk(setPaused(contract, false));
+
+    const v210Id = mintStaged(v2_1_0, wallet1, [byteHex(0xd0)], 'data:text/plain,v210-collision');
+    const v211Id = mintStaged(v2_1_1, wallet2, [byteHex(0xd1)], 'data:text/plain,v211-collision');
+
+    expect(v210Id).toBe(0n);
+    expect(v211Id).toBe(0n);
+    expect(simnet.callPublicFn(contract, 'migrate-from-v2-1-0', [Cl.uint(v210Id)], wallet1).result)
+      .toBeOk(Cl.uint(v210Id));
+    expect(simnet.callPublicFn(contract, 'migrate-from-v2-1-1', [Cl.uint(v211Id)], wallet2).result)
+      .toBeErr(Cl.uint(114));
+
+    expect(simnet.callReadOnlyFn(contract, 'get-migration-source', [Cl.uint(v210Id)], deployer).result)
+      .toBeSome(Cl.tuple({
+        'source-contract': Cl.contractPrincipal(deployer, 'xtrata-v2-1-0'),
+        'source-id': Cl.uint(v210Id)
+      }));
+    expect(simnet.callReadOnlyFn(v2_1_1, 'get-owner', [Cl.uint(v211Id)], deployer).result)
+      .toBeOk(Cl.some(Cl.standardPrincipal(wallet2)));
+  });
+
   it('expires and purges abandoned staged uploads without touching sealed state', () => {
     unwrapOk(setPaused(contract, false));
     const chunks = [fullChunk(0x90), byteHex(0x91)];

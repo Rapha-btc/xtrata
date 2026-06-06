@@ -63,6 +63,12 @@ Current live core:
 - `get-royalty-recipient`
 - `get-fee-unit` or split fee values where available
 
+All migratable legacy cores:
+
+- `xtrata-v1-1-1` `get-next-token-id` and `get-last-token-id`
+- `xtrata-v2-1-0` `get-next-token-id` and `get-last-token-id`
+- `xtrata-v2-1-1` `get-next-token-id` and `get-last-token-id`
+
 New v3.2.1 core:
 
 - `get-admin`
@@ -91,21 +97,31 @@ The report must include raw read results and normalized interpretations.
 
 ## Next-ID Rule
 
-The handover script must compute a proposed v3.2.1 starting ID from the live
-core using this rule:
+The handover script must compute a proposed v3.2.1 starting ID across every
+migratable legacy line using this rule:
 
 ```text
-proposed_next_id = max(live_get_next_token_id, live_get_last_token_id + 1)
+proposed_next_id = max(
+  v1_1_1_get_next_token_id,
+  v1_1_1_get_last_token_id + 1,
+  v2_1_0_get_next_token_id,
+  v2_1_0_get_last_token_id + 1,
+  v2_1_1_get_next_token_id,
+  v2_1_1_get_last_token_id + 1
+)
 ```
 
-The script must print both source values and the computed value.
+The script must print each source value and the computed value. This prevents
+native v3.2.1 mints from occupying IDs that a not-yet-migrated legacy token may
+need later.
 
 The script must refuse to call `set-next-id` if:
 
 - v3.2.1 `get-next-token-id` is not `u0`;
 - v3.2.1 `get-minted-count` is not `u0`;
 - v3.2.1 `get-last-token-id` indicates a native mint already occurred;
-- the computed next ID is lower than or equal to a known live minted ID.
+- the computed next ID is lower than or equal to any known migratable legacy
+  minted ID.
 
 If the operator deliberately wants to override the computed ID, the script must
 require an explicit environment variable or CLI argument and record the override
