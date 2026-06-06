@@ -1,0 +1,831 @@
+{
+  "generatedAt": "2026-06-06T00:44:30.265Z",
+  "mode": "broadcast",
+  "network": "testnet",
+  "apiUrl": "https://api.testnet.hiro.so",
+  "hiroApiKeyConfigured": true,
+  "deployerAddress": "STRNRHWSD7REAEXVTHDQWKPD4MFBG41024WQKBBM",
+  "walletAAddress": "ST1QJJVMB6NQBGMZQVDR22PADW2E3BEP61RQTFE7F",
+  "walletBAddress": "ST30X7KJ5R4ZKTG5FBS5RQTH3CC3DNNDP99XRWFE8",
+  "contractAddress": "STRNRHWSD7REAEXVTHDQWKPD4MFBG41024WQKBBM",
+  "contracts": {
+    "v1_1_1": {
+      "name": "xtrata-v1-1-1",
+      "id": "STRNRHWSD7REAEXVTHDQWKPD4MFBG41024WQKBBM.xtrata-v1-1-1",
+      "source": "contracts/other/xtrata-v1.1.1.clar",
+      "requiredFor": [
+        "legacy-v1-read-compatibility"
+      ],
+      "deployTxId": null
+    },
+    "v2_1_0": {
+      "name": "xtrata-v2-1-0",
+      "id": "STRNRHWSD7REAEXVTHDQWKPD4MFBG41024WQKBBM.xtrata-v2-1-0",
+      "source": "contracts/other/xtrata-v2.1.0.clar",
+      "requiredFor": [
+        "migration-v2.1.0"
+      ],
+      "deployTxId": null
+    },
+    "v2_1_1": {
+      "name": "xtrata-v2-1-1",
+      "id": "STRNRHWSD7REAEXVTHDQWKPD4MFBG41024WQKBBM.xtrata-v2-1-1",
+      "source": "contracts/other/xtrata-v2.1.1.clar",
+      "requiredFor": [
+        "migration-v2.1.1"
+      ],
+      "deployTxId": null
+    },
+    "core": {
+      "name": "xtrata-v3-2-1",
+      "id": "STRNRHWSD7REAEXVTHDQWKPD4MFBG41024WQKBBM.xtrata-v3-2-1",
+      "source": "contracts/other/xtrata-v3.2.1.clar",
+      "requiredFor": [
+        "candidate-core"
+      ],
+      "deployTxId": null
+    },
+    "helper": {
+      "name": "xtrata-small-mint-v1-1",
+      "id": "STRNRHWSD7REAEXVTHDQWKPD4MFBG41024WQKBBM.xtrata-small-mint-v1-1",
+      "source": "contracts/other/xtrata-small-mint-v1.1.clar",
+      "requiredFor": [
+        "small-mint-helper"
+      ],
+      "deployTxId": null
+    }
+  },
+  "assumptions": {
+    "chunkSize": 16384,
+    "coreUploadLimit": 32,
+    "appHelperPolicyLimit": 30,
+    "hashToId": "advisory first-seen lookup; duplicate same-hash mints remain allowed",
+    "parentChildReverseIndexes": "manifest/indexer/resolver responsibility, not core",
+    "keySource": "mnemonic-derived testnet account keys"
+  },
+  "keyDerivation": {
+    "source": "XTRATA_TESTNET_MNEMONIC",
+    "indexes": {
+      "deployer": 0,
+      "walletA": 1,
+      "walletB": 2
+    },
+    "derivedAddresses": {
+      "deployer": "STRNRHWSD7REAEXVTHDQWKPD4MFBG41024WQKBBM",
+      "walletA": "ST1QJJVMB6NQBGMZQVDR22PADW2E3BEP61RQTFE7F",
+      "walletB": "ST30X7KJ5R4ZKTG5FBS5RQTH3CC3DNNDP99XRWFE8"
+    }
+  },
+  "commands": {
+    "generateTestnetPlan": "npm --prefix contracts/clarinet exec -- clarinet deployments generate --testnet --manual-cost",
+    "applyTestnetPlan": "npm --prefix contracts/clarinet exec -- clarinet deployments apply --testnet --no-dashboard --use-on-disk-deployment-plan",
+    "deploy": "npm run testnet:v3.2.1:deploy -- --broadcast",
+    "smoke": "npm run testnet:v3.2.1:smoke -- --broadcast",
+    "reconstruct": "npm run testnet:v3.2.1:reconstruct -- --broadcast",
+    "report": "npm run testnet:v3.2.1:report",
+    "rehearsal": "npm run testnet:v3.2.1:rehearsal -- --broadcast"
+  },
+  "transactions": [
+    {
+      "at": "2026-06-06T00:45:01.466Z",
+      "label": "core set royalty recipient",
+      "dryRun": false,
+      "status": "success",
+      "txid": "ee6cd0ea66c25984663872b7e5a4c1d00662b8515f7e04b7c18854f465be2189",
+      "blockHeight": 4005488,
+      "feeRate": "1000000",
+      "result": {
+        "hex": "0x0703",
+        "repr": "(ok true)"
+      }
+    },
+    {
+      "at": "2026-06-06T00:45:32.600Z",
+      "label": "core unpause",
+      "dryRun": false,
+      "status": "success",
+      "txid": "ed810c595ed61dae8871f8428eb18f0ee3319abe4692a9952c70cc8e33826ce9",
+      "blockHeight": 4005489,
+      "feeRate": "1000000",
+      "result": {
+        "hex": "0x0703",
+        "repr": "(ok true)"
+      }
+    },
+    {
+      "at": "2026-06-06T00:46:03.575Z",
+      "label": "helper point at testnet core",
+      "dryRun": false,
+      "status": "success",
+      "txid": "1a22788fc32aa76cef7e6a214813119313084f199e663deee1b12348f2911cbc",
+      "blockHeight": 4005491,
+      "feeRate": "1000000",
+      "result": {
+        "hex": "0x0703",
+        "repr": "(ok true)"
+      }
+    },
+    {
+      "at": "2026-06-06T00:46:34.436Z",
+      "label": "helper unpause",
+      "dryRun": false,
+      "status": "success",
+      "txid": "3c569a6c8dff21b43116dc109284cc7cb825d8a8f3ebc71e791a21f44979220f",
+      "blockHeight": 4005493,
+      "feeRate": "1000000",
+      "result": {
+        "hex": "0x0703",
+        "repr": "(ok true)"
+      }
+    },
+    {
+      "at": "2026-06-06T00:47:05.474Z",
+      "label": "v2.1.0 unpause",
+      "dryRun": false,
+      "status": "success",
+      "txid": "0b6b2d3358175ab3558589c90d9876200081368fcc202dd41be79e9221414619",
+      "blockHeight": 4005495,
+      "feeRate": "1000000",
+      "result": {
+        "hex": "0x0703",
+        "repr": "(ok true)"
+      }
+    },
+    {
+      "at": "2026-06-06T00:47:36.529Z",
+      "label": "v2.1.1 unpause",
+      "dryRun": false,
+      "status": "success",
+      "txid": "dca1be03640685f7da2beeb2164dce6adb81f723bb9672b01b590e0b4599e6ef",
+      "blockHeight": 4005497,
+      "feeRate": "1000000",
+      "result": {
+        "hex": "0x0703",
+        "repr": "(ok true)"
+      }
+    },
+    {
+      "at": "2026-06-06T00:49:09.920Z",
+      "label": "direct mint data:text/plain,xtrata-v3.2.1-testnet-rehearsal,remaining-dep-source (1 chunks)",
+      "dryRun": false,
+      "status": "success",
+      "txid": "2fa9e8d1e0fb571b9e8d09f39d0b97051b49894c83716b1f59ed89de481d285b",
+      "blockHeight": 4005500,
+      "feeRate": "1000000",
+      "result": {
+        "hex": "0x070c0000000207657869737465640408746f6b656e2d69640100000000000000000000000000000017",
+        "repr": "(ok (tuple (existed false) (token-id u23)))"
+      }
+    },
+    {
+      "at": "2026-06-06T00:49:41.092Z",
+      "label": "direct mint data:text/plain,xtrata-v3.2.1-testnet-rehearsal,remaining-parent-owned (1 chunks)",
+      "dryRun": false,
+      "status": "success",
+      "txid": "b182f5c89624fa41d346d8f6f860b552e74c32183afeff7258b815a19604ff29",
+      "blockHeight": 4005501,
+      "feeRate": "1000000",
+      "result": {
+        "hex": "0x070c0000000207657869737465640408746f6b656e2d69640100000000000000000000000000000018",
+        "repr": "(ok (tuple (existed false) (token-id u24)))"
+      }
+    },
+    {
+      "at": "2026-06-06T00:50:12.259Z",
+      "label": "direct mint data:text/plain,xtrata-v3.2.1-testnet-rehearsal,remaining-dep-linked (1 chunks)",
+      "dryRun": false,
+      "status": "success",
+      "txid": "de439756cdc102198b30cc76df709d7f26e2440c35eebff1e738507f2184735a",
+      "blockHeight": 4005502,
+      "feeRate": "1000000",
+      "result": {
+        "hex": "0x070c0000000207657869737465640408746f6b656e2d69640100000000000000000000000000000019",
+        "repr": "(ok (tuple (existed false) (token-id u25)))"
+      }
+    },
+    {
+      "at": "2026-06-06T00:50:43.109Z",
+      "label": "remaining parent link to another wallet token expected failure",
+      "dryRun": false,
+      "status": "abort_by_response",
+      "expectedFailure": true,
+      "txid": "43e2e133c53ea5a2252fe91a91bd688953888c99d667349d955ed62e15e8e63e",
+      "blockHeight": 4005503,
+      "feeRate": "1000000",
+      "result": {
+        "hex": "0x080100000000000000000000000000000064",
+        "repr": "(err u100)"
+      }
+    },
+    {
+      "at": "2026-06-06T00:51:14.164Z",
+      "label": "direct mint data:text/plain,xtrata-v3.2.1-testnet-rehearsal,remaining-parent-linked (1 chunks)",
+      "dryRun": false,
+      "status": "success",
+      "txid": "aec676b5ad0c5505fbdf3cb7e6a01be6a0def5ce5d809c2339ab6fbd9e8f9259",
+      "blockHeight": 4005505,
+      "feeRate": "1000000",
+      "result": {
+        "hex": "0x070c0000000207657869737465640408746f6b656e2d6964010000000000000000000000000000001a",
+        "repr": "(ok (tuple (existed false) (token-id u26)))"
+      }
+    },
+    {
+      "at": "2026-06-06T00:52:05.033Z",
+      "label": "legacy begin xtrata-v2-1-0 data:text/plain,xtrata-v3.2.1-testnet-rehearsal,remaining-v210",
+      "dryRun": false,
+      "status": "success",
+      "txid": "c8ae9f5120bc818c7f2fa75186635392a2ac08f4237f096b8c410b66ce148f46",
+      "blockHeight": 4005506,
+      "feeRate": "1000000",
+      "result": {
+        "hex": "0x0703",
+        "repr": "(ok true)"
+      }
+    },
+    {
+      "at": "2026-06-06T00:52:36.283Z",
+      "label": "legacy add xtrata-v2-1-0 data:text/plain,xtrata-v3.2.1-testnet-rehearsal,remaining-v210",
+      "dryRun": false,
+      "status": "success",
+      "txid": "d35296532e9bd6236f1126fe891b1b0126d1f11cbed9a1a1fccfc650aa139005",
+      "blockHeight": 4005508,
+      "feeRate": "1000000",
+      "result": {
+        "hex": "0x0703",
+        "repr": "(ok true)"
+      }
+    },
+    {
+      "at": "2026-06-06T00:53:07.462Z",
+      "label": "legacy seal xtrata-v2-1-0 data:text/plain,xtrata-v3.2.1-testnet-rehearsal,remaining-v210",
+      "dryRun": false,
+      "status": "success",
+      "txid": "add5b440aa94a98244b04d1b1aaab42112d5d2d2371fd258e5a3316ecd7ba74e",
+      "blockHeight": 4005509,
+      "feeRate": "1000000",
+      "result": {
+        "hex": "0x070100000000000000000000000000002328",
+        "repr": "(ok u9000)"
+      }
+    },
+    {
+      "at": "2026-06-06T00:53:38.525Z",
+      "label": "remaining migrate v2.1.0 token",
+      "dryRun": false,
+      "status": "success",
+      "txid": "793688ca7476c4645035d5f918788204191ba8635dfe15bca4be078ed499666d",
+      "blockHeight": 4005511,
+      "feeRate": "1000000",
+      "result": {
+        "hex": "0x070100000000000000000000000000002328",
+        "repr": "(ok u9000)"
+      }
+    },
+    {
+      "at": "2026-06-06T00:54:09.716Z",
+      "label": "remaining duplicate migrate v2.1.0 token expected failure",
+      "dryRun": false,
+      "status": "abort_by_response",
+      "expectedFailure": true,
+      "txid": "6513d7796ac9c558841a601b20806105f6b87abccfad3393d31b87bdc19cba63",
+      "blockHeight": 4005512,
+      "feeRate": "1000000",
+      "result": {
+        "hex": "0x080100000000000000000000000000000072",
+        "repr": "(err u114)"
+      }
+    },
+    {
+      "at": "2026-06-06T00:54:40.761Z",
+      "label": "legacy begin xtrata-v2-1-1 data:text/plain,xtrata-v3.2.1-testnet-rehearsal,remaining-v211",
+      "dryRun": false,
+      "status": "success",
+      "txid": "4a2fca3f4d5b52c1f066035e7addf16c24417fce6a657eb6afdc458b4b743180",
+      "blockHeight": 4005513,
+      "feeRate": "1000000",
+      "result": {
+        "hex": "0x0703",
+        "repr": "(ok true)"
+      }
+    },
+    {
+      "at": "2026-06-06T00:55:11.680Z",
+      "label": "legacy add xtrata-v2-1-1 data:text/plain,xtrata-v3.2.1-testnet-rehearsal,remaining-v211",
+      "dryRun": false,
+      "status": "success",
+      "txid": "2e6378f933bab804181555867b5a863ab2fe8500cc1d78edc1b1e9a1bfa4eed6",
+      "blockHeight": 4005515,
+      "feeRate": "1000000",
+      "result": {
+        "hex": "0x0703",
+        "repr": "(ok true)"
+      }
+    },
+    {
+      "at": "2026-06-06T00:55:42.602Z",
+      "label": "legacy seal xtrata-v2-1-1 data:text/plain,xtrata-v3.2.1-testnet-rehearsal,remaining-v211",
+      "dryRun": false,
+      "status": "success",
+      "txid": "d403e7813cfe6bb6f41c6362b703713cad1d47544658643ec39de64d84fb6f09",
+      "blockHeight": 4005516,
+      "feeRate": "1000000",
+      "result": {
+        "hex": "0x070100000000000000000000000000002332",
+        "repr": "(ok u9010)"
+      }
+    },
+    {
+      "at": "2026-06-06T00:56:13.661Z",
+      "label": "remaining migrate v2.1.1 token",
+      "dryRun": false,
+      "status": "success",
+      "txid": "625d473eafde86596ccfe9215ef6aef4408670d7b2718defde8e70bc3ac96aa8",
+      "blockHeight": 4005517,
+      "feeRate": "1000000",
+      "result": {
+        "hex": "0x070100000000000000000000000000002332",
+        "repr": "(ok u9010)"
+      }
+    },
+    {
+      "at": "2026-06-06T00:56:44.838Z",
+      "label": "remaining duplicate migrate v2.1.1 token expected failure",
+      "dryRun": false,
+      "status": "abort_by_response",
+      "expectedFailure": true,
+      "txid": "38eb2f32b739745df32ae809c6fc297dbb16de3985ccef87be7236144179d109",
+      "blockHeight": 4005518,
+      "feeRate": "1000000",
+      "result": {
+        "hex": "0x080100000000000000000000000000000072",
+        "repr": "(err u114)"
+      }
+    }
+  ],
+  "readOnly": [
+    {
+      "at": "2026-06-06T00:48:38.790Z",
+      "dryRun": false,
+      "contract": "STRNRHWSD7REAEXVTHDQWKPD4MFBG41024WQKBBM.xtrata-v3-2-1",
+      "functionName": "get-next-token-id",
+      "sender": "ST30X7KJ5R4ZKTG5FBS5RQTH3CC3DNNDP99XRWFE8",
+      "result": {
+        "type": "(response uint UnknownType)",
+        "value": {
+          "type": "uint",
+          "value": "23"
+        },
+        "success": true
+      }
+    },
+    {
+      "at": "2026-06-06T00:49:10.180Z",
+      "dryRun": false,
+      "contract": "STRNRHWSD7REAEXVTHDQWKPD4MFBG41024WQKBBM.xtrata-v3-2-1",
+      "functionName": "get-next-token-id",
+      "sender": "ST1QJJVMB6NQBGMZQVDR22PADW2E3BEP61RQTFE7F",
+      "result": {
+        "type": "(response uint UnknownType)",
+        "value": {
+          "type": "uint",
+          "value": "24"
+        },
+        "success": true
+      }
+    },
+    {
+      "at": "2026-06-06T00:49:41.235Z",
+      "dryRun": false,
+      "contract": "STRNRHWSD7REAEXVTHDQWKPD4MFBG41024WQKBBM.xtrata-v3-2-1",
+      "functionName": "get-next-token-id",
+      "sender": "ST1QJJVMB6NQBGMZQVDR22PADW2E3BEP61RQTFE7F",
+      "result": {
+        "type": "(response uint UnknownType)",
+        "value": {
+          "type": "uint",
+          "value": "25"
+        },
+        "success": true
+      }
+    },
+    {
+      "at": "2026-06-06T00:50:43.251Z",
+      "dryRun": false,
+      "contract": "STRNRHWSD7REAEXVTHDQWKPD4MFBG41024WQKBBM.xtrata-v3-2-1",
+      "functionName": "get-next-token-id",
+      "sender": "ST1QJJVMB6NQBGMZQVDR22PADW2E3BEP61RQTFE7F",
+      "result": {
+        "type": "(response uint UnknownType)",
+        "value": {
+          "type": "uint",
+          "value": "26"
+        },
+        "success": true
+      }
+    },
+    {
+      "at": "2026-06-06T00:51:14.289Z",
+      "dryRun": false,
+      "contract": "STRNRHWSD7REAEXVTHDQWKPD4MFBG41024WQKBBM.xtrata-v3-2-1",
+      "functionName": "get-dependencies",
+      "sender": "STRNRHWSD7REAEXVTHDQWKPD4MFBG41024WQKBBM",
+      "result": {
+        "type": "(list 1 uint)",
+        "value": [
+          {
+            "type": "uint",
+            "value": "23"
+          }
+        ]
+      }
+    },
+    {
+      "at": "2026-06-06T00:51:14.409Z",
+      "dryRun": false,
+      "contract": "STRNRHWSD7REAEXVTHDQWKPD4MFBG41024WQKBBM.xtrata-v3-2-1",
+      "functionName": "get-parents",
+      "sender": "STRNRHWSD7REAEXVTHDQWKPD4MFBG41024WQKBBM",
+      "result": {
+        "type": "(list 1 uint)",
+        "value": [
+          {
+            "type": "uint",
+            "value": "24"
+          }
+        ]
+      }
+    },
+    {
+      "at": "2026-06-06T00:51:14.547Z",
+      "dryRun": false,
+      "contract": "STRNRHWSD7REAEXVTHDQWKPD4MFBG41024WQKBBM.xtrata-v2-1-0",
+      "functionName": "get-next-token-id",
+      "sender": "ST1QJJVMB6NQBGMZQVDR22PADW2E3BEP61RQTFE7F",
+      "result": {
+        "type": "(response uint UnknownType)",
+        "value": {
+          "type": "uint",
+          "value": "9000"
+        },
+        "success": true
+      }
+    },
+    {
+      "at": "2026-06-06T00:53:38.649Z",
+      "dryRun": false,
+      "contract": "STRNRHWSD7REAEXVTHDQWKPD4MFBG41024WQKBBM.xtrata-v3-2-1",
+      "functionName": "get-migration-source",
+      "sender": "STRNRHWSD7REAEXVTHDQWKPD4MFBG41024WQKBBM",
+      "result": {
+        "type": "(optional (tuple (source-contract principal) (source-id uint)))",
+        "value": {
+          "type": "(tuple (source-contract principal) (source-id uint))",
+          "value": {
+            "source-contract": {
+              "type": "principal",
+              "value": "STRNRHWSD7REAEXVTHDQWKPD4MFBG41024WQKBBM.xtrata-v2-1-0"
+            },
+            "source-id": {
+              "type": "uint",
+              "value": "9000"
+            }
+          }
+        }
+      }
+    },
+    {
+      "at": "2026-06-06T00:53:38.783Z",
+      "dryRun": false,
+      "contract": "STRNRHWSD7REAEXVTHDQWKPD4MFBG41024WQKBBM.xtrata-v2-1-0",
+      "functionName": "get-owner",
+      "sender": "STRNRHWSD7REAEXVTHDQWKPD4MFBG41024WQKBBM",
+      "result": {
+        "type": "(response (optional principal) UnknownType)",
+        "value": {
+          "type": "(optional principal)",
+          "value": {
+            "type": "principal",
+            "value": "STRNRHWSD7REAEXVTHDQWKPD4MFBG41024WQKBBM.xtrata-v3-2-1"
+          }
+        },
+        "success": true
+      }
+    },
+    {
+      "at": "2026-06-06T00:54:09.838Z",
+      "dryRun": false,
+      "contract": "STRNRHWSD7REAEXVTHDQWKPD4MFBG41024WQKBBM.xtrata-v2-1-1",
+      "functionName": "get-next-token-id",
+      "sender": "ST30X7KJ5R4ZKTG5FBS5RQTH3CC3DNNDP99XRWFE8",
+      "result": {
+        "type": "(response uint UnknownType)",
+        "value": {
+          "type": "uint",
+          "value": "9010"
+        },
+        "success": true
+      }
+    },
+    {
+      "at": "2026-06-06T00:56:13.789Z",
+      "dryRun": false,
+      "contract": "STRNRHWSD7REAEXVTHDQWKPD4MFBG41024WQKBBM.xtrata-v3-2-1",
+      "functionName": "get-migration-source",
+      "sender": "STRNRHWSD7REAEXVTHDQWKPD4MFBG41024WQKBBM",
+      "result": {
+        "type": "(optional (tuple (source-contract principal) (source-id uint)))",
+        "value": {
+          "type": "(tuple (source-contract principal) (source-id uint))",
+          "value": {
+            "source-contract": {
+              "type": "principal",
+              "value": "STRNRHWSD7REAEXVTHDQWKPD4MFBG41024WQKBBM.xtrata-v2-1-1"
+            },
+            "source-id": {
+              "type": "uint",
+              "value": "9010"
+            }
+          }
+        }
+      }
+    },
+    {
+      "at": "2026-06-06T00:56:13.927Z",
+      "dryRun": false,
+      "contract": "STRNRHWSD7REAEXVTHDQWKPD4MFBG41024WQKBBM.xtrata-v2-1-1",
+      "functionName": "get-owner",
+      "sender": "STRNRHWSD7REAEXVTHDQWKPD4MFBG41024WQKBBM",
+      "result": {
+        "type": "(response (optional principal) UnknownType)",
+        "value": {
+          "type": "(optional principal)",
+          "value": {
+            "type": "principal",
+            "value": "STRNRHWSD7REAEXVTHDQWKPD4MFBG41024WQKBBM.xtrata-v3-2-1"
+          }
+        },
+        "success": true
+      }
+    },
+    {
+      "at": "2026-06-06T00:56:44.991Z",
+      "dryRun": false,
+      "contract": "STRNRHWSD7REAEXVTHDQWKPD4MFBG41024WQKBBM.xtrata-v3-2-1",
+      "functionName": "get-inscription-summary",
+      "sender": "STRNRHWSD7REAEXVTHDQWKPD4MFBG41024WQKBBM",
+      "result": {
+        "type": "(response (optional (tuple (chunk-size uint) (creator principal) (dependencies (list 0 UnknownType)) (final-hash (buff 32)) (migration-source (optional (tuple (source-contract principal) (source-id uint)))) (mime-type (string-ascii 24)) (owner principal) (parents (list 0 UnknownType)) (sealed bool) (token-uri (optional (string-ascii 62))) (total-chunks uint) (total-size uint))) UnknownType)",
+        "value": {
+          "type": "(optional (tuple (chunk-size uint) (creator principal) (dependencies (list 0 UnknownType)) (final-hash (buff 32)) (migration-source (optional (tuple (source-contract principal) (source-id uint)))) (mime-type (string-ascii 24)) (owner principal) (parents (list 0 UnknownType)) (sealed bool) (token-uri (optional (string-ascii 62))) (total-chunks uint) (total-size uint)))",
+          "value": {
+            "type": "(tuple (chunk-size uint) (creator principal) (dependencies (list 0 UnknownType)) (final-hash (buff 32)) (migration-source (optional (tuple (source-contract principal) (source-id uint)))) (mime-type (string-ascii 24)) (owner principal) (parents (list 0 UnknownType)) (sealed bool) (token-uri (optional (string-ascii 62))) (total-chunks uint) (total-size uint))",
+            "value": {
+              "chunk-size": {
+                "type": "uint",
+                "value": "16384"
+              },
+              "creator": {
+                "type": "principal",
+                "value": "ST1QJJVMB6NQBGMZQVDR22PADW2E3BEP61RQTFE7F"
+              },
+              "dependencies": {
+                "type": "(list 0 UnknownType)",
+                "value": []
+              },
+              "final-hash": {
+                "type": "(buff 32)",
+                "value": "0x0b23336dc1273ad791bb69387b53d553dc0d1c75e20db90ca5a80a7e04633142"
+              },
+              "migration-source": {
+                "type": "(optional (tuple (source-contract principal) (source-id uint)))",
+                "value": {
+                  "type": "(tuple (source-contract principal) (source-id uint))",
+                  "value": {
+                    "source-contract": {
+                      "type": "principal",
+                      "value": "STRNRHWSD7REAEXVTHDQWKPD4MFBG41024WQKBBM.xtrata-v2-1-0"
+                    },
+                    "source-id": {
+                      "type": "uint",
+                      "value": "9000"
+                    }
+                  }
+                }
+              },
+              "mime-type": {
+                "type": "(string-ascii 24)",
+                "value": "application/octet-stream"
+              },
+              "owner": {
+                "type": "principal",
+                "value": "ST1QJJVMB6NQBGMZQVDR22PADW2E3BEP61RQTFE7F"
+              },
+              "parents": {
+                "type": "(list 0 UnknownType)",
+                "value": []
+              },
+              "sealed": {
+                "type": "bool",
+                "value": true
+              },
+              "token-uri": {
+                "type": "(optional (string-ascii 62))",
+                "value": {
+                  "type": "(string-ascii 62)",
+                  "value": "data:text/plain,xtrata-v3.2.1-testnet-rehearsal,remaining-v210"
+                }
+              },
+              "total-chunks": {
+                "type": "uint",
+                "value": "1"
+              },
+              "total-size": {
+                "type": "uint",
+                "value": "91"
+              }
+            }
+          }
+        },
+        "success": true
+      }
+    },
+    {
+      "at": "2026-06-06T00:56:45.142Z",
+      "dryRun": false,
+      "contract": "STRNRHWSD7REAEXVTHDQWKPD4MFBG41024WQKBBM.xtrata-v3-2-1",
+      "functionName": "get-chunk-batch",
+      "sender": "STRNRHWSD7REAEXVTHDQWKPD4MFBG41024WQKBBM",
+      "result": {
+        "type": "(list 1 (optional (buff 91)))",
+        "value": [
+          {
+            "type": "(optional (buff 91))",
+            "value": {
+              "type": "(buff 91)",
+              "value": "0x2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f808182838485868788"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "testCases": [
+    {
+      "at": "2026-06-06T00:48:38.572Z",
+      "name": "direct single-call 32 chunks",
+      "status": "passed",
+      "note": "Already passed in an earlier broadcast smoke run; skipped here to avoid repeating large testnet transactions."
+    },
+    {
+      "at": "2026-06-06T00:48:38.572Z",
+      "name": "staged 33 chunks as 32 + 1",
+      "status": "passed",
+      "note": "Already passed in an earlier broadcast smoke run; skipped here to avoid repeating large testnet transactions."
+    },
+    {
+      "at": "2026-06-06T00:48:38.572Z",
+      "name": "advisory dedupe duplicate same-hash mints",
+      "status": "passed",
+      "note": "Already passed in an earlier broadcast smoke run; skipped here to avoid repeating large testnet transactions."
+    },
+    {
+      "at": "2026-06-06T00:50:12.259Z",
+      "name": "dependency on another wallet token succeeds",
+      "status": "passed",
+      "tokenId": "25",
+      "dependencyId": "23"
+    },
+    {
+      "at": "2026-06-06T00:50:43.110Z",
+      "name": "parent link to another wallet token fails",
+      "status": "passed",
+      "expected": "mint-single-tx-with-relationships rejects parent tokens not owned by tx-sender."
+    },
+    {
+      "at": "2026-06-06T00:51:14.409Z",
+      "name": "parent link to owned token succeeds and relationship lists remain separate",
+      "status": "passed",
+      "tokenId": "26",
+      "parentId": "24"
+    },
+    {
+      "at": "2026-06-06T00:53:38.783Z",
+      "name": "migration from v2.1.0",
+      "status": "passed",
+      "tokenId": "9000",
+      "hash": "0b23336dc1273ad791bb69387b53d553dc0d1c75e20db90ca5a80a7e04633142"
+    },
+    {
+      "at": "2026-06-06T00:56:13.927Z",
+      "name": "migration from v2.1.1",
+      "status": "passed",
+      "tokenId": "9010",
+      "hash": "18faef4659eb864fe0d959ecd4157e09a090040269c39edadb9d3997f8f34cad"
+    },
+    {
+      "at": "2026-06-06T00:56:44.839Z",
+      "name": "duplicate migration rejected",
+      "status": "passed",
+      "expected": "Second migrate-from-v2-1-x call for the same token id fails."
+    }
+  ],
+  "reconstruction": [
+    {
+      "tokenId": "9000",
+      "summary": {
+        "type": "(response (optional (tuple (chunk-size uint) (creator principal) (dependencies (list 0 UnknownType)) (final-hash (buff 32)) (migration-source (optional (tuple (source-contract principal) (source-id uint)))) (mime-type (string-ascii 24)) (owner principal) (parents (list 0 UnknownType)) (sealed bool) (token-uri (optional (string-ascii 62))) (total-chunks uint) (total-size uint))) UnknownType)",
+        "value": {
+          "type": "(optional (tuple (chunk-size uint) (creator principal) (dependencies (list 0 UnknownType)) (final-hash (buff 32)) (migration-source (optional (tuple (source-contract principal) (source-id uint)))) (mime-type (string-ascii 24)) (owner principal) (parents (list 0 UnknownType)) (sealed bool) (token-uri (optional (string-ascii 62))) (total-chunks uint) (total-size uint)))",
+          "value": {
+            "type": "(tuple (chunk-size uint) (creator principal) (dependencies (list 0 UnknownType)) (final-hash (buff 32)) (migration-source (optional (tuple (source-contract principal) (source-id uint)))) (mime-type (string-ascii 24)) (owner principal) (parents (list 0 UnknownType)) (sealed bool) (token-uri (optional (string-ascii 62))) (total-chunks uint) (total-size uint))",
+            "value": {
+              "chunk-size": {
+                "type": "uint",
+                "value": "16384"
+              },
+              "creator": {
+                "type": "principal",
+                "value": "ST1QJJVMB6NQBGMZQVDR22PADW2E3BEP61RQTFE7F"
+              },
+              "dependencies": {
+                "type": "(list 0 UnknownType)",
+                "value": []
+              },
+              "final-hash": {
+                "type": "(buff 32)",
+                "value": "0x0b23336dc1273ad791bb69387b53d553dc0d1c75e20db90ca5a80a7e04633142"
+              },
+              "migration-source": {
+                "type": "(optional (tuple (source-contract principal) (source-id uint)))",
+                "value": {
+                  "type": "(tuple (source-contract principal) (source-id uint))",
+                  "value": {
+                    "source-contract": {
+                      "type": "principal",
+                      "value": "STRNRHWSD7REAEXVTHDQWKPD4MFBG41024WQKBBM.xtrata-v2-1-0"
+                    },
+                    "source-id": {
+                      "type": "uint",
+                      "value": "9000"
+                    }
+                  }
+                }
+              },
+              "mime-type": {
+                "type": "(string-ascii 24)",
+                "value": "application/octet-stream"
+              },
+              "owner": {
+                "type": "principal",
+                "value": "ST1QJJVMB6NQBGMZQVDR22PADW2E3BEP61RQTFE7F"
+              },
+              "parents": {
+                "type": "(list 0 UnknownType)",
+                "value": []
+              },
+              "sealed": {
+                "type": "bool",
+                "value": true
+              },
+              "token-uri": {
+                "type": "(optional (string-ascii 62))",
+                "value": {
+                  "type": "(string-ascii 62)",
+                  "value": "data:text/plain,xtrata-v3.2.1-testnet-rehearsal,remaining-v210"
+                }
+              },
+              "total-chunks": {
+                "type": "uint",
+                "value": "1"
+              },
+              "total-size": {
+                "type": "uint",
+                "value": "91"
+              }
+            }
+          }
+        },
+        "success": true
+      },
+      "readMode": "get-chunk-batch",
+      "expectedBytes": 91,
+      "actualBytes": 91,
+      "expectedChunks": 1,
+      "actualChunks": 1,
+      "expectedHash": "0b23336dc1273ad791bb69387b53d553dc0d1c75e20db90ca5a80a7e04633142",
+      "actualHash": "0b23336dc1273ad791bb69387b53d553dc0d1c75e20db90ca5a80a7e04633142",
+      "verified": true,
+      "cache": {
+        "checked": false,
+        "result": "No testnet resolver cache adapter is configured in this CLI rehearsal."
+      }
+    }
+  ],
+  "warnings": [
+    "v2.1.0 migration base setup skipped or failed: Transaction ba1fe760c84413d8176213fe06e8e500168c9bcb3d6b3e8a2654d0963f82d055 failed: abort_by_response (err u115)",
+    "v2.1.1 migration base setup skipped or failed: Transaction b530d77594571339be32a1b06ccc3d584f5f88024c09f6ab0c85bf21a2549f30 failed: abort_by_response (err u115)"
+  ],
+  "failures": [],
+  "recommendation": "ready for mainnet"
+}

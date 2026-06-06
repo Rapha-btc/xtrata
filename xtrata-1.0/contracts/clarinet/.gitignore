@@ -10,3 +10,5 @@ coverage
 *.info
 costs-reports.json
 node_modules
+
+contracts/clarinet/deployments/*.testnet-plan.yaml
