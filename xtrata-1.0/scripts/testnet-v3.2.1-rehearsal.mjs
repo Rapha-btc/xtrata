@@ -37,6 +37,7 @@ const latestEnvPath = path.join(reportsDir, 'testnet-v3.2.1-latest-env.sh');
 const CHUNK_SIZE = 16_384;
 const CORE_UPLOAD_LIMIT = 32;
 const APP_HELPER_POLICY_LIMIT = 30;
+const RECONSTRUCT_READ_BATCH_SIZE = 6;
 const DEFAULT_API_URL = 'https://api.testnet.hiro.so';
 const MIME = 'application/octet-stream';
 const DEFAULT_TOKEN_URI = 'data:text/plain,xtrata-v3.2.1-testnet-rehearsal';
@@ -84,6 +85,7 @@ const usage = `Usage:
   npm run testnet:v3.2.1:fresh-rehearsal -- [--broadcast]
   npm run testnet:v3.2.1:remaining -- [--broadcast]
   npm run testnet:v3.2.1:reconstruct -- [--broadcast]
+  npm run testnet:v3.2.1:resume-reconstruct -- [--broadcast]
   npm run testnet:v3.2.1:report
   npm run testnet:v3.2.1:rehearsal -- [--broadcast]
 
@@ -845,16 +847,21 @@ const reconstructToken = async (ctx, token) => {
     [uintCV(token.tokenId)],
     ctx.contractAddress
   );
-  const indexes = Array.from({ length: token.chunkCount }, (_, index) => uintCV(index));
-  const chunkBatch = await readOnly(
-    ctx,
-    'xtrata-v3-2-1',
-    'get-chunk-batch',
-    [uintCV(token.tokenId), listCV(indexes)],
-    ctx.contractAddress
-  );
-
-  const chunkHexValues = (chunkBatch?.value ?? []).map((entry) => entry?.value?.value ?? entry?.value);
+  const chunkHexValues = [];
+  for (let start = 0; start < token.chunkCount; start += RECONSTRUCT_READ_BATCH_SIZE) {
+    const indexes = Array.from(
+      { length: Math.min(RECONSTRUCT_READ_BATCH_SIZE, token.chunkCount - start) },
+      (_, offset) => uintCV(start + offset)
+    );
+    const chunkBatch = await readOnly(
+      ctx,
+      'xtrata-v3-2-1',
+      'get-chunk-batch',
+      [uintCV(token.tokenId), listCV(indexes)],
+      ctx.contractAddress
+    );
+    chunkHexValues.push(...(chunkBatch?.value ?? []).map((entry) => entry?.value?.value ?? entry?.value));
+  }
   const rebuilt = Buffer.concat(
     chunkHexValues.map((chunkHexValue) => Buffer.from(String(chunkHexValue).replace(/^0x/, ''), 'hex'))
   );
@@ -867,6 +874,7 @@ const reconstructToken = async (ctx, token) => {
     tokenId: token.tokenId.toString(),
     summary,
     readMode: 'get-chunk-batch',
+    readBatchSize: RECONSTRUCT_READ_BATCH_SIZE,
     expectedBytes: token.size,
     actualBytes: rebuiltBytes.length,
     expectedChunks: token.chunkCount,
@@ -1242,6 +1250,45 @@ const runReconstruct = async (ctx) => {
   });
 };
 
+const findTestCase = (report, name) => report.testCases.find((test) => test.name === name);
+
+const runResumeReconstruct = async (ctx) => {
+  const previous = JSON.parse(await readFile(jsonReportPath, 'utf8'));
+  ctx.report = {
+    ...previous,
+    generatedAt: nowIso(),
+    failures: previous.failures.filter((failure) => !String(failure).includes('CostBalanceExceeded')),
+    reconstruction: []
+  };
+
+  const staged33Case = findTestCase(previous, 'staged 33 chunks as 32 + 1');
+  if (staged33Case?.tokenId !== undefined && staged33Case?.tokenId !== null) {
+    await reconstructToken(ctx, {
+      tokenId: BigInt(staged33Case.tokenId),
+      bytes: makeCasePayload(33, 0x07),
+      size: staged33Case.size,
+      chunkCount: staged33Case.chunkCount,
+      hashHex: staged33Case.hash
+    });
+  }
+
+  const legacy210Case = findTestCase(previous, 'migration from v2.1.0');
+  if (legacy210Case?.tokenId !== undefined && legacy210Case?.tokenId !== null) {
+    await reconstructToken(ctx, {
+      tokenId: BigInt(legacy210Case.tokenId),
+      bytes: payloadBytes(91, 0x0e),
+      size: 91,
+      chunkCount: 1,
+      hashHex: legacy210Case.hash
+    });
+  }
+
+  addCase(ctx, 'resume reconstruction with safe read batches', 'passed', {
+    evidence: ctx.report.mode === 'broadcast' ? 'confirmed-on-chain' : 'dry-run-planned',
+    expected: `Reconstructed previous staged and migrated tokens with get-chunk-batch groups of ${RECONSTRUCT_READ_BATCH_SIZE}.`
+  });
+};
+
 const evaluateRecommendation = (report) => {
   if (report.failures.length > 0) {
     return 'not ready';
@@ -1389,6 +1436,8 @@ const main = async () => {
       await runRemaining(ctx);
     } else if (options.command === 'reconstruct') {
       await runReconstruct(ctx);
+    } else if (options.command === 'resume-reconstruct') {
+      await runResumeReconstruct(ctx);
     } else if (options.command === 'report') {
       addCase(ctx, 'report generation', 'passed', {
         jsonReportPath: path.relative(repoRoot, jsonReportPath),

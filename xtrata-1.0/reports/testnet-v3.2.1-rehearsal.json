@@ -1,58 +1,58 @@
 {
-  "generatedAt": "2026-06-06T11:45:00.633Z",
+  "generatedAt": "2026-06-06T11:49:10.276Z",
   "mode": "broadcast",
   "network": "testnet",
   "apiUrl": "https://api.testnet.hiro.so",
   "hiroApiKeyConfigured": true,
-  "deployerAddress": "ST1QJJVMB6NQBGMZQVDR22PADW2E3BEP61RQTFE7F",
-  "walletAAddress": "ST30X7KJ5R4ZKTG5FBS5RQTH3CC3DNNDP99XRWFE8",
-  "walletBAddress": "STRNRHWSD7REAEXVTHDQWKPD4MFBG41024WQKBBM",
-  "contractAddress": "ST1QJJVMB6NQBGMZQVDR22PADW2E3BEP61RQTFE7F",
+  "deployerAddress": "ST30X7KJ5R4ZKTG5FBS5RQTH3CC3DNNDP99XRWFE8",
+  "walletAAddress": "STRNRHWSD7REAEXVTHDQWKPD4MFBG41024WQKBBM",
+  "walletBAddress": "ST1QJJVMB6NQBGMZQVDR22PADW2E3BEP61RQTFE7F",
+  "contractAddress": "ST30X7KJ5R4ZKTG5FBS5RQTH3CC3DNNDP99XRWFE8",
   "contracts": {
     "v1_1_1": {
       "name": "xtrata-v1-1-1",
-      "id": "ST1QJJVMB6NQBGMZQVDR22PADW2E3BEP61RQTFE7F.xtrata-v1-1-1",
+      "id": "ST30X7KJ5R4ZKTG5FBS5RQTH3CC3DNNDP99XRWFE8.xtrata-v1-1-1",
       "source": "contracts/other/xtrata-v1.1.1.clar",
       "requiredFor": [
         "legacy-v1-read-compatibility"
       ],
-      "deployTxId": null
+      "deployTxId": "20b568a8e4ea778a10c54ddb20e088450d54ab4a25c894f9acd46b000b785715"
     },
     "v2_1_0": {
       "name": "xtrata-v2-1-0",
-      "id": "ST1QJJVMB6NQBGMZQVDR22PADW2E3BEP61RQTFE7F.xtrata-v2-1-0",
+      "id": "ST30X7KJ5R4ZKTG5FBS5RQTH3CC3DNNDP99XRWFE8.xtrata-v2-1-0",
       "source": "contracts/other/xtrata-v2.1.0.clar",
       "requiredFor": [
         "migration-v2.1.0"
       ],
-      "deployTxId": null
+      "deployTxId": "2e1bfecbf51fdc10cccd1448ff3573ba49091a01af68f3467f0a8d60f4e15a5d"
     },
     "v2_1_1": {
       "name": "xtrata-v2-1-1",
-      "id": "ST1QJJVMB6NQBGMZQVDR22PADW2E3BEP61RQTFE7F.xtrata-v2-1-1",
+      "id": "ST30X7KJ5R4ZKTG5FBS5RQTH3CC3DNNDP99XRWFE8.xtrata-v2-1-1",
       "source": "contracts/other/xtrata-v2.1.1.clar",
       "requiredFor": [
         "migration-v2.1.1"
       ],
-      "deployTxId": null
+      "deployTxId": "8b6922edaeb1f663926c1364f049e3bb1e65e28bc245f9003558bf926f54ccc0"
     },
     "core": {
       "name": "xtrata-v3-2-1",
-      "id": "ST1QJJVMB6NQBGMZQVDR22PADW2E3BEP61RQTFE7F.xtrata-v3-2-1",
+      "id": "ST30X7KJ5R4ZKTG5FBS5RQTH3CC3DNNDP99XRWFE8.xtrata-v3-2-1",
       "source": "contracts/other/xtrata-v3.2.1.clar",
       "requiredFor": [
         "candidate-core"
       ],
-      "deployTxId": null
+      "deployTxId": "12e7e529f4f5e7f3088c4882123a1fe926f1a777b0a5899ce73f4894288fd9e5"
     },
     "helper": {
       "name": "xtrata-small-mint-v1-1",
-      "id": "ST1QJJVMB6NQBGMZQVDR22PADW2E3BEP61RQTFE7F.xtrata-small-mint-v1-1",
+      "id": "ST30X7KJ5R4ZKTG5FBS5RQTH3CC3DNNDP99XRWFE8.xtrata-small-mint-v1-1",
       "source": "contracts/other/xtrata-small-mint-v1.1.clar",
       "requiredFor": [
         "small-mint-helper"
       ],
-      "deployTxId": null
+      "deployTxId": "4a1c29fcba802d403913e4e9c9d20772470192a20ce7e3a4a28cb8685450da7e"
     }
   },
   "assumptions": {
@@ -66,14 +66,14 @@
   "keyDerivation": {
     "source": "XTRATA_TESTNET_MNEMONIC",
     "indexes": {
-      "deployer": 1,
-      "walletA": 2,
-      "walletB": 0
+      "deployer": 2,
+      "walletA": 0,
+      "walletB": 1
     },
     "derivedAddresses": {
-      "deployer": "ST1QJJVMB6NQBGMZQVDR22PADW2E3BEP61RQTFE7F",
-      "walletA": "ST30X7KJ5R4ZKTG5FBS5RQTH3CC3DNNDP99XRWFE8",
-      "walletB": "STRNRHWSD7REAEXVTHDQWKPD4MFBG41024WQKBBM"
+      "deployer": "ST30X7KJ5R4ZKTG5FBS5RQTH3CC3DNNDP99XRWFE8",
+      "walletA": "STRNRHWSD7REAEXVTHDQWKPD4MFBG41024WQKBBM",
+      "walletB": "ST1QJJVMB6NQBGMZQVDR22PADW2E3BEP61RQTFE7F"
     }
   },
   "commands": {
@@ -85,16 +85,1183 @@
     "report": "npm run testnet:v3.2.1:report",
     "rehearsal": "npm run testnet:v3.2.1:rehearsal -- --broadcast"
   },
-  "transactions": [],
-  "readOnly": [],
-  "testCases": [],
+  "transactions": [
+    {
+      "at": "2026-06-06T11:50:11.934Z",
+      "label": "deploy xtrata-v1-1-1",
+      "dryRun": false,
+      "status": "success",
+      "txid": "20b568a8e4ea778a10c54ddb20e088450d54ab4a25c894f9acd46b000b785715",
+      "blockHeight": 4005942,
+      "feeRate": "1000000",
+      "result": {
+        "hex": "0x0703",
+        "repr": "(ok true)"
+      }
+    },
+    {
+      "at": "2026-06-06T11:50:43.131Z",
+      "label": "deploy xtrata-v2-1-0",
+      "dryRun": false,
+      "status": "success",
+      "txid": "2e1bfecbf51fdc10cccd1448ff3573ba49091a01af68f3467f0a8d60f4e15a5d",
+      "blockHeight": 4005944,
+      "feeRate": "1000000",
+      "result": {
+        "hex": "0x0703",
+        "repr": "(ok true)"
+      }
+    },
+    {
+      "at": "2026-06-06T11:51:14.292Z",
+      "label": "deploy xtrata-v2-1-1",
+      "dryRun": false,
+      "status": "success",
+      "txid": "8b6922edaeb1f663926c1364f049e3bb1e65e28bc245f9003558bf926f54ccc0",
+      "blockHeight": 4005945,
+      "feeRate": "1000000",
+      "result": {
+        "hex": "0x0703",
+        "repr": "(ok true)"
+      }
+    },
+    {
+      "at": "2026-06-06T11:51:45.546Z",
+      "label": "deploy xtrata-v3-2-1",
+      "dryRun": false,
+      "status": "success",
+      "txid": "12e7e529f4f5e7f3088c4882123a1fe926f1a777b0a5899ce73f4894288fd9e5",
+      "blockHeight": 4005946,
+      "feeRate": "1000000",
+      "result": {
+        "hex": "0x0703",
+        "repr": "(ok true)"
+      }
+    },
+    {
+      "at": "2026-06-06T11:52:16.532Z",
+      "label": "deploy xtrata-small-mint-v1-1",
+      "dryRun": false,
+      "status": "success",
+      "txid": "4a1c29fcba802d403913e4e9c9d20772470192a20ce7e3a4a28cb8685450da7e",
+      "blockHeight": 4005947,
+      "feeRate": "1000000",
+      "result": {
+        "hex": "0x0703",
+        "repr": "(ok true)"
+      }
+    },
+    {
+      "at": "2026-06-06T11:52:47.589Z",
+      "label": "core set royalty recipient",
+      "dryRun": false,
+      "status": "success",
+      "txid": "99ebeabcad8800f6df6f257f063fcac68c7ee6e5129d7f591243915844cf045e",
+      "blockHeight": 4005948,
+      "feeRate": "1000000",
+      "result": {
+        "hex": "0x0703",
+        "repr": "(ok true)"
+      }
+    },
+    {
+      "at": "2026-06-06T11:53:18.649Z",
+      "label": "core unpause",
+      "dryRun": false,
+      "status": "success",
+      "txid": "d46368b5fda9809ea54caf542d245b8305dd5309bfe5343a099f8988aa2df2df",
+      "blockHeight": 4005949,
+      "feeRate": "1000000",
+      "result": {
+        "hex": "0x0703",
+        "repr": "(ok true)"
+      }
+    },
+    {
+      "at": "2026-06-06T11:53:49.657Z",
+      "label": "helper point at testnet core",
+      "dryRun": false,
+      "status": "success",
+      "txid": "8c6e0071c2590af4b526db058e322c59e5d637e29d901b883df43b0fdc0df190",
+      "blockHeight": 4005950,
+      "feeRate": "1000000",
+      "result": {
+        "hex": "0x0703",
+        "repr": "(ok true)"
+      }
+    },
+    {
+      "at": "2026-06-06T11:54:20.624Z",
+      "label": "helper unpause",
+      "dryRun": false,
+      "status": "success",
+      "txid": "53992b5eb2717623aff14b64eac0b529897cdfc4ca6e2eb954edbf95a054d077",
+      "blockHeight": 4005953,
+      "feeRate": "1000000",
+      "result": {
+        "hex": "0x0703",
+        "repr": "(ok true)"
+      }
+    },
+    {
+      "at": "2026-06-06T11:54:51.667Z",
+      "label": "v2.1.0 unpause",
+      "dryRun": false,
+      "status": "success",
+      "txid": "224b1c8f0cc9271095c536b971ba768e09686cee2483cbc9c8b8907e26035a32",
+      "blockHeight": 4005954,
+      "feeRate": "1000000",
+      "result": {
+        "hex": "0x0703",
+        "repr": "(ok true)"
+      }
+    },
+    {
+      "at": "2026-06-06T11:55:22.691Z",
+      "label": "v2.1.1 unpause",
+      "dryRun": false,
+      "status": "success",
+      "txid": "2db1eca7fa1638efc6b76783018663877d58bc4786120f49a9de9307bc9d088d",
+      "blockHeight": 4005955,
+      "feeRate": "1000000",
+      "result": {
+        "hex": "0x0703",
+        "repr": "(ok true)"
+      }
+    },
+    {
+      "at": "2026-06-06T11:55:53.706Z",
+      "label": "v2.1.0 set migration base 9000",
+      "dryRun": false,
+      "status": "success",
+      "txid": "f13f3f586c7e5d3d85abca63a7084c2419fe1757a931c514da0d0a0486ce7f4c",
+      "blockHeight": 4005956,
+      "feeRate": "1000000",
+      "result": {
+        "hex": "0x0703",
+        "repr": "(ok true)"
+      }
+    },
+    {
+      "at": "2026-06-06T11:56:24.652Z",
+      "label": "v2.1.1 set migration base 9010",
+      "dryRun": false,
+      "status": "success",
+      "txid": "a50dfab3349bb8e7e6e01dcec5f6374ca642989d139c69c14da68168aebe6dcc",
+      "blockHeight": 4005957,
+      "feeRate": "1000000",
+      "result": {
+        "hex": "0x0703",
+        "repr": "(ok true)"
+      }
+    },
+    {
+      "at": "2026-06-06T11:56:55.697Z",
+      "label": "direct mint data:text/plain,xtrata-v3.2.1-testnet-rehearsal,direct single-call 1-byte (1 chunks)",
+      "dryRun": false,
+      "status": "success",
+      "txid": "1f52fc18dcd00c2676ea208250f8381e765bcc6828dcfe002e678ce658626415",
+      "blockHeight": 4005958,
+      "feeRate": "1000000",
+      "result": {
+        "hex": "0x070c0000000207657869737465640408746f6b656e2d69640100000000000000000000000000000000",
+        "repr": "(ok (tuple (existed false) (token-id u0)))"
+      }
+    },
+    {
+      "at": "2026-06-06T11:57:26.973Z",
+      "label": "direct mint data:text/plain,xtrata-v3.2.1-testnet-rehearsal,direct single-call 1 full chunk (1 chunks)",
+      "dryRun": false,
+      "status": "success",
+      "txid": "d744cd8659382703c155a692c90609f8d3bd41eb26adc033b9cd235da52f1cf7",
+      "blockHeight": 4005961,
+      "feeRate": "1000000",
+      "result": {
+        "hex": "0x070c0000000207657869737465640408746f6b656e2d69640100000000000000000000000000000001",
+        "repr": "(ok (tuple (existed false) (token-id u1)))"
+      }
+    },
+    {
+      "at": "2026-06-06T11:57:59.530Z",
+      "label": "direct mint data:text/plain,xtrata-v3.2.1-testnet-rehearsal,direct single-call 30 chunks (30 chunks)",
+      "dryRun": false,
+      "status": "success",
+      "txid": "c4c22bf03d43e3bd4a798cf37fe39682ee9e626faabe6d2e726c9ff3a0b6fe8f",
+      "blockHeight": 4005962,
+      "feeRate": "1000000",
+      "result": {
+        "hex": "0x070c0000000207657869737465640408746f6b656e2d69640100000000000000000000000000000002",
+        "repr": "(ok (tuple (existed false) (token-id u2)))"
+      }
+    },
+    {
+      "at": "2026-06-06T11:58:32.002Z",
+      "label": "direct mint data:text/plain,xtrata-v3.2.1-testnet-rehearsal,direct single-call 32 chunks (32 chunks)",
+      "dryRun": false,
+      "status": "success",
+      "txid": "cd6ee0fbac48cadec622ae30893536bd50d325d1dc534e36bce3f78ce2e20e76",
+      "blockHeight": 4005964,
+      "feeRate": "1000000",
+      "result": {
+        "hex": "0x070c0000000207657869737465640408746f6b656e2d69640100000000000000000000000000000003",
+        "repr": "(ok (tuple (existed false) (token-id u3)))"
+      }
+    },
+    {
+      "at": "2026-06-06T11:59:03.113Z",
+      "label": "helper mint data:text/plain,xtrata-v3.2.1-testnet-rehearsal,helper-1-byte (1 chunks)",
+      "dryRun": false,
+      "status": "success",
+      "txid": "3aed59eadf4ed430dc450a0be7bc12cf02124fbced9aa8e73c641dee1a0029d5",
+      "blockHeight": 4005965,
+      "feeRate": "1000000",
+      "result": {
+        "hex": "0x070c0000000207657869737465640408746f6b656e2d69640100000000000000000000000000000004",
+        "repr": "(ok (tuple (existed false) (token-id u4)))"
+      }
+    },
+    {
+      "at": "2026-06-06T11:59:35.922Z",
+      "label": "helper mint data:text/plain,xtrata-v3.2.1-testnet-rehearsal,helper-policy-30 (30 chunks)",
+      "dryRun": false,
+      "status": "success",
+      "txid": "e2f20f2845e1fa697edca5f9436f6754e8ecaf5eedfa1417a5cd54b479a96a89",
+      "blockHeight": 4005967,
+      "feeRate": "1000000",
+      "result": {
+        "hex": "0x070c0000000207657869737465640408746f6b656e2d69640100000000000000000000000000000005",
+        "repr": "(ok (tuple (existed false) (token-id u5)))"
+      }
+    },
+    {
+      "at": "2026-06-06T11:59:36.898Z",
+      "label": "helper oversized 33 chunks expected failure",
+      "dryRun": false,
+      "status": "expected-broadcast-rejection",
+      "error": "transaction rejected",
+      "reason": "BadFunctionArgument"
+    },
+    {
+      "at": "2026-06-06T12:00:08.220Z",
+      "label": "staged begin data:text/plain,xtrata-v3.2.1-testnet-rehearsal,staged-33",
+      "dryRun": false,
+      "status": "success",
+      "txid": "2db615a65245007806907ea4de87ec567a2f43ca291abbe8d2650ea7773560be",
+      "blockHeight": 4005968,
+      "feeRate": "1000000",
+      "result": {
+        "hex": "0x0703",
+        "repr": "(ok true)"
+      }
+    },
+    {
+      "at": "2026-06-06T12:00:40.563Z",
+      "label": "staged add chunks data:text/plain,xtrata-v3.2.1-testnet-rehearsal,staged-33 0-31",
+      "dryRun": false,
+      "status": "success",
+      "txid": "b89d4d76587be00b97b561c6282cd6e517d4d213e44e1b11710591f775ae1f35",
+      "blockHeight": 4005969,
+      "feeRate": "1000000",
+      "result": {
+        "hex": "0x0703",
+        "repr": "(ok true)"
+      }
+    },
+    {
+      "at": "2026-06-06T12:01:11.751Z",
+      "label": "staged add chunks data:text/plain,xtrata-v3.2.1-testnet-rehearsal,staged-33 32-32",
+      "dryRun": false,
+      "status": "success",
+      "txid": "a8df4d234746920e3e0f41344401c136678ed5a2e65e08bb9f6853f23af0c94c",
+      "blockHeight": 4005972,
+      "feeRate": "1000000",
+      "result": {
+        "hex": "0x0703",
+        "repr": "(ok true)"
+      }
+    },
+    {
+      "at": "2026-06-06T12:01:42.751Z",
+      "label": "staged seal data:text/plain,xtrata-v3.2.1-testnet-rehearsal,staged-33",
+      "dryRun": false,
+      "status": "success",
+      "txid": "f0edda30af92b531a79706f986fbcff56795a2f6d897eb8c0fe589a745fcf7ac",
+      "blockHeight": 4005974,
+      "feeRate": "1000000",
+      "result": {
+        "hex": "0x070100000000000000000000000000000006",
+        "repr": "(ok u6)"
+      }
+    },
+    {
+      "at": "2026-06-06T12:02:13.801Z",
+      "label": "staged begin data:text/plain,xtrata-v3.2.1-testnet-rehearsal,staged-64",
+      "dryRun": false,
+      "status": "success",
+      "txid": "888676f462111c2823afdc89dd52c289e7f2b93bca7dfa1879aac4fd788620eb",
+      "blockHeight": 4005975,
+      "feeRate": "1000000",
+      "result": {
+        "hex": "0x0703",
+        "repr": "(ok true)"
+      }
+    },
+    {
+      "at": "2026-06-06T12:02:45.891Z",
+      "label": "staged add chunks data:text/plain,xtrata-v3.2.1-testnet-rehearsal,staged-64 0-31",
+      "dryRun": false,
+      "status": "success",
+      "txid": "bbe72fb5dc190bd90146fed8c35acfda62cf66d43078113296ad3d465d9ac3b7",
+      "blockHeight": 4005976,
+      "feeRate": "1000000",
+      "result": {
+        "hex": "0x0703",
+        "repr": "(ok true)"
+      }
+    },
+    {
+      "at": "2026-06-06T12:03:18.261Z",
+      "label": "staged add chunks data:text/plain,xtrata-v3.2.1-testnet-rehearsal,staged-64 32-63",
+      "dryRun": false,
+      "status": "success",
+      "txid": "6a14b73ea972e36a8d826f6c26c298a7df6013c7ae69329f74c6aeb06666e8e3",
+      "blockHeight": 4005977,
+      "feeRate": "1000000",
+      "result": {
+        "hex": "0x0703",
+        "repr": "(ok true)"
+      }
+    },
+    {
+      "at": "2026-06-06T12:03:49.204Z",
+      "label": "staged seal data:text/plain,xtrata-v3.2.1-testnet-rehearsal,staged-64",
+      "dryRun": false,
+      "status": "success",
+      "txid": "c2ad335ed3e8e91b7d534ed1490e6e13019645ef5d943d4782271ac0240a9b4d",
+      "blockHeight": 4005978,
+      "feeRate": "1000000",
+      "result": {
+        "hex": "0x070100000000000000000000000000000007",
+        "repr": "(ok u7)"
+      }
+    },
+    {
+      "at": "2026-06-06T12:04:20.314Z",
+      "label": "direct mint data:text/plain,xtrata-v3.2.1-testnet-rehearsal,dedupe-a (1 chunks)",
+      "dryRun": false,
+      "status": "success",
+      "txid": "a83ac7b204b41bc6be9a493dfdced5ca89fd2f81e715512ac90f2cf04465a565",
+      "blockHeight": 4005979,
+      "feeRate": "1000000",
+      "result": {
+        "hex": "0x070c0000000207657869737465640408746f6b656e2d69640100000000000000000000000000000008",
+        "repr": "(ok (tuple (existed false) (token-id u8)))"
+      }
+    },
+    {
+      "at": "2026-06-06T12:04:51.429Z",
+      "label": "direct mint data:text/plain,xtrata-v3.2.1-testnet-rehearsal,dedupe-b (1 chunks)",
+      "dryRun": false,
+      "status": "success",
+      "txid": "e2e3630e5aaf317e2f5e1bfa4788eafe9d1568bc8305985b96a82b3ba43a12a7",
+      "blockHeight": 4005980,
+      "feeRate": "1000000",
+      "result": {
+        "hex": "0x070c0000000207657869737465640408746f6b656e2d69640100000000000000000000000000000009",
+        "repr": "(ok (tuple (existed false) (token-id u9)))"
+      }
+    },
+    {
+      "at": "2026-06-06T12:05:22.528Z",
+      "label": "direct mint data:text/plain,xtrata-v3.2.1-testnet-rehearsal,dep-source (1 chunks)",
+      "dryRun": false,
+      "status": "success",
+      "txid": "4ae442518b730839b0dec6eaa79d9d144528bcb7e507009f7229d9c63efea575",
+      "blockHeight": 4005982,
+      "feeRate": "1000000",
+      "result": {
+        "hex": "0x070c0000000207657869737465640408746f6b656e2d6964010000000000000000000000000000000a",
+        "repr": "(ok (tuple (existed false) (token-id u10)))"
+      }
+    },
+    {
+      "at": "2026-06-06T12:05:53.714Z",
+      "label": "direct mint data:text/plain,xtrata-v3.2.1-testnet-rehearsal,parent-owned (1 chunks)",
+      "dryRun": false,
+      "status": "success",
+      "txid": "6b41460eb10cb0e66c7d7d07463baa7d61b2965cfd3fe0efe3aa3b36093b290a",
+      "blockHeight": 4005983,
+      "feeRate": "1000000",
+      "result": {
+        "hex": "0x070c0000000207657869737465640408746f6b656e2d6964010000000000000000000000000000000b",
+        "repr": "(ok (tuple (existed false) (token-id u11)))"
+      }
+    },
+    {
+      "at": "2026-06-06T12:06:24.816Z",
+      "label": "direct mint data:text/plain,xtrata-v3.2.1-testnet-rehearsal,dep-linked (1 chunks)",
+      "dryRun": false,
+      "status": "success",
+      "txid": "61bdcb5372263b15a33f20d5518350b1246d40fede45b00a42748e204e771519",
+      "blockHeight": 4005984,
+      "feeRate": "1000000",
+      "result": {
+        "hex": "0x070c0000000207657869737465640408746f6b656e2d6964010000000000000000000000000000000c",
+        "repr": "(ok (tuple (existed false) (token-id u12)))"
+      }
+    },
+    {
+      "at": "2026-06-06T12:06:56.049Z",
+      "label": "parent link to another wallet token expected failure",
+      "dryRun": false,
+      "status": "abort_by_response",
+      "expectedFailure": true,
+      "txid": "483fc63e91423257538f2c85172ec505589fbccd324a78381c6f7cd37bbee598",
+      "blockHeight": 4005985,
+      "feeRate": "1000000",
+      "result": {
+        "hex": "0x080100000000000000000000000000000064",
+        "repr": "(err u100)"
+      }
+    },
+    {
+      "at": "2026-06-06T12:07:27.225Z",
+      "label": "direct mint data:text/plain,xtrata-v3.2.1-testnet-rehearsal,parent-linked (1 chunks)",
+      "dryRun": false,
+      "status": "success",
+      "txid": "0dd76148da97e7ea6ba7f73c8775b8452b5d8391f9e7281d8b67653d968b1b8a",
+      "blockHeight": 4005986,
+      "feeRate": "1000000",
+      "result": {
+        "hex": "0x070c0000000207657869737465640408746f6b656e2d6964010000000000000000000000000000000d",
+        "repr": "(ok (tuple (existed false) (token-id u13)))"
+      }
+    },
+    {
+      "at": "2026-06-06T12:07:58.657Z",
+      "label": "legacy begin xtrata-v2-1-0 data:text/plain,xtrata-v3.2.1-testnet-rehearsal,v210",
+      "dryRun": false,
+      "status": "success",
+      "txid": "bd250a5d94cfe97c8b42116c61003f006f39c3e6217a49105534fcba9399d90b",
+      "blockHeight": 4005987,
+      "feeRate": "1000000",
+      "result": {
+        "hex": "0x0703",
+        "repr": "(ok true)"
+      }
+    },
+    {
+      "at": "2026-06-06T12:08:29.669Z",
+      "label": "legacy add xtrata-v2-1-0 data:text/plain,xtrata-v3.2.1-testnet-rehearsal,v210",
+      "dryRun": false,
+      "status": "success",
+      "txid": "e201f872a145ae4386b9b187edb1b34977f76eb6d183d01efb20777703b9497e",
+      "blockHeight": 4005988,
+      "feeRate": "1000000",
+      "result": {
+        "hex": "0x0703",
+        "repr": "(ok true)"
+      }
+    },
+    {
+      "at": "2026-06-06T12:09:00.601Z",
+      "label": "legacy seal xtrata-v2-1-0 data:text/plain,xtrata-v3.2.1-testnet-rehearsal,v210",
+      "dryRun": false,
+      "status": "success",
+      "txid": "af9b55cf46230625e28d7afd2fe8fd3469ea00e8f7ca0e376751b73ba54d7bbc",
+      "blockHeight": 4005991,
+      "feeRate": "1000000",
+      "result": {
+        "hex": "0x070100000000000000000000000000002328",
+        "repr": "(ok u9000)"
+      }
+    },
+    {
+      "at": "2026-06-06T12:09:31.533Z",
+      "label": "migrate v2.1.0 token",
+      "dryRun": false,
+      "status": "success",
+      "txid": "d1f51cd1d062814e3a8373c5ea53ea4018fe0cc9416d6e5a20d016bc776ac4a9",
+      "blockHeight": 4005993,
+      "feeRate": "1000000",
+      "result": {
+        "hex": "0x070100000000000000000000000000002328",
+        "repr": "(ok u9000)"
+      }
+    },
+    {
+      "at": "2026-06-06T12:10:02.734Z",
+      "label": "duplicate migrate v2.1.0 token expected failure",
+      "dryRun": false,
+      "status": "abort_by_response",
+      "expectedFailure": true,
+      "txid": "7e6505f6fa02e4d824d74c189ff548bd5042442fff4067208bc703bedf15617b",
+      "blockHeight": 4005994,
+      "feeRate": "1000000",
+      "result": {
+        "hex": "0x080100000000000000000000000000000072",
+        "repr": "(err u114)"
+      }
+    },
+    {
+      "at": "2026-06-06T12:10:33.895Z",
+      "label": "legacy begin xtrata-v2-1-1 data:text/plain,xtrata-v3.2.1-testnet-rehearsal,v211",
+      "dryRun": false,
+      "status": "success",
+      "txid": "7b6e140157f523a0e15d09b0ffea5b81cbb33ebc6ff788363e8977ad888c21f2",
+      "blockHeight": 4005995,
+      "feeRate": "1000000",
+      "result": {
+        "hex": "0x0703",
+        "repr": "(ok true)"
+      }
+    },
+    {
+      "at": "2026-06-06T12:11:04.995Z",
+      "label": "legacy add xtrata-v2-1-1 data:text/plain,xtrata-v3.2.1-testnet-rehearsal,v211",
+      "dryRun": false,
+      "status": "success",
+      "txid": "ea247532c6638d5468f5f74ca0373a8b54e50dadf119c6f3c57fe6229e40015f",
+      "blockHeight": 4005996,
+      "feeRate": "1000000",
+      "result": {
+        "hex": "0x0703",
+        "repr": "(ok true)"
+      }
+    },
+    {
+      "at": "2026-06-06T12:11:36.051Z",
+      "label": "legacy seal xtrata-v2-1-1 data:text/plain,xtrata-v3.2.1-testnet-rehearsal,v211",
+      "dryRun": false,
+      "status": "success",
+      "txid": "a78a154fdfcc716ee5d4bff834bbe57b8425bddf563c639595805aaf18a4cb8a",
+      "blockHeight": 4005997,
+      "feeRate": "1000000",
+      "result": {
+        "hex": "0x070100000000000000000000000000002332",
+        "repr": "(ok u9010)"
+      }
+    },
+    {
+      "at": "2026-06-06T12:12:06.869Z",
+      "label": "migrate v2.1.1 token",
+      "dryRun": false,
+      "status": "success",
+      "txid": "b456e348f51e0546255e9516d56e245430aa37d2968499a0776f21666a67c942",
+      "blockHeight": 4005998,
+      "feeRate": "1000000",
+      "result": {
+        "hex": "0x070100000000000000000000000000002332",
+        "repr": "(ok u9010)"
+      }
+    },
+    {
+      "at": "2026-06-06T12:12:38.095Z",
+      "label": "duplicate migrate v2.1.1 token expected failure",
+      "dryRun": false,
+      "status": "abort_by_response",
+      "expectedFailure": true,
+      "txid": "57b4ee570ac85f86487f0c82e0dc0af02af79dce218b494423951fe6091061fe",
+      "blockHeight": 4006000,
+      "feeRate": "1000000",
+      "result": {
+        "hex": "0x080100000000000000000000000000000072",
+        "repr": "(err u114)"
+      }
+    }
+  ],
+  "readOnly": [
+    {
+      "at": "2026-06-06T11:56:24.795Z",
+      "dryRun": false,
+      "contract": "ST30X7KJ5R4ZKTG5FBS5RQTH3CC3DNNDP99XRWFE8.xtrata-v3-2-1",
+      "functionName": "get-next-token-id",
+      "sender": "STRNRHWSD7REAEXVTHDQWKPD4MFBG41024WQKBBM",
+      "result": {
+        "type": "(response uint UnknownType)",
+        "value": {
+          "type": "uint",
+          "value": "0"
+        },
+        "success": true
+      }
+    },
+    {
+      "at": "2026-06-06T11:56:55.822Z",
+      "dryRun": false,
+      "contract": "ST30X7KJ5R4ZKTG5FBS5RQTH3CC3DNNDP99XRWFE8.xtrata-v3-2-1",
+      "functionName": "get-next-token-id",
+      "sender": "STRNRHWSD7REAEXVTHDQWKPD4MFBG41024WQKBBM",
+      "result": {
+        "type": "(response uint UnknownType)",
+        "value": {
+          "type": "uint",
+          "value": "1"
+        },
+        "success": true
+      }
+    },
+    {
+      "at": "2026-06-06T11:57:27.144Z",
+      "dryRun": false,
+      "contract": "ST30X7KJ5R4ZKTG5FBS5RQTH3CC3DNNDP99XRWFE8.xtrata-v3-2-1",
+      "functionName": "get-next-token-id",
+      "sender": "STRNRHWSD7REAEXVTHDQWKPD4MFBG41024WQKBBM",
+      "result": {
+        "type": "(response uint UnknownType)",
+        "value": {
+          "type": "uint",
+          "value": "2"
+        },
+        "success": true
+      }
+    },
+    {
+      "at": "2026-06-06T11:57:59.655Z",
+      "dryRun": false,
+      "contract": "ST30X7KJ5R4ZKTG5FBS5RQTH3CC3DNNDP99XRWFE8.xtrata-v3-2-1",
+      "functionName": "get-next-token-id",
+      "sender": "STRNRHWSD7REAEXVTHDQWKPD4MFBG41024WQKBBM",
+      "result": {
+        "type": "(response uint UnknownType)",
+        "value": {
+          "type": "uint",
+          "value": "3"
+        },
+        "success": true
+      }
+    },
+    {
+      "at": "2026-06-06T11:58:32.123Z",
+      "dryRun": false,
+      "contract": "ST30X7KJ5R4ZKTG5FBS5RQTH3CC3DNNDP99XRWFE8.xtrata-v3-2-1",
+      "functionName": "get-next-token-id",
+      "sender": "STRNRHWSD7REAEXVTHDQWKPD4MFBG41024WQKBBM",
+      "result": {
+        "type": "(response uint UnknownType)",
+        "value": {
+          "type": "uint",
+          "value": "4"
+        },
+        "success": true
+      }
+    },
+    {
+      "at": "2026-06-06T11:59:03.329Z",
+      "dryRun": false,
+      "contract": "ST30X7KJ5R4ZKTG5FBS5RQTH3CC3DNNDP99XRWFE8.xtrata-v3-2-1",
+      "functionName": "get-next-token-id",
+      "sender": "STRNRHWSD7REAEXVTHDQWKPD4MFBG41024WQKBBM",
+      "result": {
+        "type": "(response uint UnknownType)",
+        "value": {
+          "type": "uint",
+          "value": "5"
+        },
+        "success": true
+      }
+    },
+    {
+      "at": "2026-06-06T11:59:37.203Z",
+      "dryRun": false,
+      "contract": "ST30X7KJ5R4ZKTG5FBS5RQTH3CC3DNNDP99XRWFE8.xtrata-v3-2-1",
+      "functionName": "get-next-token-id",
+      "sender": "STRNRHWSD7REAEXVTHDQWKPD4MFBG41024WQKBBM",
+      "result": {
+        "type": "(response uint UnknownType)",
+        "value": {
+          "type": "uint",
+          "value": "6"
+        },
+        "success": true
+      }
+    },
+    {
+      "at": "2026-06-06T12:01:42.898Z",
+      "dryRun": false,
+      "contract": "ST30X7KJ5R4ZKTG5FBS5RQTH3CC3DNNDP99XRWFE8.xtrata-v3-2-1",
+      "functionName": "get-next-token-id",
+      "sender": "STRNRHWSD7REAEXVTHDQWKPD4MFBG41024WQKBBM",
+      "result": {
+        "type": "(response uint UnknownType)",
+        "value": {
+          "type": "uint",
+          "value": "7"
+        },
+        "success": true
+      }
+    },
+    {
+      "at": "2026-06-06T12:03:49.341Z",
+      "dryRun": false,
+      "contract": "ST30X7KJ5R4ZKTG5FBS5RQTH3CC3DNNDP99XRWFE8.xtrata-v3-2-1",
+      "functionName": "get-next-token-id",
+      "sender": "STRNRHWSD7REAEXVTHDQWKPD4MFBG41024WQKBBM",
+      "result": {
+        "type": "(response uint UnknownType)",
+        "value": {
+          "type": "uint",
+          "value": "8"
+        },
+        "success": true
+      }
+    },
+    {
+      "at": "2026-06-06T12:04:20.445Z",
+      "dryRun": false,
+      "contract": "ST30X7KJ5R4ZKTG5FBS5RQTH3CC3DNNDP99XRWFE8.xtrata-v3-2-1",
+      "functionName": "get-next-token-id",
+      "sender": "ST1QJJVMB6NQBGMZQVDR22PADW2E3BEP61RQTFE7F",
+      "result": {
+        "type": "(response uint UnknownType)",
+        "value": {
+          "type": "uint",
+          "value": "9"
+        },
+        "success": true
+      }
+    },
+    {
+      "at": "2026-06-06T12:04:51.570Z",
+      "dryRun": false,
+      "contract": "ST30X7KJ5R4ZKTG5FBS5RQTH3CC3DNNDP99XRWFE8.xtrata-v3-2-1",
+      "functionName": "get-id-by-hash",
+      "sender": "ST30X7KJ5R4ZKTG5FBS5RQTH3CC3DNNDP99XRWFE8",
+      "result": {
+        "type": "(optional uint)",
+        "value": {
+          "type": "uint",
+          "value": "8"
+        }
+      }
+    },
+    {
+      "at": "2026-06-06T12:04:51.701Z",
+      "dryRun": false,
+      "contract": "ST30X7KJ5R4ZKTG5FBS5RQTH3CC3DNNDP99XRWFE8.xtrata-v3-2-1",
+      "functionName": "get-next-token-id",
+      "sender": "ST1QJJVMB6NQBGMZQVDR22PADW2E3BEP61RQTFE7F",
+      "result": {
+        "type": "(response uint UnknownType)",
+        "value": {
+          "type": "uint",
+          "value": "10"
+        },
+        "success": true
+      }
+    },
+    {
+      "at": "2026-06-06T12:05:22.665Z",
+      "dryRun": false,
+      "contract": "ST30X7KJ5R4ZKTG5FBS5RQTH3CC3DNNDP99XRWFE8.xtrata-v3-2-1",
+      "functionName": "get-next-token-id",
+      "sender": "STRNRHWSD7REAEXVTHDQWKPD4MFBG41024WQKBBM",
+      "result": {
+        "type": "(response uint UnknownType)",
+        "value": {
+          "type": "uint",
+          "value": "11"
+        },
+        "success": true
+      }
+    },
+    {
+      "at": "2026-06-06T12:05:53.831Z",
+      "dryRun": false,
+      "contract": "ST30X7KJ5R4ZKTG5FBS5RQTH3CC3DNNDP99XRWFE8.xtrata-v3-2-1",
+      "functionName": "get-next-token-id",
+      "sender": "STRNRHWSD7REAEXVTHDQWKPD4MFBG41024WQKBBM",
+      "result": {
+        "type": "(response uint UnknownType)",
+        "value": {
+          "type": "uint",
+          "value": "12"
+        },
+        "success": true
+      }
+    },
+    {
+      "at": "2026-06-06T12:06:56.194Z",
+      "dryRun": false,
+      "contract": "ST30X7KJ5R4ZKTG5FBS5RQTH3CC3DNNDP99XRWFE8.xtrata-v3-2-1",
+      "functionName": "get-next-token-id",
+      "sender": "STRNRHWSD7REAEXVTHDQWKPD4MFBG41024WQKBBM",
+      "result": {
+        "type": "(response uint UnknownType)",
+        "value": {
+          "type": "uint",
+          "value": "13"
+        },
+        "success": true
+      }
+    },
+    {
+      "at": "2026-06-06T12:07:27.370Z",
+      "dryRun": false,
+      "contract": "ST30X7KJ5R4ZKTG5FBS5RQTH3CC3DNNDP99XRWFE8.xtrata-v3-2-1",
+      "functionName": "get-dependencies",
+      "sender": "ST30X7KJ5R4ZKTG5FBS5RQTH3CC3DNNDP99XRWFE8",
+      "result": {
+        "type": "(list 1 uint)",
+        "value": [
+          {
+            "type": "uint",
+            "value": "10"
+          }
+        ]
+      }
+    },
+    {
+      "at": "2026-06-06T12:07:27.499Z",
+      "dryRun": false,
+      "contract": "ST30X7KJ5R4ZKTG5FBS5RQTH3CC3DNNDP99XRWFE8.xtrata-v3-2-1",
+      "functionName": "get-parents",
+      "sender": "ST30X7KJ5R4ZKTG5FBS5RQTH3CC3DNNDP99XRWFE8",
+      "result": {
+        "type": "(list 1 uint)",
+        "value": [
+          {
+            "type": "uint",
+            "value": "11"
+          }
+        ]
+      }
+    },
+    {
+      "at": "2026-06-06T12:07:27.630Z",
+      "dryRun": false,
+      "contract": "ST30X7KJ5R4ZKTG5FBS5RQTH3CC3DNNDP99XRWFE8.xtrata-v2-1-0",
+      "functionName": "get-next-token-id",
+      "sender": "STRNRHWSD7REAEXVTHDQWKPD4MFBG41024WQKBBM",
+      "result": {
+        "type": "(response uint UnknownType)",
+        "value": {
+          "type": "uint",
+          "value": "9000"
+        },
+        "success": true
+      }
+    },
+    {
+      "at": "2026-06-06T12:09:31.674Z",
+      "dryRun": false,
+      "contract": "ST30X7KJ5R4ZKTG5FBS5RQTH3CC3DNNDP99XRWFE8.xtrata-v3-2-1",
+      "functionName": "get-migration-source",
+      "sender": "ST30X7KJ5R4ZKTG5FBS5RQTH3CC3DNNDP99XRWFE8",
+      "result": {
+        "type": "(optional (tuple (source-contract principal) (source-id uint)))",
+        "value": {
+          "type": "(tuple (source-contract principal) (source-id uint))",
+          "value": {
+            "source-contract": {
+              "type": "principal",
+              "value": "ST30X7KJ5R4ZKTG5FBS5RQTH3CC3DNNDP99XRWFE8.xtrata-v2-1-0"
+            },
+            "source-id": {
+              "type": "uint",
+              "value": "9000"
+            }
+          }
+        }
+      }
+    },
+    {
+      "at": "2026-06-06T12:09:31.790Z",
+      "dryRun": false,
+      "contract": "ST30X7KJ5R4ZKTG5FBS5RQTH3CC3DNNDP99XRWFE8.xtrata-v2-1-0",
+      "functionName": "get-owner",
+      "sender": "ST30X7KJ5R4ZKTG5FBS5RQTH3CC3DNNDP99XRWFE8",
+      "result": {
+        "type": "(response (optional principal) UnknownType)",
+        "value": {
+          "type": "(optional principal)",
+          "value": {
+            "type": "principal",
+            "value": "ST30X7KJ5R4ZKTG5FBS5RQTH3CC3DNNDP99XRWFE8.xtrata-v3-2-1"
+          }
+        },
+        "success": true
+      }
+    },
+    {
+      "at": "2026-06-06T12:10:02.865Z",
+      "dryRun": false,
+      "contract": "ST30X7KJ5R4ZKTG5FBS5RQTH3CC3DNNDP99XRWFE8.xtrata-v2-1-1",
+      "functionName": "get-next-token-id",
+      "sender": "ST1QJJVMB6NQBGMZQVDR22PADW2E3BEP61RQTFE7F",
+      "result": {
+        "type": "(response uint UnknownType)",
+        "value": {
+          "type": "uint",
+          "value": "9010"
+        },
+        "success": true
+      }
+    },
+    {
+      "at": "2026-06-06T12:12:06.985Z",
+      "dryRun": false,
+      "contract": "ST30X7KJ5R4ZKTG5FBS5RQTH3CC3DNNDP99XRWFE8.xtrata-v3-2-1",
+      "functionName": "get-migration-source",
+      "sender": "ST30X7KJ5R4ZKTG5FBS5RQTH3CC3DNNDP99XRWFE8",
+      "result": {
+        "type": "(optional (tuple (source-contract principal) (source-id uint)))",
+        "value": {
+          "type": "(tuple (source-contract principal) (source-id uint))",
+          "value": {
+            "source-contract": {
+              "type": "principal",
+              "value": "ST30X7KJ5R4ZKTG5FBS5RQTH3CC3DNNDP99XRWFE8.xtrata-v2-1-1"
+            },
+            "source-id": {
+              "type": "uint",
+              "value": "9010"
+            }
+          }
+        }
+      }
+    },
+    {
+      "at": "2026-06-06T12:12:07.171Z",
+      "dryRun": false,
+      "contract": "ST30X7KJ5R4ZKTG5FBS5RQTH3CC3DNNDP99XRWFE8.xtrata-v2-1-1",
+      "functionName": "get-owner",
+      "sender": "ST30X7KJ5R4ZKTG5FBS5RQTH3CC3DNNDP99XRWFE8",
+      "result": {
+        "type": "(response (optional principal) UnknownType)",
+        "value": {
+          "type": "(optional principal)",
+          "value": {
+            "type": "principal",
+            "value": "ST30X7KJ5R4ZKTG5FBS5RQTH3CC3DNNDP99XRWFE8.xtrata-v3-2-1"
+          }
+        },
+        "success": true
+      }
+    },
+    {
+      "at": "2026-06-06T12:12:38.227Z",
+      "dryRun": false,
+      "contract": "ST30X7KJ5R4ZKTG5FBS5RQTH3CC3DNNDP99XRWFE8.xtrata-v3-2-1",
+      "functionName": "get-inscription-summary",
+      "sender": "ST30X7KJ5R4ZKTG5FBS5RQTH3CC3DNNDP99XRWFE8",
+      "result": {
+        "type": "(response (optional (tuple (chunk-size uint) (creator principal) (dependencies (list 0 UnknownType)) (final-hash (buff 32)) (migration-source (optional none)) (mime-type (string-ascii 24)) (owner principal) (parents (list 0 UnknownType)) (sealed bool) (token-uri (optional (string-ascii 57))) (total-chunks uint) (total-size uint))) UnknownType)",
+        "value": {
+          "type": "(optional (tuple (chunk-size uint) (creator principal) (dependencies (list 0 UnknownType)) (final-hash (buff 32)) (migration-source (optional none)) (mime-type (string-ascii 24)) (owner principal) (parents (list 0 UnknownType)) (sealed bool) (token-uri (optional (string-ascii 57))) (total-chunks uint) (total-size uint)))",
+          "value": {
+            "type": "(tuple (chunk-size uint) (creator principal) (dependencies (list 0 UnknownType)) (final-hash (buff 32)) (migration-source (optional none)) (mime-type (string-ascii 24)) (owner principal) (parents (list 0 UnknownType)) (sealed bool) (token-uri (optional (string-ascii 57))) (total-chunks uint) (total-size uint))",
+            "value": {
+              "chunk-size": {
+                "type": "uint",
+                "value": "16384"
+              },
+              "creator": {
+                "type": "principal",
+                "value": "STRNRHWSD7REAEXVTHDQWKPD4MFBG41024WQKBBM"
+              },
+              "dependencies": {
+                "type": "(list 0 UnknownType)",
+                "value": []
+              },
+              "final-hash": {
+                "type": "(buff 32)",
+                "value": "0x9903fd12efa740b106451e6f02f682f2eed7fcb6546563b905a2de8661f881a5"
+              },
+              "migration-source": {
+                "type": "(optional none)",
+                "value": null
+              },
+              "mime-type": {
+                "type": "(string-ascii 24)",
+                "value": "application/octet-stream"
+              },
+              "owner": {
+                "type": "principal",
+                "value": "STRNRHWSD7REAEXVTHDQWKPD4MFBG41024WQKBBM"
+              },
+              "parents": {
+                "type": "(list 0 UnknownType)",
+                "value": []
+              },
+              "sealed": {
+                "type": "bool",
+                "value": true
+              },
+              "token-uri": {
+                "type": "(optional (string-ascii 57))",
+                "value": {
+                  "type": "(string-ascii 57)",
+                  "value": "data:text/plain,xtrata-v3.2.1-testnet-rehearsal,staged-33"
+                }
+              },
+              "total-chunks": {
+                "type": "uint",
+                "value": "33"
+              },
+              "total-size": {
+                "type": "uint",
+                "value": "540672"
+              }
+            }
+          }
+        },
+        "success": true
+      }
+    }
+  ],
+  "testCases": [
+    {
+      "at": "2026-06-06T11:56:55.701Z",
+      "name": "direct single-call 1-byte",
+      "status": "passed",
+      "evidence": "confirmed-on-chain",
+      "tokenId": "0",
+      "size": 1,
+      "chunkCount": 1,
+      "hash": "1fd4247443c9440cb3c48c28851937196bc156032d70a96c98e127ecb347e45f"
+    },
+    {
+      "at": "2026-06-06T11:57:26.973Z",
+      "name": "direct single-call 1 full chunk",
+      "status": "passed",
+      "evidence": "confirmed-on-chain",
+      "tokenId": "1",
+      "size": 16384,
+      "chunkCount": 1,
+      "hash": "7e153db2e717f7688bfc2f191a491b7c20071294c5dce5d30732ff75ae585c59"
+    },
+    {
+      "at": "2026-06-06T11:57:59.530Z",
+      "name": "direct single-call 30 chunks",
+      "status": "passed",
+      "evidence": "confirmed-on-chain",
+      "tokenId": "2",
+      "size": 491520,
+      "chunkCount": 30,
+      "hash": "0cafd52ed2c2179c4b09c6820d01ad8e1086235eb4c0d1fa4928f654a5089771"
+    },
+    {
+      "at": "2026-06-06T11:58:32.002Z",
+      "name": "direct single-call 32 chunks",
+      "status": "passed",
+      "evidence": "confirmed-on-chain",
+      "tokenId": "3",
+      "size": 524288,
+      "chunkCount": 32,
+      "hash": "255f9c04ab2ee4924bdd080ac4eb95b3335d73473d7830c1ec305e412aa6b28b"
+    },
+    {
+      "at": "2026-06-06T11:59:03.113Z",
+      "name": "helper 1-byte",
+      "status": "passed",
+      "evidence": "confirmed-on-chain",
+      "tokenId": "4",
+      "size": 1,
+      "chunkCount": 1,
+      "hash": "086fb60bd968fe68ecec6a8d826ea5aa7d3d8020e644d7c5d0e07ded456ca3e8"
+    },
+    {
+      "at": "2026-06-06T11:59:35.922Z",
+      "name": "helper max app policy 30 chunks",
+      "status": "passed",
+      "evidence": "confirmed-on-chain",
+      "tokenId": "5",
+      "size": 491520,
+      "chunkCount": 30,
+      "hash": "4ba1435660ce9236a965174959c94a54cb6bfd8fd8adb6234234499a7becb4ca"
+    },
+    {
+      "at": "2026-06-06T11:59:36.898Z",
+      "name": "helper oversized 33 chunks rejected",
+      "status": "passed",
+      "evidence": "confirmed-on-chain",
+      "expected": "Rejected because helper contract ABI is list 32; official app policy remains 30."
+    },
+    {
+      "at": "2026-06-06T12:01:42.751Z",
+      "name": "staged 33 chunks as 32 + 1",
+      "status": "passed",
+      "evidence": "confirmed-on-chain",
+      "tokenId": "6",
+      "size": 540672,
+      "chunkCount": 33,
+      "hash": "9903fd12efa740b106451e6f02f682f2eed7fcb6546563b905a2de8661f881a5"
+    },
+    {
+      "at": "2026-06-06T12:03:49.206Z",
+      "name": "staged 64 chunks as 32 + 32",
+      "status": "passed",
+      "evidence": "confirmed-on-chain",
+      "tokenId": "7",
+      "size": 1048576,
+      "chunkCount": 64,
+      "hash": "99e38f294c5ce6c802b8a493427241355ad85ceebeabadec1254603d8cdf1bde"
+    },
+    {
+      "at": "2026-06-06T12:04:51.571Z",
+      "name": "advisory dedupe duplicate same-hash mints",
+      "status": "passed",
+      "evidence": "confirmed-on-chain",
+      "walletATokenId": "8",
+      "walletBTokenId": "9",
+      "firstSeenTokenId": "8",
+      "hash": "673dc17066d2bfd82851c7c90a38377d884bf314a5290a4c63ed97ae8098082f"
+    },
+    {
+      "at": "2026-06-06T12:06:24.817Z",
+      "name": "dependency on another wallet token succeeds",
+      "status": "passed",
+      "evidence": "confirmed-on-chain",
+      "tokenId": "12",
+      "dependencyId": "10"
+    },
+    {
+      "at": "2026-06-06T12:06:56.049Z",
+      "name": "parent link to another wallet token fails",
+      "status": "passed",
+      "evidence": "confirmed-on-chain",
+      "expected": "mint-single-tx-with-relationships rejects parent tokens not owned by tx-sender."
+    },
+    {
+      "at": "2026-06-06T12:07:27.499Z",
+      "name": "parent link to owned token succeeds and relationship lists remain separate",
+      "status": "passed",
+      "evidence": "confirmed-on-chain",
+      "tokenId": "13",
+      "parentId": "11"
+    },
+    {
+      "at": "2026-06-06T12:09:31.790Z",
+      "name": "migration from v2.1.0",
+      "status": "passed",
+      "evidence": "confirmed-on-chain",
+      "tokenId": "9000",
+      "hash": "fb868d1784406fa2270c850fe0aa2aa94924e7864451fd69743417d98fe3268f"
+    },
+    {
+      "at": "2026-06-06T12:12:07.171Z",
+      "name": "migration from v2.1.1",
+      "status": "passed",
+      "evidence": "confirmed-on-chain",
+      "tokenId": "9010",
+      "hash": "564aff3192363aa9dead0250230d895d1015c3bb15cfc85a90a68894c9bf897b"
+    },
+    {
+      "at": "2026-06-06T12:12:38.096Z",
+      "name": "duplicate migration rejected",
+      "status": "passed",
+      "evidence": "confirmed-on-chain",
+      "expected": "Second migrate-from-v2-1-x call for the same token id fails."
+    }
+  ],
   "reconstruction": [],
   "warnings": [
     "Fresh deployment mode: ignoring XTRATA_TESTNET_CONTRACT_ADDRESS and using the rotated deployer address as the contract namespace.",
     "Clarinet deployment remains the preferred path for source/trait selection. This script deploy mode uses contracts/other testnet variants when --broadcast is supplied."
   ],
   "failures": [
-    "Transaction 4bcc1cf4b7bf1de1ab2d8b0af3eb077b70affd63fe6e36446c935ea973f75fb6 failed: abort_by_response (err none)"
+    "RuntimeCheck(CostBalanceExceeded(ExecutionCost { write_length: 0, write_count: 0, read_length: 103515, read_count: 8, runtime: 25767317 }, ExecutionCost { write_length: 0, write_count: 0, read_length: 100000, read_count: 30, runtime: 1000000000 }))"
   ],
   "recommendation": "not ready"
 }

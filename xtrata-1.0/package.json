@@ -39,6 +39,7 @@
     "testnet:v3.2.1:fresh-rehearsal": "node scripts/testnet-v3.2.1-rehearsal.mjs fresh-rehearsal",
     "testnet:v3.2.1:remaining": "node scripts/testnet-v3.2.1-rehearsal.mjs remaining",
     "testnet:v3.2.1:reconstruct": "node scripts/testnet-v3.2.1-rehearsal.mjs reconstruct",
+    "testnet:v3.2.1:resume-reconstruct": "node scripts/testnet-v3.2.1-rehearsal.mjs resume-reconstruct",
     "testnet:v3.2.1:report": "node scripts/testnet-v3.2.1-rehearsal.mjs report",
     "testnet:v3.2.1:rehearsal": "node scripts/testnet-v3.2.1-rehearsal.mjs rehearsal",
     "test:contracts": "npm run contracts:sync && npm run contracts:verify",
