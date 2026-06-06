@@ -112,7 +112,7 @@ v3.2 separates upload payload limits from general list limits:
 - General list limit: `MAX-GENERAL-LIST-SIZE = u50`.
 - Seal batch/read/purge style list limit: `MAX-SEAL-BATCH-SIZE = u50`.
 
-The Clarity ABI still accepts `(list 50 (buff 16384))` for some upload-style calls so existing call construction remains straightforward, but runtime assertions reject actual upload payloads above 32 chunks. This keeps the public type shape broad enough for compatibility and tests while enforcing the v3.2 payload cap inside the contract.
+Upload-style chunk arguments are typed as `(list 32 (buff 16384))`. This makes the 32-chunk cap visible at the ABI boundary instead of relying only on runtime assertions. The runtime checks remain in place as defensive validation.
 
 The value 50 remains only where it does not create upload payload size risk:
 
@@ -122,7 +122,9 @@ The value 50 remains only where it does not create upload payload size risk:
 - Read chunk batches.
 - Purge chunk index batches.
 
-Actual chunk upload payloads cannot exceed 32 chunks.
+Actual chunk upload payloads cannot exceed 32 chunks at either the ABI boundary or runtime.
+
+The earlier broad upload ABI was not retained. For a new v3.2 deployment, compatibility with old call builders is less important than making the permanent contract interface accurately express the upload limit. SDKs and UI code should send at most 32 chunks per upload-style call.
 
 ## Fixed Chunk Validation
 
@@ -175,7 +177,7 @@ Lifecycle hardening includes:
 - Begin rejects invalid total-size/total-chunks shapes.
 - Begin rejects a hash that is already minted.
 - Add batch rejects missing or expired upload state.
-- Add batch rejects payloads above 32 chunks.
+- Add batch accepts at most 32 chunks at the ABI boundary and keeps a defensive runtime cap.
 - Add batch rejects non-contiguous chunk indexes by deriving indexes from `next-index`.
 - Add batch validates each chunk length against its expected position.
 - Seal verifies all chunks are present by requiring `next-index == total-chunks`.
@@ -329,6 +331,36 @@ Dependencies and parents are intentionally simple:
 
 This preserves simple relationship proof without turning the core into graph infrastructure.
 
+## Unmigrated v1/v2 Parent Compatibility
+
+The current v3.2 candidate does not allow unmigrated v1 or v2 inscriptions to be used as core parent inscriptions. Its `parents` field is `(list 50 uint)`, and those IDs are interpreted only inside the v3.2 NFT namespace. That means parent ID `u7` means v3.2 token `u7`, not v1 token `u7` or v2 token `u7`.
+
+This is intentional in the current minimal model because it keeps parent validation cheap and unambiguous:
+
+- Parent existence is checked against v3.2 state.
+- Parent ownership is checked with v3.2 `get-owner`.
+- Parent storage stays compact.
+- Read-only helpers and events do not need a cross-contract reference schema.
+
+The existing v1 and v2 contracts do expose enough read-only surface to make cross-version validation possible in principle, especially `get-owner`, `get-token-uri`, `get-inscription-meta`, `get-chunk`, `get-dependencies`, and `is-inscription-sealed`. But supporting unmigrated v1/v2 parents safely would require a different parent reference model. A bare uint is not enough because token IDs collide across contracts.
+
+A safe core design would need versioned or contract-qualified parent references, for example:
+
+```text
+{ source-contract: principal, source-id: uint }
+```
+
+or a smaller enum-like source code for known Xtrata contracts plus the old token ID. The contract would then need static validation paths for each supported live contract, ownership checks against the old NFT, updated events, updated read-only helpers, duplicate detection across qualified references, and tests for every supported source.
+
+Trade-off:
+
+- Keeping parents v3-only is the smallest and safest core.
+- Requiring migration makes old inscriptions usable as v3 parents while preserving one parent namespace.
+- Allowing unmigrated v1/v2 parents is better for existing collections but expands the core ABI and permanent state model.
+- A manifest or resolver can refer to old parent inscriptions without migration today, but that is not the same as an on-chain v3 parent relationship with ownership gating.
+
+Recommendation: do not overload the existing `parents (list 50 uint)` field. If unmigrated v1/v2 parent support is a product requirement, add a separate explicitly named cross-version parent path and store contract-qualified parent refs. That change should happen before testnet, because changing the parent schema after deployment would be painful.
+
 ## Migration
 
 The candidate supports migration from:
@@ -377,8 +409,8 @@ Tests: 10 passed.
 
 npm run test:report -- xtrata-v3.2.0.test.ts
 Result: pass
-Suites: 22 passed, 2 skipped.
-Tests: 165 passed, 35 skipped.
+Suites: 23 passed, 2 skipped.
+Tests: 185 passed, 35 skipped.
 ```
 
 The two skipped suites are stale v3.1 draft suites whose contracts are intentionally absent from the current Clarinet manifest. They were marked skipped instead of restoring draft contracts because this task explicitly treats those drafts as outside the v3.2 direction.
@@ -397,7 +429,7 @@ The v3.2 tests cover:
 - Exact 512 KiB single-transaction file.
 - Rejection of single-transaction files above one upload batch.
 - Exact 32-chunk staged upload batch.
-- Rejection of upload batches above 32 chunks.
+- ABI/type-level rejection of upload-style chunk lists above 32 chunks.
 - Partial final chunk.
 - Invalid chunk count.
 - Too-small non-final chunk.
@@ -420,7 +452,7 @@ Oversized chunk payloads above 16 KiB are rejected by Clarity type checking beca
 
 ## Measured Cost Rows
 
-`costs-reports.json` includes 77 v3.2 rows after the local test report. Selected max measured rows:
+`costs-reports.json` includes 75 v3.2.0 rows after the local test report. Selected max measured rows:
 
 | Method | Max runtime | Max write length | Max write count | Max read length | Max read count |
 |---|---:|---:|---:|---:|---:|
@@ -529,4 +561,3 @@ I could not verify live wallet behavior, real mainnet mining fees, or production
 Testnet readiness: yes, after human source review. The contract compiles locally, targeted tests pass, full local test report passes, and the core fixed-16-KiB behavior is covered.
 
 Mainnet readiness: not yet. The candidate is suitable for testnet validation and external audit, but mainnet deployment should wait for human contract review, real wallet testing, migration rehearsal, resolver validation, and fee review against current live receipts.
-

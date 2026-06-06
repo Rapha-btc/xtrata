@@ -83,7 +83,7 @@
 (define-constant MAX-TOTAL-SIZE (* MAX-TOTAL-CHUNKS CHUNK-SIZE))
 
 ;; Fee bounds (microSTX): 0.001 STX .. 1.0 STX
-(define-constant FEE-MIN u1000)
+(define-constant FEE-MIN u1)
 (define-constant FEE-MAX u1000000)
 
 ;; Upload expiry (~30 days at 10-min block cadence)

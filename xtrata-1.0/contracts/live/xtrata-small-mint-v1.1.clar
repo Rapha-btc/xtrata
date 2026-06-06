@@ -1,9 +1,9 @@
 ;; xtrata-small-mint-v1.1
 ;;
 ;; Small-file helper for xtrata-v3.2.1.
-;; - Exposes a one-call write path for <= 32 chunks.
+;; - Exposes a one-call write path for <= 30 chunks.
 ;; - Internally runs begin-or-get -> add-chunk-batch -> seal in one transaction.
-;; - Uses the v3.2.1 list-32 upload ABI.
+;; - Uses the v3.2.1 list-32 upload ABI with a helper-side policy cap of 30.
 ;; - Hash lookup is advisory only; duplicate hashes can mint new token IDs.
 
 (define-constant ERR-NOT-AUTHORIZED (err u100))
@@ -12,7 +12,7 @@
 (define-constant ERR-INVALID-CORE-CONTRACT (err u103))
 
 (define-constant CHUNK-SIZE u16384)
-(define-constant MAX-SMALL-CHUNKS u32)
+(define-constant MAX-SMALL-CHUNKS u30)
 
 ;; Default core target. Owner can update this for local/testnet/mainnet as needed.
 (define-constant DEFAULT-XTRATA-CONTRACT 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v3-2-1)

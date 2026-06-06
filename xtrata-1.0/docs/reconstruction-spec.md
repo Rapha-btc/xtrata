@@ -148,6 +148,21 @@ provide a larger `batchSize`. If a batch still triggers `CostBalanceExceeded`,
 the runtime splits that read; Cloudflare subrequest quota exhaustion is terminal
 and must not fan out into individual chunk reads.
 
+For large v3.2.1 reconstructions, resolvers should prefer direct node map-entry
+reads for stored data when available:
+
+- `InscriptionMeta`
+- `TokenURIs`
+- `MigrationSource`
+- `Chunks`
+
+The final v3.2.1 testnet rehearsal verified a 33-chunk / 540,672-byte token by
+following these map entries directly. Heavy read-only calls such as
+`get-inscription-summary` or large `get-chunk-batch` requests can exceed public
+node `read_length` budgets even when the underlying data is valid. SDK and
+runtime callers must treat read-only helpers as convenience APIs, not as a
+guaranteed whole-token reconstruction surface for large files.
+
 Production readiness checks after a runtime deployment should include:
 
 - purge the target token from runtime cache using the protected

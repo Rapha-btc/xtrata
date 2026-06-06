@@ -53,6 +53,11 @@ function unwrapUInt(result: any) {
   return result.value as bigint;
 }
 
+function unwrapSome(result: any) {
+  expect(result.type).toBe(ClarityType.OptionalSome);
+  return result.value;
+}
+
 function unwrapMintTokenId(result: any) {
   const tuple = unwrapOk(result);
   expect(tuple.type).toBe(ClarityType.Tuple);
@@ -101,6 +106,19 @@ function addBatch(target: string, sender: string, hash: string, chunksHex: strin
     [Cl.bufferFromHex(hash), Cl.list(chunksHex.map((chunk) => Cl.bufferFromHex(chunk)))],
     sender
   ).result;
+}
+
+function readUploadState(hash: string, sender: string) {
+  const state = unwrapSome(
+    simnet.callReadOnlyFn(
+      contract,
+      'get-upload-state',
+      [Cl.bufferFromHex(hash), Cl.standardPrincipal(sender)],
+      deployer
+    ).result
+  );
+  expect(state.type).toBe(ClarityType.Tuple);
+  return state.value;
 }
 
 function expectAbiFailureOrErr(call: () => unknown, errCode: number) {
@@ -447,25 +465,109 @@ describe('xtrata-v3.2.1 fixed 16 KiB core', () => {
     expectAbiFailureOrErr(() => mintSingle(wallet2, thirtyThree, 'data:text/plain,oversized').result, 102);
   });
 
-  it('mints through the v3.2.1 small-mint helper using the list 32 upload ABI', () => {
+  it('resumes a staged upload without charging a second begin fee or resetting current-index', () => {
+    unwrapOk(setPaused(contract, false));
+    unwrapOk(
+      simnet.callPublicFn(
+        contract,
+        'set-royalty-recipient',
+        [Cl.standardPrincipal(wallet2)],
+        deployer
+      ).result
+    );
+
+    const chunks = Array.from({ length: 33 }, (_, index) => fullChunk(0x9a + index));
+    const hash = computeFinalHash(chunks);
+
+    const beforeBegin = stxBalance(wallet2);
+    unwrapOk(begin(contract, wallet1, hash, chunks));
+    const afterBegin = stxBalance(wallet2);
+    expect(afterBegin - beforeBegin).toBe(100_000n);
+
+    unwrapOk(addBatch(contract, wallet1, hash, chunks.slice(0, 32)));
+    let uploadState = readUploadState(hash, wallet1);
+    expect(uploadState['mime-type']).toStrictEqual(Cl.stringAscii(mime));
+    expect(uploadState['total-size']).toStrictEqual(Cl.uint(totalSize(chunks)));
+    expect(uploadState['total-chunks']).toStrictEqual(Cl.uint(33));
+    expect(uploadState['current-index']).toStrictEqual(Cl.uint(32));
+
+    const beforeResume = stxBalance(wallet2);
+    unwrapOk(begin(contract, wallet1, hash, chunks));
+    const afterResume = stxBalance(wallet2);
+    expect(afterResume - beforeResume).toBe(0n);
+    uploadState = readUploadState(hash, wallet1);
+    expect(uploadState['mime-type']).toStrictEqual(Cl.stringAscii(mime));
+    expect(uploadState['total-size']).toStrictEqual(Cl.uint(totalSize(chunks)));
+    expect(uploadState['total-chunks']).toStrictEqual(Cl.uint(33));
+    expect(uploadState['current-index']).toStrictEqual(Cl.uint(32));
+
+    unwrapOk(addBatch(contract, wallet1, hash, chunks.slice(32)));
+    expect(seal(contract, wallet1, hash, 'data:text/plain,resumed-staged-upload'))
+      .toBeOk(Cl.uint(0));
+    expect(simnet.callReadOnlyFn(contract, 'get-inscription-chunks', [Cl.uint(0)], deployer).result)
+      .toBeSome(Cl.uint(33));
+  });
+
+  it('rejects staged resume attempts with mismatched file metadata without mutating upload state', () => {
+    unwrapOk(setPaused(contract, false));
+    unwrapOk(
+      simnet.callPublicFn(
+        contract,
+        'set-royalty-recipient',
+        [Cl.standardPrincipal(wallet2)],
+        deployer
+      ).result
+    );
+
+    const chunks = [fullChunk(0xba), fullChunk(0xbb), byteHex(0xbc, 7)];
+    const hash = computeFinalHash(chunks);
+
+    unwrapOk(begin(contract, wallet1, hash, chunks));
+    unwrapOk(addBatch(contract, wallet1, hash, [chunks[0]]));
+    const beforeBadResume = stxBalance(wallet2);
+
+    expect(beginWithShape(contract, wallet1, hash, totalSize(chunks) + 1, chunks.length))
+      .toBeErr(Cl.uint(102));
+    expect(beginWithShape(contract, wallet1, hash, totalSize(chunks), chunks.length + 1))
+      .toBeErr(Cl.uint(102));
+    const afterBadResume = stxBalance(wallet2);
+    expect(afterBadResume - beforeBadResume).toBe(0n);
+
+    const uploadState = readUploadState(hash, wallet1);
+    expect(uploadState['mime-type']).toStrictEqual(Cl.stringAscii(mime));
+    expect(uploadState['total-size']).toStrictEqual(Cl.uint(totalSize(chunks)));
+    expect(uploadState['total-chunks']).toStrictEqual(Cl.uint(3));
+    expect(uploadState['current-index']).toStrictEqual(Cl.uint(1));
+
+    unwrapOk(begin(contract, wallet1, hash, chunks));
+    unwrapOk(addBatch(contract, wallet1, hash, chunks.slice(1)));
+    expect(seal(contract, wallet1, hash, 'data:text/plain,metadata-resume-safe'))
+      .toBeOk(Cl.uint(0));
+  });
+
+  it('mints through the v3.2.1 small-mint helper with list 32 ABI and policy cap 30', () => {
     unwrapOk(setPaused(contract, false));
     unwrapOk(setHelperCoreContract());
     unwrapOk(setPaused(helperContract, false));
 
     expect(simnet.callReadOnlyFn(helperContract, 'get-max-small-chunks', [], deployer).result)
-      .toBeOk(Cl.uint(32));
+      .toBeOk(Cl.uint(30));
 
-    const exactHelperBatch = Array.from({ length: 32 }, (_, index) => fullChunk(0x60 + index));
+    const exactHelperBatch = Array.from({ length: 30 }, (_, index) => fullChunk(0x60 + index));
     const hash = computeFinalHash(exactHelperBatch);
-    const result = mintHelperSmall(wallet1, exactHelperBatch, 'data:text/plain,helper-32');
+    const result = mintHelperSmall(wallet1, exactHelperBatch, 'data:text/plain,helper-30');
 
     expect(result.result).toBeOk(Cl.tuple({ 'token-id': Cl.uint(0), existed: Cl.bool(false) }));
     expect(simnet.callReadOnlyFn(contract, 'get-inscription-chunks', [Cl.uint(0)], deployer).result)
-      .toBeSome(Cl.uint(32));
+      .toBeSome(Cl.uint(30));
     expect(simnet.callReadOnlyFn(contract, 'get-id-by-hash', [Cl.bufferFromHex(hash)], deployer).result)
       .toBeSome(Cl.uint(0));
     expect(simnet.callReadOnlyFn(contract, 'get-token-uri', [Cl.uint(0)], deployer).result)
-      .toBeOk(Cl.some(Cl.stringAscii('data:text/plain,helper-32')));
+      .toBeOk(Cl.some(Cl.stringAscii('data:text/plain,helper-30')));
+
+    const overPolicyBatch = Array.from({ length: 31 }, (_, index) => fullChunk(0x80 + index));
+    expect(mintHelperSmall(wallet1, overPolicyBatch, 'data:text/plain,helper-31').result)
+      .toBeErr(Cl.uint(102));
   });
 
   it('reconstructs a 33-chunk staged file uploaded as 32 plus 1 batches', () => {

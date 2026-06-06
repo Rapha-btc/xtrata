@@ -201,6 +201,41 @@ Source: `contracts/live/xtrata-small-mint-v1.0.clar`
 - `get-core-contract()`
 - `get-max-small-chunks()`
 
+## xtrata-small-mint-v1.1
+
+Source: `contracts/live/xtrata-small-mint-v1.1.clar`
+
+## Purpose
+- Optional small-file mint helper for `xtrata-v3.2.1`.
+- Targets `xtrata-v3.2.1` by default, with owner-configurable core contract.
+- Keeps the v3.2.1 list-32 chunk payload ABI but enforces the first-party
+  helper policy cap of `<= 30` chunks.
+
+## Core Behavior
+- One-call path runs `begin-or-get -> add-chunk-batch -> seal` in a single tx.
+- `HashToId` is advisory in v3.2.1, so duplicate same-hash helper mints should
+  mint new token IDs rather than returning an existing canonical ID.
+- Recursive sealing is supported through `mint-small-single-tx-recursive`.
+- Core protocol fees and core pause semantics still apply.
+
+## Constants
+- `CHUNK-SIZE` -> `u16384`
+- `MAX-SMALL-CHUNKS` -> `u30`
+- `DEFAULT-XTRATA-CONTRACT` -> default v3.2.1 core principal
+
+## Public Functions
+- `mint-small-single-tx(xtrata-contract, expected-hash, mime, total-size, chunks, token-uri-string)`
+- `mint-small-single-tx-recursive(xtrata-contract, expected-hash, mime, total-size, chunks, token-uri-string, dependencies)`
+- `set-paused(value)`
+- `set-core-contract(new-core)`
+- `transfer-contract-ownership(new-owner)`
+
+## Read-Only Functions
+- `get-owner()`
+- `is-paused()`
+- `get-core-contract()`
+- `get-max-small-chunks()`
+
 ## xtrata-backup-registry-v1.0 (Clarinet prototype)
 
 Source: `contracts/clarinet/contracts/xtrata-backup-registry-v1.0.clar`

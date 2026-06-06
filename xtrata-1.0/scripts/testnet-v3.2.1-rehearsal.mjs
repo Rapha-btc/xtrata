@@ -19,11 +19,13 @@ import {
   contractPrincipalCV,
   cvToJSON,
   getAddressFromPrivateKey,
+  getContractMapEntry,
   listCV,
   makeContractCall,
   makeContractDeploy,
   principalCV,
   stringAsciiCV,
+  tupleCV,
   uintCV
 } from '@stacks/transactions';
 
@@ -37,7 +39,6 @@ const latestEnvPath = path.join(reportsDir, 'testnet-v3.2.1-latest-env.sh');
 const CHUNK_SIZE = 16_384;
 const CORE_UPLOAD_LIMIT = 32;
 const APP_HELPER_POLICY_LIMIT = 30;
-const RECONSTRUCT_READ_BATCH_SIZE = 6;
 const DEFAULT_API_URL = 'https://api.testnet.hiro.so';
 const MIME = 'application/octet-stream';
 const DEFAULT_TOKEN_URI = 'data:text/plain,xtrata-v3.2.1-testnet-rehearsal';
@@ -658,6 +659,44 @@ const readOptionalUInt = async (ctx, contractName, functionName, functionArgs, s
   return BigInt(value.value);
 };
 
+const mapEntry = async (ctx, contractName, mapName, mapKey) => {
+  const result = await getContractMapEntry({
+    contractAddress: ctx.contractAddress,
+    contractName,
+    mapName,
+    mapKey,
+    network: ctx.network
+  });
+  const json = cvToJSON(result);
+  ctx.report.readOnly.push({
+    at: nowIso(),
+    mode: 'map-entry',
+    contract: contractId(ctx.contractAddress, contractName),
+    mapName,
+    result: json
+  });
+  return json;
+};
+
+const unwrapOptionalMapValue = (json, label) => {
+  if (!json || json.value === null || json.value === undefined) {
+    throw new Error(`Missing map entry for ${label}.`);
+  }
+  return json.value;
+};
+
+const tupleValue = (json) => json?.value ?? json;
+
+const fieldValue = (tupleJson, name) => tupleValue(tupleJson)?.[name]?.value;
+
+const contractNameFromPrincipal = (principal) => {
+  const parts = String(principal).split('.');
+  if (parts.length < 2) {
+    throw new Error(`Expected contract principal, got ${principal}.`);
+  }
+  return parts[parts.length - 1];
+};
+
 const directMint = async (ctx, keyName, bytes, tokenUri, relationships = null) => {
   const chunks = chunkBytes(bytes);
   const expectedHash = rollingHash(chunks);
@@ -840,27 +879,36 @@ const reconstructToken = async (ctx, token) => {
     return;
   }
 
-  const summary = await readOnly(
-    ctx,
-    'xtrata-v3-2-1',
-    'get-inscription-summary',
-    [uintCV(token.tokenId)],
-    ctx.contractAddress
-  );
+  const v3MetaEntry = await mapEntry(ctx, 'xtrata-v3-2-1', 'InscriptionMeta', uintCV(token.tokenId));
+  const v3Meta = unwrapOptionalMapValue(v3MetaEntry, `xtrata-v3-2-1.InscriptionMeta ${token.tokenId}`);
+  const tokenUri = await mapEntry(ctx, 'xtrata-v3-2-1', 'TokenURIs', uintCV(token.tokenId));
+  const migrationSourceEntry = await mapEntry(ctx, 'xtrata-v3-2-1', 'MigrationSource', uintCV(token.tokenId));
+  const migrationSource = migrationSourceEntry?.value ? migrationSourceEntry.value : null;
+  const sourceContractName = migrationSource
+    ? contractNameFromPrincipal(fieldValue(migrationSource, 'source-contract'))
+    : 'xtrata-v3-2-1';
+  const sourceTokenId = migrationSource ? BigInt(fieldValue(migrationSource, 'source-id')) : BigInt(token.tokenId);
+  const sourceMeta = migrationSource
+    ? unwrapOptionalMapValue(
+        await mapEntry(ctx, sourceContractName, 'InscriptionMeta', uintCV(sourceTokenId)),
+        `${sourceContractName}.InscriptionMeta ${sourceTokenId}`
+      )
+    : v3Meta;
+  const chunkContext = fieldValue(sourceMeta, 'final-hash');
+  const chunkCreator = fieldValue(sourceMeta, 'creator');
   const chunkHexValues = [];
-  for (let start = 0; start < token.chunkCount; start += RECONSTRUCT_READ_BATCH_SIZE) {
-    const indexes = Array.from(
-      { length: Math.min(RECONSTRUCT_READ_BATCH_SIZE, token.chunkCount - start) },
-      (_, offset) => uintCV(start + offset)
-    );
-    const chunkBatch = await readOnly(
+  for (let index = 0; index < token.chunkCount; index += 1) {
+    const chunkEntry = await mapEntry(
       ctx,
-      'xtrata-v3-2-1',
-      'get-chunk-batch',
-      [uintCV(token.tokenId), listCV(indexes)],
-      ctx.contractAddress
+      sourceContractName,
+      'Chunks',
+      tupleCV({
+        context: bufferCV(Buffer.from(String(chunkContext).replace(/^0x/, ''), 'hex')),
+        creator: principalCV(chunkCreator),
+        index: uintCV(index)
+      })
     );
-    chunkHexValues.push(...(chunkBatch?.value ?? []).map((entry) => entry?.value?.value ?? entry?.value));
+    chunkHexValues.push(unwrapOptionalMapValue(chunkEntry, `${sourceContractName}.Chunks ${sourceTokenId}/${index}`).value);
   }
   const rebuilt = Buffer.concat(
     chunkHexValues.map((chunkHexValue) => Buffer.from(String(chunkHexValue).replace(/^0x/, ''), 'hex'))
@@ -872,9 +920,10 @@ const reconstructToken = async (ctx, token) => {
 
   ctx.report.reconstruction.push({
     tokenId: token.tokenId.toString(),
-    summary,
-    readMode: 'get-chunk-batch',
-    readBatchSize: RECONSTRUCT_READ_BATCH_SIZE,
+    meta: v3MetaEntry,
+    tokenUri,
+    migrationSource,
+    readMode: 'map-entry',
     expectedBytes: token.size,
     actualBytes: rebuiltBytes.length,
     expectedChunks: token.chunkCount,
@@ -1001,11 +1050,12 @@ const runSmoke = async (ctx) => {
     chunkCount: helperMax.chunkCount,
     hash: helperMax.hashHex
   });
-  const helperOversizedBytes = makeCasePayload(33, 0x66);
+  const helperOversizedChunksCount = APP_HELPER_POLICY_LIMIT + 1;
+  const helperOversizedBytes = makeCasePayload(helperOversizedChunksCount, 0x66);
   const helperOversizedChunks = chunkBytes(helperOversizedBytes);
   await callContractExpectFailure(
     ctx,
-    'helper oversized 33 chunks expected failure',
+    `helper oversized ${helperOversizedChunksCount} chunks expected failure`,
     'walletA',
     'xtrata-small-mint-v1-1',
     'mint-small-single-tx',
@@ -1015,11 +1065,11 @@ const runSmoke = async (ctx) => {
       stringAsciiCV(MIME),
       uintCV(helperOversizedBytes.length),
       listCV(helperOversizedChunks.map((chunk) => bufferCV(chunk))),
-      stringAsciiCV(`${DEFAULT_TOKEN_URI},helper-oversized-33`)
+      stringAsciiCV(`${DEFAULT_TOKEN_URI},helper-oversized-${helperOversizedChunksCount}`)
     ]
   );
-  addCase(ctx, 'helper oversized 33 chunks rejected', 'passed', {
-    expected: 'Rejected because helper contract ABI is list 32; official app policy remains 30.'
+  addCase(ctx, `helper oversized ${helperOversizedChunksCount} chunks rejected`, 'passed', {
+    expected: `Rejected because helper policy cap is ${APP_HELPER_POLICY_LIMIT} chunks while the core ABI remains list 32.`
   });
 
   const staged33 = await stagedMint(ctx, 'walletA', makeCasePayload(33, 0x07), `${DEFAULT_TOKEN_URI},staged-33`, 32);
@@ -1285,7 +1335,7 @@ const runResumeReconstruct = async (ctx) => {
 
   addCase(ctx, 'resume reconstruction with safe read batches', 'passed', {
     evidence: ctx.report.mode === 'broadcast' ? 'confirmed-on-chain' : 'dry-run-planned',
-    expected: `Reconstructed previous staged and migrated tokens with get-chunk-batch groups of ${RECONSTRUCT_READ_BATCH_SIZE}.`
+    expected: 'Reconstructed previous staged and migrated tokens through direct map-entry reads.'
   });
 };
 

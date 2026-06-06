@@ -1,6 +1,6 @@
 # Xtrata v3.2.1 Testnet Rehearsal
 
-Generated: 2026-06-06T11:49:10.276Z
+Generated: 2026-06-06T13:04:05.378Z
 
 ## Summary
 
@@ -10,7 +10,7 @@ Generated: 2026-06-06T11:49:10.276Z
 - Hiro API key: configured
 - Deployer: ST30X7KJ5R4ZKTG5FBS5RQTH3CC3DNNDP99XRWFE8
 - Contract address: ST30X7KJ5R4ZKTG5FBS5RQTH3CC3DNNDP99XRWFE8
-- Recommendation: not ready
+- Recommendation: ready for mainnet
 
 ## Contracts
 
@@ -102,12 +102,14 @@ npm run testnet:v3.2.1:rehearsal -- --broadcast
 | migration from v2.1.0 | passed | token 9000; evidence confirmed-on-chain |
 | migration from v2.1.1 | passed | token 9010; evidence confirmed-on-chain |
 | duplicate migration rejected | passed | Second migrate-from-v2-1-x call for the same token id fails.; evidence confirmed-on-chain |
+| resume reconstruction with safe read batches | passed | Reconstructed previous staged and migrated tokens through direct map-entry reads.; evidence confirmed-on-chain |
 
 ## Reconstruction
 
 | Token | Status | Bytes | Chunks | Verified | Cache |
 |---|---|---:|---:|---|---|
-
+| 6 |  | 540672 | 33 | true | No testnet resolver cache adapter is configured in this CLI rehearsal. |
+| 9000 |  | 91 | 1 | true | No testnet resolver cache adapter is configured in this CLI rehearsal. |
 
 ## Warnings
 
@@ -116,4 +118,4 @@ npm run testnet:v3.2.1:rehearsal -- --broadcast
 
 ## Failures
 
-- RuntimeCheck(CostBalanceExceeded(ExecutionCost { write_length: 0, write_count: 0, read_length: 103515, read_count: 8, runtime: 25767317 }, ExecutionCost { write_length: 0, write_count: 0, read_length: 100000, read_count: 30, runtime: 1000000000 }))
+- None

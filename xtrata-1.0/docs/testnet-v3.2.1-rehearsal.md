@@ -164,7 +164,7 @@ The script records Markdown and JSON reports under:
 Covered paths:
 
 - direct single-call mint: 1 byte, 1 full chunk, 30 chunks, 32 chunks
-- small-mint helper: 1 byte, 30 chunks, expected rejection for 33 chunks
+- small-mint helper: 1 byte, 30 chunks, expected rejection for 31 chunks
 - staged upload: 33 chunks as 32 + 1, 64 chunks as 32 + 32
 - advisory dedupe: wallet A and wallet B mint identical bytes; `get-id-by-hash` should remain first-seen
 - relationship split: dependency on another wallet succeeds, parent link to another wallet fails, parent link to owned token succeeds

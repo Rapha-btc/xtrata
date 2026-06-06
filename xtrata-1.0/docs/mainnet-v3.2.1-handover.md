@@ -1,7 +1,7 @@
 # Xtrata v3.2.1 Mainnet Handover Runbook
 
 This runbook defines the controlled mainnet handover from the current live
-Xtrata core line to `xtrata-v3.2.1` and `xtrata-small-mint-v1.1`.
+Xtrata core line to the core `xtrata-v3.2.1` contract.
 
 The goal is to keep the process automated and repeatable while requiring
 explicit operator approval before any mainnet write transaction is broadcast.
@@ -12,7 +12,15 @@ Target contracts:
 
 - Current live core: `SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-1`
 - New core: `SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v3-2-1`
-- New small-mint helper: `SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-small-mint-v1-1`
+
+Deployment/admin signer:
+
+- Wallet: `Xtrata.btc` in Xverse
+- Address: `SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X`
+
+Mainnet signing must be performed through Xverse wallet prompts. The mainnet
+handover must not require pasting the `Xtrata.btc` seed phrase, mnemonic,
+private key, or encrypted mnemonic into terminal or repo files.
 
 If the live source of truth changes before launch, update these contract IDs in
 the runbook and the automation config before running any broadcast step.
@@ -21,7 +29,8 @@ the runbook and the automation config before running any broadcast step.
 
 - `xtrata-v3.2.1` uses fixed 16 KiB chunks.
 - Core upload payload ABI supports `(list 32 (buff 16384))`.
-- App/helper policy may continue to cap normal upload batches at 30 chunks.
+- App tooling may keep a 30 chunk practical policy for wallet and RPC safety;
+  the core upload ABI remains `(list 32 (buff 16384))`.
 - `HashToId` is advisory first-seen lookup only.
 - Duplicate same-hash mints are allowed and should mint distinct token IDs.
 - Parents and dependencies remain separate relationship concepts.
@@ -34,10 +43,10 @@ the runbook and the automation config before running any broadcast step.
 Mainnet automation must support three modes:
 
 1. `plan`: read-only preflight and report generation.
-2. `stage`: build and display unsigned/signed transaction intents, but do not
-   broadcast.
-3. `broadcast`: send transactions only when the operator supplies an explicit
-   confirmation flag.
+2. `stage`: build and display wallet transaction intents, but do not request
+   Xverse signatures.
+3. `broadcast`: request one Xverse signature at a time only when the operator
+   supplies an explicit confirmation flag.
 
 The broadcast command must refuse to run unless all of these are true:
 
@@ -46,7 +55,8 @@ The broadcast command must refuse to run unless all of these are true:
 - Network is mainnet.
 - Contract principals match the approved mainnet targets.
 - Admin/deployer address matches the expected contract owner.
-- Helper owner-only setup calls are expected to be sent by the approved admin.
+- Connected Xverse address is
+  `SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X`.
 - v3.2.1 has no native mints before `set-next-id` when continuity is enabled.
 - A fresh preflight report was generated in the same run.
 
@@ -82,16 +92,6 @@ New v3.2.1 core:
 - `get-upload-batch-fee-unit`
 - `get-seal-fee-unit`
 - `get-single-tx-fee-unit`
-
-Small-mint helper:
-
-- `is-paused`
-- `get-core-contract`
-
-The helper does not expose `get-admin`. The automation must not invent that
-read. Instead, it should report the expected helper operator and verify helper
-control by staging owner-only setup calls. `ERR-NOT-AUTHORIZED` on helper setup
-is a hard failure.
 
 The report must include raw read results and normalized interpretations.
 
@@ -131,34 +131,31 @@ reason in the report.
 
 The intended write sequence is:
 
-1. Pause the current live core:
+1. Deploy `xtrata-v3-2-1` from `contracts/live/xtrata-v3.2.1.clar` through
+   Xverse, unless already deployed and source-hash verified.
+
+2. Pause the current live core:
 
    ```clarity
    (contract-call? .xtrata-v2-1-1 set-paused true)
    ```
 
-2. Confirm the current live core is paused:
+3. Confirm the current live core is paused:
 
    ```clarity
    (contract-call? .xtrata-v2-1-1 is-paused)
    ```
 
-3. Set the one-shot v3.2.1 next ID, if required:
+4. Set the one-shot v3.2.1 next ID, if required:
 
    ```clarity
    (contract-call? .xtrata-v3-2-1 set-next-id u<computed-next-id>)
    ```
 
-4. Set the v3.2.1 royalty recipient:
+5. Set the v3.2.1 royalty recipient:
 
    ```clarity
    (contract-call? .xtrata-v3-2-1 set-royalty-recipient '<recipient>)
-   ```
-
-5. Confirm or set the helper core target:
-
-   ```clarity
-   (contract-call? .xtrata-small-mint-v1-1 set-core-contract 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v3-2-1)
    ```
 
 6. Unpause v3.2.1:
@@ -167,27 +164,21 @@ The intended write sequence is:
    (contract-call? .xtrata-v3-2-1 set-paused false)
    ```
 
-7. Unpause the small-mint helper:
-
-   ```clarity
-   (contract-call? .xtrata-small-mint-v1-1 set-paused false)
-   ```
-
-8. Mint the first v3.2.1 inscription using the approved announcement text:
+7. Mint the first v3.2.1 inscription using the approved announcement text:
 
    - Source: `docs/mainnet-v3.2.1-announcement-inscription.md`
    - MIME: `text/markdown`
    - Route: direct `mint-single-tx` unless final byte size exceeds the single
      transaction policy.
 
-9. Reconstruct the minted announcement inscription and verify:
+8. Reconstruct the minted announcement inscription and verify:
 
    - token ID equals the expected first v3.2.1 native ID;
    - byte reconstruction matches the local announcement file;
    - final Xtrata rolling hash matches;
    - `get-id-by-hash` returns the announcement token ID.
 
-10. Produce the final handover report.
+9. Produce the final handover report.
 
 ## Suggested Commands
 
@@ -197,6 +188,7 @@ iteration:
 ```sh
 npm run mainnet:v3.2.1:handover
 npm run mainnet:v3.2.1:handover -- --stage
+npm run mainnet:v3.2.1:handover-ui
 npm run mainnet:v3.2.1:handover -- --broadcast --confirm-mainnet-handover
 npm run mainnet:v3.2.1:report
 ```
@@ -213,13 +205,14 @@ Recommended configuration:
 ```sh
 export XTRATA_MAINNET_API_URL=https://api.hiro.so
 export XTRATA_MAINNET_HIRO_API_KEY=<hiro-api-key>
-export XTRATA_MAINNET_DEPLOYER_ADDRESS=<mainnet-admin-address>
+export XTRATA_MAINNET_DEPLOYER_ADDRESS=SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X
+export XTRATA_MAINNET_SIGNER_WALLET=Xverse
+export XTRATA_MAINNET_SIGNER_BNS=Xtrata.btc
 export XTRATA_MAINNET_ROYALTY_RECIPIENT=<mainnet-royalty-address>
 ```
 
-For write transactions, prefer the safest signing route available in the repo at
-implementation time. If a raw key or mnemonic is required, keep it terminal-only
-and use a dedicated admin wallet. Do not persist it.
+For write transactions, use Xverse wallet prompts from the local handover UI.
+Do not use raw keys or mnemonics for mainnet deployment.
 
 ## Report Output
 
@@ -231,10 +224,9 @@ The automation should write:
 The report must include:
 
 - network;
-- operator/deployer/admin address;
+- operator/deployer/admin address and connected wallet label;
 - old live core contract ID;
 - new v3.2.1 core contract ID;
-- helper contract ID;
 - preflight read results;
 - proposed and final `next-id`;
 - all transaction IDs;
@@ -257,8 +249,6 @@ The practical recovery options are:
   old core after diagnosing the failure.
 - If `set-next-id` succeeds but announcement mint fails, keep v3.2.1 paused
   until the cause is understood, then resume the handover.
-- If v3.2.1 unpauses but helper setup fails, leave core available and keep helper
-  paused until fixed.
 - If the announcement mint succeeds, treat v3.2.1 as live and continue with app,
   SDK, resolver, and documentation updates.
 
@@ -269,7 +259,7 @@ Before broadcast:
 - [ ] Testnet report says `ready for mainnet`.
 - [ ] Mainnet contract source has been synced and verified.
 - [ ] Live core contract ID is confirmed.
-- [ ] New core and helper contract IDs are confirmed.
+- [ ] New core contract ID is confirmed.
 - [ ] Admin address is confirmed.
 - [ ] Royalty recipient is confirmed.
 - [ ] Computed next ID is reviewed.
@@ -282,7 +272,6 @@ After broadcast:
 - [ ] Old live core is paused.
 - [ ] v3.2.1 has the expected next ID or first token ID.
 - [ ] v3.2.1 is unpaused.
-- [ ] Helper points to v3.2.1 and is unpaused.
 - [ ] Announcement inscription reconstructs exactly.
 - [ ] App/SDK defaults are ready to move to v3.2.1.
 - [ ] Final mainnet handover report is committed or archived.

@@ -249,20 +249,19 @@ describe('xtrata-v3.2.0 fixed 16 KiB core', () => {
     expect(addBatch(contract, wallet1, validHash, [byteHex(0x15)])).toBeErr(Cl.uint(101));
   });
 
-  it('caps actual upload batches at 32 chunks and rejects oversized single-tx attempts', () => {
+  it('caps upload chunk ABI at 32 chunks and rejects oversized single-tx attempts', () => {
     unwrapOk(setPaused(contract, false));
 
     const thirtyThree = Array.from({ length: 33 }, (_, index) => fullChunk(0x20 + index));
     const hash = computeFinalHash(thirtyThree);
     unwrapOk(begin(contract, wallet1, hash, thirtyThree));
 
-    expect(addBatch(contract, wallet1, hash, thirtyThree)).toBeErr(Cl.uint(102));
+    expect(() => addBatch(contract, wallet1, hash, thirtyThree)).toThrow();
     unwrapOk(addBatch(contract, wallet1, hash, thirtyThree.slice(0, 32)));
     unwrapOk(addBatch(contract, wallet1, hash, thirtyThree.slice(32)));
     expect(seal(contract, wallet1, hash, 'data:text/plain,thirty-three')).toBeOk(Cl.uint(0));
 
-    const singleOversized = mintSingle(wallet2, thirtyThree, 'data:text/plain,oversized');
-    expect(singleOversized.result).toBeErr(Cl.uint(102));
+    expect(() => mintSingle(wallet2, thirtyThree, 'data:text/plain,oversized')).toThrow();
   });
 
   it('mints one-byte, one-chunk, small, and exact 512 KiB files through the single-call route', () => {

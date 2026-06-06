@@ -6,7 +6,6 @@ This inscription records the mainnet handover to `xtrata-v3.2.1`.
 
 - Previous live core: `SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-1`
 - New core: `SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v3-2-1`
-- Small-mint helper: `SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-small-mint-v1-1`
 
 ## What Changed
 
@@ -17,8 +16,9 @@ Key protocol properties:
 
 - fixed 16 KiB chunks;
 - core upload payloads accept up to 32 chunks per upload batch;
-- app and helper tooling may use a 30 chunk practical policy for wallet and RPC
-  safety;
+- the core `mint-single-tx` route supports small inscriptions directly in one
+  transaction;
+- app tooling may use a 30 chunk practical policy for wallet and RPC safety;
 - duplicate same-hash content is allowed to mint new token IDs;
 - `get-id-by-hash` remains an advisory first-seen lookup;
 - parent relationships and dependency relationships remain separate;
