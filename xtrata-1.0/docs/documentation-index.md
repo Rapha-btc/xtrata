@@ -102,6 +102,9 @@ Historical SDK planning docs:
 | [`docs/contract-inventory.md`](contract-inventory.md) | Contract source/function inventory. |
 | [`docs/product-contract-ui-reference.md`](product-contract-ui-reference.md) | Product role map for core, market, commerce, vault, and collection-sale contracts. |
 | [`docs/xtrata-v3-migration-reference.md`](xtrata-v3-migration-reference.md) | v3 migration design reference. |
+| [`docs/testnet-v3.2.1-rehearsal.md`](testnet-v3.2.1-rehearsal.md) | v3.2.1 testnet deployment and rehearsal runbook. |
+| [`docs/mainnet-v3.2.1-handover.md`](mainnet-v3.2.1-handover.md) | Controlled mainnet v3.2.1 handover runbook. |
+| [`docs/mainnet-v3.2.1-automation-spec.md`](mainnet-v3.2.1-automation-spec.md) | Automation spec for the mainnet handover script. |
 | [`docs/release-notes-xtrata-v1.1.0.md`](release-notes-xtrata-v1.1.0.md) | v1.1.0 release notes. |
 
 ## Standards Docs
