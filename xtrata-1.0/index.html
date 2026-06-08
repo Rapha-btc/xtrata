@@ -3469,7 +3469,8 @@
           {
             id: 'v3-core',
             title: 'v3',
-            tokenIds: [359n, 313n, 14n]
+            tokenIds: [359n, 313n, 14n],
+            primaryOnly: true
           },
           {
             id: 'jim-music',
@@ -7559,7 +7560,9 @@ const openCuratedGallery = async (galleryId) => {
   renderTokenGridPlaceholders('...');
 
   try {
-    const summaries = await fetchWalletTokenSummaries(gallery.tokenIds);
+    const summaries = await fetchWalletTokenSummaries(gallery.tokenIds, {
+      primaryOnly: gallery.primaryOnly === true
+    });
     debugLog('grid', 'curated gallery summaries fetched', {
       viewRequestId,
       galleryId: gallery.id,
@@ -7757,11 +7760,16 @@ const openCuratedGallery = async (galleryId) => {
       };
     };
 
-    const fetchWalletTokenSummaries = async (ids) => {
+    const fetchWalletTokenSummaries = async (ids, options = {}) => {
       const startedAt = performance.now();
+      // primaryOnly: read strictly from the active (primary) contract, skipping
+      // the legacy fallback. Used by galleries whose token ids live on the
+      // primary core but fall within the legacy id range (e.g. v3 #359, which
+      // would otherwise be shadowed by the v2 token of the same id).
+      const primaryOnly = options.primaryOnly === true;
       const sender = getReadOnlySenderAddress();
       let legacyMaxId = null;
-      if (state.legacyClient) {
+      if (state.legacyClient && !primaryOnly) {
         try {
           legacyMaxId = await state.legacyClient.getLastTokenId(sender);
         } catch (error) {
@@ -7782,7 +7790,7 @@ const openCuratedGallery = async (galleryId) => {
       });
       const summaries = await runLimited(visibleIds, 4, async (id) => {
         try {
-          if (state.legacyClient) {
+          if (state.legacyClient && !primaryOnly) {
             return await fetchTokenSummaryWithFallback({
               primaryClient: state.client,
               legacyClient: state.legacyClient,
