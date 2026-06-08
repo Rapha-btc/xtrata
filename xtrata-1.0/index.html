@@ -6603,7 +6603,7 @@
           mimeType
         });
         if (options.renderGrid !== false) {
-          renderTokenGrid();
+          scheduleGridRender();
         }
         return null;
       }
@@ -6633,7 +6633,7 @@
           mimeType: thumbnail.mimeType
         });
         if (options.renderGrid !== false) {
-          renderTokenGrid();
+          scheduleGridRender();
         }
         return thumbnail;
       } catch (error) {
@@ -6912,7 +6912,7 @@
           ) {
             renderGridLiveMedia(token, thumbElement, state.gridLiveMediaCache.get(cacheKey));
           } else if (getWalletPageIds().some((id) => id === token.id)) {
-            renderTokenGrid();
+            scheduleGridRender();
           }
           debugLog('cache', 'background audio grid display ready', {
             tokenId: token.id.toString(),
@@ -6934,7 +6934,7 @@
           ) {
             renderGridLiveMedia(token, thumbElement, state.gridLiveMediaCache.get(cacheKey));
           } else if (getWalletPageIds().some((id) => id === token.id)) {
-            renderTokenGrid();
+            scheduleGridRender();
           }
           debugLog('cache', 'background video grid display ready', {
             tokenId: token.id.toString(),
@@ -6960,7 +6960,7 @@
           ) {
             renderGridLiveMedia(token, thumbElement, state.gridLiveMediaCache.get(cacheKey));
           } else if (getWalletPageIds().some((id) => id === token.id)) {
-            renderTokenGrid();
+            scheduleGridRender();
           }
           debugLog('cache', 'background html grid display ready', {
             tokenId: token.id.toString(),
@@ -6982,7 +6982,7 @@
           ) {
             renderGridLiveMedia(token, thumbElement, state.gridLiveMediaCache.get(cacheKey));
           } else if (getWalletPageIds().some((id) => id === token.id)) {
-            renderTokenGrid();
+            scheduleGridRender();
           }
           return;
         }
@@ -7006,7 +7006,7 @@
           ) {
             renderGridLiveMedia(token, thumbElement, state.gridLiveMediaCache.get(cacheKey));
           } else if (getWalletPageIds().some((id) => id === token.id)) {
-            renderTokenGrid();
+            scheduleGridRender();
           }
           debugLog('cache', 'background animated image grid display ready', {
             tokenId: token.id.toString(),
@@ -7028,7 +7028,7 @@
         ) {
           await applyCachedThumbnail(token, thumbElement);
         } else if (getWalletPageIds().some((id) => id === token.id)) {
-          renderTokenGrid();
+          scheduleGridRender();
         }
       } catch (error) {
         debugLog(
@@ -7104,6 +7104,29 @@
       });
       pumpBackgroundThumbnailHydrationQueue();
       return true;
+    };
+
+    // Coalesce hydration-triggered re-renders into one per frame. A full
+    // renderTokenGrid revokes every grid blob URL and rebuilds the DOM, which
+    // invalidates the thumbElement references held by in-flight media/thumbnail
+    // callbacks — each of which would then trigger another full render, causing
+    // a render storm and visible flicker (images briefly reverting to the mime
+    // placeholder). Scheduling collapses that cascade.
+    let gridRenderScheduled = false;
+    const scheduleGridRender = () => {
+      if (gridRenderScheduled) {
+        return;
+      }
+      gridRenderScheduled = true;
+      const run = () => {
+        gridRenderScheduled = false;
+        renderTokenGrid();
+      };
+      if (typeof requestAnimationFrame === 'function') {
+        requestAnimationFrame(run);
+      } else {
+        setTimeout(run, 16);
+      }
     };
 
     const renderTokenGrid = (options = {}) => {
