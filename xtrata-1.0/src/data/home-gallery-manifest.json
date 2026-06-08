@@ -19,10 +19,23 @@
   ],
   "tokenGalleries": [
     {
+      "id": "v3-core",
+      "title": "v3 core (xtrata-v3-2-3)",
+      "kicker": "Current live core",
+      "description": "The current Xtrata core. Includes the v3 sealing inscription and tokens migrated from earlier cores.",
+      "contractId": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v3-2-3",
+      "tokens": [
+        { "tokenId": "359", "label": "v3 sealing inscription" },
+        { "tokenId": "14", "label": "Migrated from v1 (#14)" },
+        { "tokenId": "313", "label": "Migrated from v2 (#313)" }
+      ]
+    },
+    {
       "id": "music-tools",
       "title": "On-chain music tools",
       "kicker": "Programmable media",
-      "description": "BVST instruments, patches, and shells stored as Xtrata inscriptions.",
+      "description": "BVST instruments, patches, and shells stored as Xtrata inscriptions on the v2 core.",
+      "contractId": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-0",
       "tokens": [
         { "tokenId": "237", "label": "JMS10 shell" },
         { "tokenId": "240", "label": "BVSTEngine shell" },
@@ -38,7 +51,8 @@
       "id": "reference-records",
       "title": "Reference records",
       "kicker": "History and links",
-      "description": "Catalog inscriptions that point to related modules, releases, and source-of-truth records.",
+      "description": "Catalog inscriptions that point to related modules, releases, and source-of-truth records on the v2 core.",
+      "contractId": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-0",
       "tokens": [
         { "tokenId": "244", "label": "JMS10 release" },
         { "tokenId": "245", "label": "BVSTEngine release" },
@@ -48,6 +62,23 @@
         { "tokenId": "261", "label": "MinerTwo release" },
         { "tokenId": "262", "label": "ChainPoly release" },
         { "tokenId": "265", "label": "Release catalog" }
+      ]
+    },
+    {
+      "id": "v1-origins",
+      "title": "v1 origins (xtrata-v1-1-1)",
+      "kicker": "The first core",
+      "description": "Early inscriptions on the original Xtrata core, still live and readable on-chain.",
+      "contractId": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v1-1-1",
+      "tokens": [
+        { "tokenId": "1", "label": "Inscription #1" },
+        { "tokenId": "2", "label": "Inscription #2" },
+        { "tokenId": "3", "label": "Inscription #3" },
+        { "tokenId": "4", "label": "Inscription #4" },
+        { "tokenId": "5", "label": "Inscription #5" },
+        { "tokenId": "6", "label": "Inscription #6" },
+        { "tokenId": "7", "label": "Inscription #7" },
+        { "tokenId": "8", "label": "Inscription #8" }
       ]
     }
   ]

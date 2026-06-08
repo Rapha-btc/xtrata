@@ -18,6 +18,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { PUBLIC_CONTRACT, PUBLIC_MINT_RESTRICTIONS } from './config/public';
 import CollectionCoverImage from './components/CollectionCoverImage';
 import { getContractId } from './lib/contract/config';
+import { getRegistryById } from './lib/contract/registry';
 import { createXtrataClient } from './lib/contract/client';
 import { resolveCollectionMintPaymentModel } from './lib/collection-mint/payment-model';
 import {
@@ -784,6 +785,10 @@ export default function SimplePublicHome() {
     preferredViewerTokenId
   );
   const [viewerMode, setViewerMode] = useState<ViewerMode>('collection');
+  // The viewer reads from the default public contract unless a gallery token
+  // from another core in the lineage (v1/v2) is opened, in which case it follows
+  // that gallery's contract.
+  const [viewerContract, setViewerContract] = useState<typeof PUBLIC_CONTRACT>(PUBLIC_CONTRACT);
   const [viewerCollapsed, setViewerCollapsed] = useState(false);
   const [marketCollapsed, setMarketCollapsed] = useState(true);
   const [mintCollapsed, setMintCollapsed] = useState(false);
@@ -897,6 +902,19 @@ export default function SimplePublicHome() {
       ) ?? HOME_GALLERY_MANIFEST.tokenGalleries[0] ?? null,
     [activeTokenGalleryId]
   );
+  // A gallery may target a specific contract in the lineage (v1/v2/v3); fall
+  // back to the default public contract when it doesn't or the id is unknown.
+  const galleryContract = useMemo<typeof PUBLIC_CONTRACT>(() => {
+    const id = activeTokenGallery?.contractId;
+    if (id) {
+      const entry = getRegistryById().get(id);
+      if (entry) {
+        return entry;
+      }
+    }
+    return contract;
+  }, [activeTokenGallery, contract]);
+  const galleryContractId = getContractId(galleryContract);
   const usdPriceBook = useUsdPriceBook({
     enabled: liveCollectionCards.length > 0
   }).data ?? null;
@@ -1266,6 +1284,7 @@ export default function SimplePublicHome() {
   };
 
   const handleOpenGalleryToken = (id: bigint) => {
+    setViewerContract(galleryContract);
     setViewerTokenId(id);
     setViewerMode('collection');
     setViewerCollapsed(false);
@@ -1535,8 +1554,8 @@ export default function SimplePublicHome() {
                 {activeTokenGallery && (
                   <HomeTokenGalleryPreview
                     gallery={activeTokenGallery}
-                    contract={contract}
-                    contractId={contractId}
+                    contract={galleryContract}
+                    contractId={galleryContractId}
                     senderAddress={readOnlySender}
                     isActiveTab={tabGuard.isActive}
                     onOpenToken={handleOpenGalleryToken}
@@ -1694,7 +1713,7 @@ export default function SimplePublicHome() {
 
         <div id="home-viewer">
           <ViewerScreen
-            contract={contract}
+            contract={viewerContract}
             senderAddress={readOnlySender}
             walletSession={walletSession}
             walletLookupState={walletLookupState}
@@ -1704,7 +1723,13 @@ export default function SimplePublicHome() {
             onToggleCollapse={() => setViewerCollapsed((prev) => !prev)}
             isActiveTab={tabGuard.isActive}
             mode={viewerMode}
-            onModeChange={setViewerMode}
+            onModeChange={(nextMode) => {
+              // Wallet lookups resolve against the canonical public contract.
+              if (nextMode === 'wallet') {
+                setViewerContract(PUBLIC_CONTRACT);
+              }
+              setViewerMode(nextMode);
+            }}
             onClearWalletLookup={handleClearWalletLookup}
             modeLabels={{ collection: 'Explore', wallet: 'Wallet' }}
             viewerTitles={{ collection: 'Live inscription viewer', wallet: 'Wallet viewer' }}
