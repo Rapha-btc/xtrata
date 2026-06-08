@@ -1,4 +1,4 @@
-import { uintCV, callReadOnlyFunction, cvToJSON } from '@stacks/transactions';
+import { uintCV, callReadOnlyFunction, cvToJSON, PostConditionMode } from '@stacks/transactions';
 import { toStacksNetwork } from './lib/network/stacks';
 import { getApiBaseUrls } from './lib/network/config';
 import {
@@ -140,6 +140,10 @@ const migrate = (id: bigint) =>
       contractName: CORE,
       functionName: SOURCES[state.source].fn,
       functionArgs: [uintCV(id)],
+      // Migration transfers the legacy NFT (and a small begin-fee in STX) into
+      // the core. Allow mode is required so those transfers aren't rejected by
+      // the wallet's default deny post-conditions (which aborts the migration).
+      postConditionMode: PostConditionMode.Allow,
       appDetails,
       network,
       stxAddress: state.session.address,
