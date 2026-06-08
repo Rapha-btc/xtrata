@@ -11,8 +11,33 @@ import type { WalletSession } from './lib/wallet/types';
 const DEPLOYER = 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X';
 const CORE = 'xtrata-v3-2-3';
 const ASSET = 'xtrata-inscription';
-const network = toStacksNetwork('mainnet');
+// Route every Hiro call through the dev/prod /hiro proxy, which injects the
+// HIRO_API_KEY server-side (avoids browser rate limits).
 const apiBase = getApiBaseUrls('mainnet')[0];
+const network = toStacksNetwork('mainnet', apiBase);
+// Explicit fee so migrations confirm promptly instead of stalling on a low
+// wallet-estimated fee.
+const FEE_USTX = 30000n;
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+// Poll the proxy until the tx leaves the mempool; returns its final status.
+const waitForTx = async (txid: string): Promise<'success' | 'failed'> => {
+  const id = `0x${txid.replace(/^0x/, '')}`;
+  for (;;) {
+    await sleep(8000);
+    try {
+      const res = await fetch(`${apiBase}/extended/v1/tx/${id}`);
+      if (!res.ok) continue;
+      const json = (await res.json()) as { tx_status?: string };
+      const st = json.tx_status;
+      if (!st || st === 'pending') continue;
+      return st === 'success' ? 'success' : 'failed';
+    } catch {
+      // network blip — keep polling
+    }
+  }
+};
 
 const appDetails = {
   name: 'Xtrata Migration',
@@ -30,6 +55,7 @@ type State = {
   eligible: bigint[];
   v3Minted: Set<string>;
   busyId: string | null;
+  busyPhase: 'signing' | 'confirming' | null;
   scanning: boolean;
   log: string[];
 };
@@ -40,6 +66,7 @@ const state: State = {
   eligible: [],
   v3Minted: new Set(),
   busyId: null,
+  busyPhase: null,
   scanning: false,
   log: []
 };
@@ -134,6 +161,7 @@ const migrate = (id: bigint) =>
       return;
     }
     state.busyId = id.toString();
+    state.busyPhase = 'signing';
     render();
     showContractCall({
       contractAddress: DEPLOYER,
@@ -144,6 +172,7 @@ const migrate = (id: bigint) =>
       // the core. Allow mode is required so those transfers aren't rejected by
       // the wallet's default deny post-conditions (which aborts the migration).
       postConditionMode: PostConditionMode.Allow,
+      fee: FEE_USTX,
       appDetails,
       network,
       stxAddress: state.session.address,
@@ -152,12 +181,33 @@ const migrate = (id: bigint) =>
           (payload && typeof payload === 'object' && 'txId' in (payload as Record<string, unknown>)
             ? String((payload as Record<string, unknown>).txId)
             : '') || '';
-        note(`Migrated #${id} ${txId ? `→ ${txId}` : '(submitted)'}`);
-        state.v3Minted.add(id.toString());
-        state.eligible = state.eligible.filter((value) => value !== id);
-        state.busyId = null;
+        note(`#${id} submitted → ${txId || '(no txid)'}. Waiting for on-chain confirmation…`);
+        state.busyPhase = 'confirming';
         render();
-        resolve();
+        // Only resolve once the tx has actually confirmed on-chain. This is what
+        // lets "Migrate all" hold the next signature until this one settles.
+        void (async () => {
+          if (!txId) {
+            note(`#${id}: wallet returned no txid; stopping.`);
+            state.busyId = null;
+            render();
+            reject(new Error('no txid'));
+            return;
+          }
+          const result = await waitForTx(txId);
+          state.busyId = null;
+          if (result === 'success') {
+            note(`#${id} confirmed ✓`);
+            state.v3Minted.add(id.toString());
+            state.eligible = state.eligible.filter((value) => value !== id);
+            render();
+            resolve();
+          } else {
+            note(`#${id} FAILED on-chain (${txId}). Stopping the run.`);
+            render();
+            reject(new Error('tx failed'));
+          }
+        })();
       },
       onCancel: () => {
         note(`Cancelled #${id}.`);
@@ -233,7 +283,11 @@ const render = () => {
                 <div class="tile">
                   <span>#${id.toString()}</span>
                   <button data-migrate="${id.toString()}" ${state.busyId ? 'disabled' : ''}>
-                    ${state.busyId === id.toString() ? 'Signing…' : 'Migrate'}
+                    ${state.busyId === id.toString()
+                      ? state.busyPhase === 'confirming'
+                        ? 'Confirming…'
+                        : 'Signing…'
+                      : 'Migrate'}
                   </button>
                 </div>`
               )
