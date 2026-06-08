@@ -1,0 +1,79 @@
+{
+  "generatedAt": "2026-06-07T20:53:08.403Z",
+  "mode": "dry-run",
+  "network": "testnet",
+  "apiUrl": "https://api.testnet.hiro.so",
+  "hiroApiKeyConfigured": false,
+  "deployerAddress": null,
+  "walletAAddress": null,
+  "walletBAddress": null,
+  "contractAddress": "ST000000000000000000002AMW42H",
+  "contracts": {
+    "v1_1_1": {
+      "name": "xtrata-v1-1-1",
+      "id": "ST000000000000000000002AMW42H.xtrata-v1-1-1",
+      "source": "contracts/other/xtrata-v1.1.1.clar",
+      "requiredFor": [
+        "legacy-v1-read-compatibility"
+      ],
+      "deployTxId": null
+    },
+    "v2_1_0": {
+      "name": "xtrata-v2-1-0",
+      "id": "ST000000000000000000002AMW42H.xtrata-v2-1-0",
+      "source": "contracts/other/xtrata-v2.1.0.clar",
+      "requiredFor": [
+        "migration-v2.1.0"
+      ],
+      "deployTxId": null
+    },
+    "core": {
+      "name": "xtrata-v3-2-2",
+      "id": "ST000000000000000000002AMW42H.xtrata-v3-2-2",
+      "source": "contracts/other/xtrata-v3.2.2.clar",
+      "requiredFor": [
+        "candidate-core"
+      ],
+      "deployTxId": null
+    },
+    "helper": {
+      "name": "xtrata-small-mint-v1-1",
+      "id": "ST000000000000000000002AMW42H.xtrata-small-mint-v1-1",
+      "source": "contracts/other/xtrata-small-mint-v1.1.clar",
+      "requiredFor": [
+        "small-mint-helper"
+      ],
+      "deployTxId": null
+    }
+  },
+  "assumptions": {
+    "chunkSize": 16384,
+    "coreUploadLimit": 32,
+    "appHelperPolicyLimit": 30,
+    "hashToId": "advisory first-seen lookup; duplicate same-hash mints remain allowed",
+    "parentChildReverseIndexes": "manifest/indexer/resolver responsibility, not core",
+    "keySource": "explicit private key env vars or dry-run"
+  },
+  "keyDerivation": null,
+  "commands": {
+    "generateTestnetPlan": "npm --prefix contracts/clarinet exec -- clarinet deployments generate --testnet --manual-cost",
+    "applyTestnetPlan": "npm --prefix contracts/clarinet exec -- clarinet deployments apply --testnet --no-dashboard --use-on-disk-deployment-plan",
+    "deploy": "npm run testnet:v3.2.2:deploy -- --broadcast",
+    "smoke": "npm run testnet:v3.2.2:smoke -- --broadcast",
+    "reconstruct": "npm run testnet:v3.2.2:reconstruct -- --broadcast",
+    "report": "npm run testnet:v3.2.2:report",
+    "rehearsal": "npm run testnet:v3.2.2:rehearsal -- --broadcast"
+  },
+  "transactions": [],
+  "readOnly": [],
+  "testCases": [],
+  "reconstruction": [],
+  "warnings": [
+    "Dry-run mode only. Add --broadcast plus testnet keys to submit transactions.",
+    "Clarinet deployment remains the preferred path for source/trait selection. This script deploy mode uses contracts/other testnet variants when --broadcast is supplied."
+  ],
+  "failures": [
+    "ENOENT: no such file or directory, open '/Users/melophonic/Documents/GitHub/xtrata/contracts/other/xtrata-v1.1.1.clar'"
+  ],
+  "recommendation": "not ready"
+}

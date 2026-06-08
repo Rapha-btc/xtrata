@@ -1,5 +1,8 @@
 # Xtrata v3.2.1 Mainnet Handover Runbook
 
+> Superseded by `docs/mainnet-v3.4.0-handover.md`. Do not deploy v3.2.1 or its
+> v2.1.1 helper dependency for the current handover.
+
 This runbook defines the controlled mainnet handover from the current live
 Xtrata core line to the core `xtrata-v3.2.1` contract.
 
@@ -10,7 +13,8 @@ explicit operator approval before any mainnet write transaction is broadcast.
 
 Target contracts:
 
-- Current live core: `SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-1`
+- Current live core: `SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-0`
+- Migration dependency: `SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-1`
 - New core: `SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v3-2-1`
 
 Deployment/admin signer:
@@ -79,6 +83,13 @@ All migratable legacy cores:
 - `xtrata-v2-1-0` `get-next-token-id` and `get-last-token-id`
 - `xtrata-v2-1-1` `get-next-token-id` and `get-last-token-id`
 
+If `xtrata-v2-1-1` is not already deployed on mainnet, deploy
+`contracts/live/xtrata-v2.1.1.clar` first using **Clarity 2**. The v2.1.1
+source uses `as-contract`, so deploying it as Clarity 3 fails with
+`use of unresolved function 'as-contract'`. It is an empty, paused migration
+dependency needed because `xtrata-v3.2.1` has explicit migration/read fallback
+references to `.xtrata-v2-1-1`. It is not the live app target.
+
 New v3.2.1 core:
 
 - `get-admin`
@@ -117,6 +128,8 @@ need later.
 
 The script must refuse to call `set-next-id` if:
 
+- the current live core has not been confirmed paused in the latest preflight
+  report generated after the pause transaction;
 - v3.2.1 `get-next-token-id` is not `u0`;
 - v3.2.1 `get-minted-count` is not `u0`;
 - v3.2.1 `get-last-token-id` indicates a native mint already occurred;
@@ -132,53 +145,67 @@ reason in the report.
 The intended write sequence is:
 
 1. Deploy `xtrata-v3-2-1` from `contracts/live/xtrata-v3.2.1.clar` through
-   Xverse, unless already deployed and source-hash verified.
+   Xverse, unless already deployed and source-hash verified. If mainnet
+   `xtrata-v2-1-1` is missing, deploy `contracts/live/xtrata-v2.1.1.clar`
+   first as **Clarity 2** so the v3.2.1 migration reference resolves.
 
 2. Pause the current live core:
 
    ```clarity
-   (contract-call? .xtrata-v2-1-1 set-paused true)
+   (contract-call? .xtrata-v2-1-0 set-paused true)
    ```
 
-3. Confirm the current live core is paused:
+3. Wait for the pause transaction to confirm.
+
+4. Rerun the mainnet preflight and refresh the handover UI:
+
+   ```sh
+   npm run mainnet:v3.2.1:preflight
+   ```
+
+   The `set-next-id` value must come from this post-pause report, not from a
+   pre-pause report. This closes the race where someone could inscribe between
+   the initial plan and the live-core pause confirmation.
+
+5. Confirm the current live core is paused:
 
    ```clarity
-   (contract-call? .xtrata-v2-1-1 is-paused)
+   (contract-call? .xtrata-v2-1-0 is-paused)
    ```
 
-4. Set the one-shot v3.2.1 next ID, if required:
+6. Set the one-shot v3.2.1 next ID, if required:
 
    ```clarity
    (contract-call? .xtrata-v3-2-1 set-next-id u<computed-next-id>)
    ```
 
-5. Set the v3.2.1 royalty recipient:
+7. Set the v3.2.1 royalty recipient:
 
    ```clarity
    (contract-call? .xtrata-v3-2-1 set-royalty-recipient '<recipient>)
    ```
 
-6. Unpause v3.2.1:
+8. Unpause v3.2.1:
 
    ```clarity
    (contract-call? .xtrata-v3-2-1 set-paused false)
    ```
 
-7. Mint the first v3.2.1 inscription using the approved announcement text:
+9. Mint the first v3.2.1 inscription using the approved announcement text:
 
    - Source: `docs/mainnet-v3.2.1-announcement-inscription.md`
    - MIME: `text/markdown`
    - Route: direct `mint-single-tx` unless final byte size exceeds the single
      transaction policy.
 
-8. Reconstruct the minted announcement inscription and verify:
+10. Reconstruct the minted announcement inscription and verify:
 
    - token ID equals the expected first v3.2.1 native ID;
    - byte reconstruction matches the local announcement file;
    - final Xtrata rolling hash matches;
    - `get-id-by-hash` returns the announcement token ID.
 
-9. Produce the final handover report.
+11. Produce the final handover report.
 
 ## Suggested Commands
 

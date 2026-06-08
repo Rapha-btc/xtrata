@@ -1,11 +1,34 @@
-;; xtrata-v2.1.1
+;; xtrata-v3.4.0  (dependency-free core, trait-based migration)
 ;;
-;; Core posture (v2.1.1):
+;; A self-contained core with NO STATIC dependency on any other xtrata contract.
+;; It still supports MIGRATION of v1/v2 inscriptions, but via a TRAIT parameter
+;; (legacy-inscription-trait) instead of hardcoded .xtrata-* references. That keeps
+;; the contract deployable on its own while letting any caller port a legacy token
+;; from any contract implementing the trait (e.g. xtrata-v1-1-1, xtrata-v2-1-0).
+;;
+;; Compared to v3.2.1 this core removes the small-mint helper (single-tx minting is
+;; core-native; use mint-single-tx) and replaces the static migrate-from-v1/v2 calls
+;; and the (as-contract tx-sender) escrow constant. The escrow recipient is the
+;; contract's own principal via the Clarity 4 keyword `current-contract`.
+;;
+;; MIGRATION MODEL (faithful, same-id):
+;;   - caller re-supplies the inscription content; the core recomputes the rolling
+;;     hash and verifies it equals the caller-declared expected-hash
+;;   - caller must own the legacy token; the legacy NFT is escrowed into this contract
+;;   - the source contract must be explicitly approved by the contract owner
+;;   - a v3 token is minted at the SAME id, content stored locally, provenance recorded
+;;   - migrated tokens are first-class: usable as parents and fully reconstructable
+;;   - one-shot set-next-id sets the native-mint start ABOVE the legacy id range so
+;;     native mints never collide with same-id migrated tokens
+;; Native (non-migrated) token ids start at the configured offset and increment by one.
+;;
+;; Core posture (v3.3.0):
 ;; 1) Open participation: anyone can inscribe (fees apply) once unpaused.
-;; 2) Content-addressed + canonical: a given final-hash can be sealed at most once.
-;;    - HashToId provides on-chain lookup (final-hash -> canonical token-id)
-;;    - begin-inscription rejects already-sealed hashes (early duplicate detection)
-;;    - seal rejects already-sealed hashes (race-safety)
+;; 2) Content-addressed + advisory lookup: duplicate content can mint new tokens.
+;;    - HashToId records the first sealed/minted token for a final-hash
+;;    - get-id-by-hash returns that first-seen token-id
+;;    - begin/seal/mint/migration never block or return an existing token only
+;;      because the hash already exists
 ;; 3) Content is immutable once sealed (no post-mint edits, no mutable pointers tied to an id).
 ;; 4) Creator is immutable provenance; owner can transfer.
 ;; 5) SIP-009 compatible: standard NFT interfaces for wallet/indexer interoperability.
@@ -13,7 +36,7 @@
 ;; 7) Sealing requires ALL declared chunks uploaded (current-index == total-chunks) and hash verified.
 ;; 8) Upload sessions are start-or-resume and expire after inactivity (stacks-block-height based):
 ;;    - begin-inscription starts/resumes {uploader, file-hash} uploads
-;;    - begin-or-get returns canonical token-id if already sealed, else starts/resumes upload
+;;    - begin-or-get starts/resumes upload and does not canonicalize duplicates
 ;;    - expired uploads can be permissionlessly purged in batches
 ;;    - abandon-upload marks the session expired so chunks can be purged immediately
 ;; 9) Dependencies must already exist at seal time (no forward refs).
@@ -23,8 +46,8 @@
 ;; 11) Hard caps: total-chunks <= 2048 and total-size <= 32 MiB.
 ;; 12) Read-only batch chunk reader speeds client reconstruction.
 ;; 13) Default paused on deploy; allowlisted contract callers can inscribe while paused.
-;; 14) Optional migration: lock v1 token in escrow and mint same id in v2.
-;; 15) Admin can set an initial next-id offset once (for v1 continuity).
+;; 16) Chunking is fixed at 16 KiB. Upload payload batches are capped at 32 chunks.
+;; 17) Small-file single-tx minting is core-native and capped at one upload batch.
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; --- SIP-009 TRAIT (IMPLEMENT FOR WALLET/INDEXER COMPATIBILITY) ---
@@ -32,15 +55,28 @@
 
 ;; [LOCAL / CLARINET]
 ;; (impl-trait .sip009-nft-trait.nft-trait)
-;; (use-trait nft-trait .sip009-nft-trait.nft-trait)
 
 ;; [TESTNET]
-(impl-trait 'ST1NXBK3K5YYMD6FD41MVNP3JS1GABZ8TRVX023PT.nft-trait.nft-trait)
-(use-trait nft-trait 'ST1NXBK3K5YYMD6FD41MVNP3JS1GABZ8TRVX023PT.nft-trait.nft-trait)
+;; (impl-trait 'ST1NXBK3K5YYMD6FD41MVNP3JS1GABZ8TRVX023PT.nft-trait.nft-trait)
 
 ;; [MAINNET]
-;; (impl-trait 'SP2PABAF9FTAJYNFZH93XENAJ8FVY99RRM50D2JG9.nft-trait.nft-trait)
-;; (use-trait nft-trait 'SP2PABAF9FTAJYNFZH93XENAJ8FVY99RRM50D2JG9.nft-trait.nft-trait)
+(impl-trait 'SP2PABAF9FTAJYNFZH93XENAJ8FVY99RRM50D2JG9.nft-trait.nft-trait)
+
+;; --- LEGACY MIGRATION TRAIT (passed as a parameter; NOT a static dependency) ---
+;; Implemented by xtrata-v1-1-1, xtrata-v2-1-0, and any compatible legacy core.
+(define-trait legacy-inscription-trait
+  (
+    (get-owner (uint) (response (optional principal) uint))
+    (transfer (uint principal principal) (response bool uint))
+  )
+)
+
+;; The contract's own principal (escrow destination for migrated legacy NFTs).
+;; [MAINNET / Clarity 4] current-contract is the Clarity 4 keyword for self-principal.
+(define-constant SELF current-contract)
+;; [LOCAL TEST / Clarity 3] swap the line above for the next one to test on a
+;; Clarity 3 toolchain (as-contract was removed in Clarity 4):
+;; (define-constant SELF (as-contract tx-sender))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; --- ASSET DEFINITION ---
@@ -64,27 +100,32 @@
 (define-constant ERR-NOT-EXPIRED        (err u113))
 (define-constant ERR-DUPLICATE          (err u114))
 (define-constant ERR-ALREADY-SET        (err u115))
+(define-constant ERR-MIGRATION-SOURCE   (err u116))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; --- CONSTANTS ---
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define-constant MAX-BATCH-SIZE u50)
+(define-constant MAX-UPLOAD-BATCH-SIZE u32)
+(define-constant MAX-GENERAL-LIST-SIZE u50)
 (define-constant MAX-SEAL-BATCH-SIZE u50)
+(define-constant MAX-SINGLE-TX-CHUNKS u32)
 (define-constant CHUNK-SIZE u16384)
+(define-constant MAX-UPLOAD-PAYLOAD (* MAX-UPLOAD-BATCH-SIZE CHUNK-SIZE))
 ;; Hard caps to keep uploads finishable within expiry windows.
 (define-constant MAX-TOTAL-CHUNKS u2048)
 (define-constant MAX-TOTAL-SIZE (* MAX-TOTAL-CHUNKS CHUNK-SIZE))
 
 ;; Fee bounds (microSTX): 0.001 STX .. 1.0 STX
-(define-constant FEE-MIN u1000)
+(define-constant FEE-MIN u1)
 (define-constant FEE-MAX u1000000)
 
 ;; Upload expiry (~30 days at 10-min block cadence)
 (define-constant UPLOAD-EXPIRY-BLOCKS u4320)
 
-;; Contract principal helper (for escrow / internal transfers)
-(define-constant CONTRACT-PRINCIPAL (as-contract tx-sender))
+
+(define-constant MODE-STAGED u1)
+(define-constant MODE-SINGLE-TX u2)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; --- SVG (COMPATIBLE / SAFE) ---
@@ -116,13 +157,15 @@
 ;; Split fee controls (microSTX), bounded for predictability.
 ;; Defaults preserve prior pricing at 50+ chunks while pro-rating the first batch.
 ;; - begin-fee-unit: charged once per new upload session
-;; - upload-chunk-fee-unit: charged per chunk for the first batch only (up to 50 chunks)
-;; - upload-batch-fee-unit: charged per full batch after the first
+;; - upload-chunk-fee-unit: charged per chunk for the first upload batch only (up to 32 chunks)
+;; - upload-batch-fee-unit: charged per full upload batch after the first
 ;; - seal-fee-unit: fixed extra fee charged at seal
+;; - single-tx-fee-unit: one fixed fee for the core-native small-file route
 (define-data-var begin-fee-unit uint u100000)
 (define-data-var upload-chunk-fee-unit uint u2000)
 (define-data-var upload-batch-fee-unit uint u100000)
 (define-data-var seal-fee-unit uint u100000)
+(define-data-var single-tx-fee-unit uint u100000)
 
 ;; Pause switch (admin adjustable)
 ;; IMPORTANT: pause blocks inscription writes for non-owners; transfers and reads remain available.
@@ -139,7 +182,7 @@
 ;; --- DEDUPE INDEX (NEW) ---
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;; Canonical mapping: sealed content hash -> token-id
+;; Advisory first-seen mapping: sealed content hash -> first token-id.
 (define-map HashToId (buff 32) uint)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -147,8 +190,8 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define-map AllowedCallers principal bool)
+(define-map AllowedMigrationSources principal bool)
 (define-map MintedIndex uint uint)
-(define-map MigratedFromV1 uint bool)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; --- STORAGE ---
@@ -167,6 +210,8 @@
 )
 
 (define-map InscriptionDependencies uint (list 50 uint))
+(define-map InscriptionParents uint (list 50 uint))
+(define-map MigrationSource uint { source-contract: principal, source-id: uint })
 
 (define-map UploadState
   { owner: principal, hash: (buff 32) }
@@ -234,6 +279,26 @@
   )
 )
 
+(define-private (valid-total-shape? (total-size uint) (total-chunks uint))
+  (if (is-eq total-chunks u0)
+    false
+    (and
+      (> total-size u0)
+      (<= total-chunks MAX-TOTAL-CHUNKS)
+      (<= total-size MAX-TOTAL-SIZE)
+      (<= total-size (* total-chunks CHUNK-SIZE))
+      (> total-size (* (- total-chunks u1) CHUNK-SIZE))
+    )
+  )
+)
+
+(define-private (expected-chunk-length (index uint) (total-size uint) (total-chunks uint))
+  (if (< index (- total-chunks u1))
+    CHUNK-SIZE
+    (- total-size (* index CHUNK-SIZE))
+  )
+)
+
 (define-private (validate-purge-indexes (indexes (list 50 uint)) (start uint) (total uint))
   (let ((res (fold validate-purge-index indexes { ok: true, expected: start, total: total })))
     (get ok res)
@@ -290,6 +355,64 @@
   )
 )
 
+(define-private (uint-in-list? (target uint) (items (list 50 uint)))
+  (let ((res (fold uint-in-list-step items { target: target, found: false })))
+    (get found res)
+  )
+)
+
+(define-private (uint-in-list-step (item uint) (acc { target: uint, found: bool }))
+  (if (get found acc)
+    acc
+    { target: (get target acc), found: (is-eq item (get target acc)) }
+  )
+)
+
+(define-private (collect-unique-uint (item uint) (acc { ok: bool, seen: (list 50 uint) }))
+  (if (get ok acc)
+    (let ((seen (get seen acc)))
+      (if (uint-in-list? item seen)
+        { ok: false, seen: seen }
+        { ok: true, seen: (unwrap-panic (as-max-len? (append seen item) u50)) }
+      )
+    )
+    acc
+  )
+)
+
+(define-private (validate-parent-uniqueness (parents (list 50 uint)))
+  (let ((res (fold collect-unique-uint parents { ok: true, seen: (list) })))
+    (get ok res)
+  )
+)
+
+(define-private (validate-parent (id uint) (acc { missing: bool, unowned: bool }))
+  (if (or (get missing acc) (get unowned acc))
+    acc
+    (match (nft-get-owner? xtrata-inscription id)
+      owner
+        (if (is-eq owner tx-sender)
+          { missing: false, unowned: false }
+          { missing: false, unowned: true }
+        )
+      { missing: true, unowned: false }
+    )
+  )
+)
+
+(define-private (validate-parents (parents (list 50 uint)))
+  (begin
+    (asserts! (validate-parent-uniqueness parents) ERR-DUPLICATE)
+    (let ((res (fold validate-parent parents { missing: false, unowned: false })))
+      (begin
+        (asserts! (not (get missing res)) ERR-DEPENDENCY-MISSING)
+        (asserts! (not (get unowned res)) ERR-NOT-AUTHORIZED)
+        (ok true)
+      )
+    )
+  )
+)
+
 (define-private (append-chunk-batch
   (index uint)
   (acc {
@@ -314,27 +437,27 @@
   )
 )
 
-;; ceil(total-chunks / MAX-BATCH-SIZE)
+;; ceil(total-chunks / MAX-UPLOAD-BATCH-SIZE)
 (define-private (num-batches (total-chunks uint))
   (let (
-    (q (/ total-chunks MAX-BATCH-SIZE))
-    (r (mod total-chunks MAX-BATCH-SIZE))
+    (q (/ total-chunks MAX-UPLOAD-BATCH-SIZE))
+    (r (mod total-chunks MAX-UPLOAD-BATCH-SIZE))
   )
     (if (is-eq r u0) q (+ q u1))
   )
 )
 
 (define-private (first-batch-chunks (total-chunks uint))
-  (if (> total-chunks MAX-BATCH-SIZE)
-    MAX-BATCH-SIZE
+  (if (> total-chunks MAX-UPLOAD-BATCH-SIZE)
+    MAX-UPLOAD-BATCH-SIZE
     total-chunks
   )
 )
 
 (define-private (additional-batches (total-chunks uint))
-  (if (<= total-chunks MAX-BATCH-SIZE)
+  (if (<= total-chunks MAX-UPLOAD-BATCH-SIZE)
     u0
-    (num-batches (- total-chunks MAX-BATCH-SIZE))
+    (num-batches (- total-chunks MAX-UPLOAD-BATCH-SIZE))
   )
 )
 
@@ -347,6 +470,10 @@
   )
     (+ (var-get seal-fee-unit) (+ first-fee extra-fee))
   )
+)
+
+(define-private (single-tx-fee-for-chunks (total-chunks uint))
+  (+ (var-get single-tx-fee-unit) (* total-chunks (var-get upload-chunk-fee-unit)))
 )
 
 (define-private (hash-in-list? (hash (buff 32)) (items (list 50 (buff 32))))
@@ -402,6 +529,87 @@
       )
       id
     )
+  )
+)
+
+(define-private (advance-next-id-if-needed (id uint))
+  (if (>= id (var-get next-id))
+    (var-set next-id (+ id u1))
+    true
+  )
+)
+
+(define-private (record-migration-source (token-id uint) (source-contract principal) (source-id uint))
+  (map-set MigrationSource token-id { source-contract: source-contract, source-id: source-id })
+)
+
+
+
+(define-private (record-hash-first-seen (hash (buff 32)) (token-id uint))
+  (begin
+    ;; map-insert preserves the original token-id when duplicate content mints later.
+    (map-insert HashToId hash token-id)
+    true
+  )
+)
+
+(define-private (store-relationships (id uint) (dependencies (list 50 uint)) (parents (list 50 uint)))
+  (begin
+    (if (> (len dependencies) u0)
+      (map-set InscriptionDependencies id dependencies)
+      true
+    )
+    (if (> (len parents) u0)
+      (map-set InscriptionParents id parents)
+      true
+    )
+    true
+  )
+)
+
+(define-private (commit-inscription
+  (expected-hash (buff 32))
+  (token-uri-string (string-ascii 256))
+  (new-id uint)
+  (creator principal)
+  (mime-type (string-ascii 64))
+  (total-size uint)
+  (total-chunks uint)
+  (final-hash (buff 32))
+  (dependencies (list 50 uint))
+  (parents (list 50 uint))
+)
+  (begin
+    (try! (nft-mint? xtrata-inscription new-id tx-sender))
+
+    (map-insert InscriptionMeta new-id {
+      owner: tx-sender,
+      creator: creator,
+      mime-type: mime-type,
+      total-size: total-size,
+      total-chunks: total-chunks,
+      sealed: true,
+      final-hash: final-hash
+    })
+
+    (record-hash-first-seen expected-hash new-id)
+    (map-set TokenURIs new-id token-uri-string)
+    (store-relationships new-id dependencies parents)
+    (var-set next-id (+ new-id u1))
+    (record-mint new-id)
+    (print {
+      event: "inscription-sealed",
+      token-id: new-id,
+      owner: tx-sender,
+      token-uri: token-uri-string,
+      final-hash: final-hash,
+      chunk-size: CHUNK-SIZE,
+      total-size: total-size,
+      total-chunks: total-chunks,
+      dependencies: dependencies,
+      parents: parents
+    })
+    (ok new-id)
   )
 )
 
@@ -484,7 +692,7 @@
 ;; --- DEDUPE READ-ONLY (NEW) ---
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;; Returns (some token-id) if this hash is already sealed, else none.
+;; Returns the first token-id sealed/minted for this hash, if any.
 (define-read-only (get-id-by-hash (hash (buff 32)))
   (map-get? HashToId hash)
 )
@@ -503,9 +711,10 @@
 
 ;; Split fee model:
 ;; - begin fee = begin-fee-unit
-;; - seal fee  = seal-fee-unit
-;;             + upload-chunk-fee-unit * min(total-chunks, 50)
-;;             + upload-batch-fee-unit * ceil(max(total-chunks - 50, 0) / 50)
+;; - staged seal fee  = seal-fee-unit
+;;                    + upload-chunk-fee-unit * min(total-chunks, 32)
+;;                    + upload-batch-fee-unit * ceil(max(total-chunks - 32, 0) / 32)
+;; - single-tx fee = single-tx-fee-unit + upload-chunk-fee-unit * total-chunks
 ;;
 ;; Governance constraints:
 ;; - absolute bounds: [0.001, 1.0] STX
@@ -567,16 +776,28 @@
   )
 )
 
+(define-public (set-single-tx-fee-unit (new-fee uint))
+  (let ((old (var-get single-tx-fee-unit)))
+    (begin
+      (asserts! (is-eq tx-sender (var-get contract-owner)) ERR-NOT-AUTHORIZED)
+      (try! (assert-valid-fee-update old new-fee))
+      (var-set single-tx-fee-unit new-fee)
+      (ok true)
+    )
+  )
+)
+
 ;; Backwards-compatible one-knob setter.
 ;; Applies a legacy profile:
 ;; - begin = unit
-;; - upload-chunk = max(FEE-MIN, floor(unit / 50))
+;; - upload-chunk = max(FEE-MIN, floor(unit / 32))
 ;; - upload-batch = unit
 ;; - seal = unit
+;; - single-tx = unit
 (define-public (set-fee-unit (new-fee uint))
   (let (
     (old (var-get upload-batch-fee-unit))
-    (raw-chunk (/ new-fee MAX-BATCH-SIZE))
+    (raw-chunk (/ new-fee MAX-UPLOAD-BATCH-SIZE))
     (chunk-fee (if (>= raw-chunk FEE-MIN) raw-chunk FEE-MIN))
   )
     (begin
@@ -586,20 +807,24 @@
       (var-set upload-chunk-fee-unit chunk-fee)
       (var-set upload-batch-fee-unit new-fee)
       (var-set seal-fee-unit new-fee)
+      (var-set single-tx-fee-unit new-fee)
       (ok true)
     )
   )
 )
 
+
 (define-public (set-next-id (value uint))
-  (begin
-    (asserts! (is-eq tx-sender (var-get contract-owner)) ERR-NOT-AUTHORIZED)
-    (asserts! (not (var-get offset-set)) ERR-ALREADY-SET)
-    (asserts! (is-eq (var-get next-id) u0) ERR-ALREADY-SET)
-    (asserts! (is-eq (var-get minted-count) u0) ERR-ALREADY-SET)
-    (var-set next-id value)
-    (var-set offset-set true)
-    (ok true)
+  (let ((caller tx-sender))
+    (begin
+      (asserts! (is-eq caller (var-get contract-owner)) ERR-NOT-AUTHORIZED)
+      (asserts! (not (var-get offset-set)) ERR-ALREADY-SET)
+      (asserts! (is-eq (var-get next-id) u0) ERR-ALREADY-SET)
+      (asserts! (is-eq (var-get minted-count) u0) ERR-ALREADY-SET)
+      (var-set next-id value)
+      (var-set offset-set true)
+      (ok value)
+    )
   )
 )
 
@@ -609,6 +834,17 @@
     (if allowed
       (map-set AllowedCallers caller true)
       (map-delete AllowedCallers caller)
+    )
+    (ok true)
+  )
+)
+
+(define-public (set-migration-source (source principal) (allowed bool))
+  (begin
+    (asserts! (is-eq tx-sender (var-get contract-owner)) ERR-NOT-AUTHORIZED)
+    (if allowed
+      (map-set AllowedMigrationSources source true)
+      (map-delete AllowedMigrationSources source)
     )
     (ok true)
   )
@@ -631,63 +867,21 @@
 )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; --- MIGRATION (V1 -> V2) ---
+;; --- MIGRATION (LEGACY -> V3.2) ---
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define-public (migrate-from-v1 (token-id uint))
-  (let (
-    (v1-meta (unwrap! (contract-call? .xtrata-v1-1-1 get-inscription-meta token-id) ERR-NOT-FOUND))
-    (v1-uri (contract-call? .xtrata-v1-1-1 get-token-uri-raw token-id))
-    (v1-deps (contract-call? .xtrata-v1-1-1 get-dependencies token-id))
-    (hash (get final-hash v1-meta))
-  )
-    (begin
-      (try! (assert-inscription-allowed))
-      (asserts! (is-none (nft-get-owner? xtrata-inscription token-id)) ERR-DUPLICATE)
-      (asserts! (is-none (map-get? HashToId hash)) ERR-DUPLICATE)
 
-      ;; charge the begin fee for migration
-      (try! (maybe-pay (var-get begin-fee-unit)))
 
-      ;; escrow the v1 token into this contract
-      (try! (contract-call? .xtrata-v1-1-1 transfer token-id tx-sender CONTRACT-PRINCIPAL))
-
-      ;; mint v2 token with the same id
-      (try! (nft-mint? xtrata-inscription token-id tx-sender))
-      (map-insert InscriptionMeta token-id {
-        owner: tx-sender,
-        creator: (get creator v1-meta),
-        mime-type: (get mime-type v1-meta),
-        total-size: (get total-size v1-meta),
-        total-chunks: (get total-chunks v1-meta),
-        sealed: true,
-        final-hash: hash
-      })
-      (map-insert HashToId hash token-id)
-      (map-set MigratedFromV1 token-id true)
-      (match v1-uri
-        uri (map-set TokenURIs token-id uri)
-        true
-      )
-      (if (> (len v1-deps) u0)
-        (map-set InscriptionDependencies token-id v1-deps)
-        true
-      )
-      (record-mint token-id)
-      (ok token-id)
-    )
-  )
-)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; --- CORE LOGIC ---
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;; begin-or-get (NEW):
-;; - If hash is already sealed: return (ok (some canonical-id))
-;; - Else: start/resume upload (via begin-inscription) and return (ok none)
+;; begin-or-get:
+;; - Start/resume upload (via begin-inscription) and return (ok none)
+;; - Existing HashToId entries stay advisory and do not canonicalize duplicates
 ;;
-;; This gives third parties a single call to either start/resume OR get canonical id.
+;; This gives third parties a single call to start/resume while keeping a stable ABI.
 (define-public (begin-or-get
   (expected-hash (buff 32))
   (mime (string-ascii 64))
@@ -696,13 +890,8 @@
 )
   (begin
     (try! (assert-inscription-allowed))
-    (match (map-get? HashToId expected-hash)
-      existing-id (ok (some existing-id))
-      (begin
-        (try! (begin-inscription expected-hash mime total-size total-chunks))
-        (ok none)
-      )
-    )
+    (try! (begin-inscription expected-hash mime total-size total-chunks))
+    (ok none)
   )
 )
 
@@ -712,18 +901,11 @@
 ;;   - do NOT charge begin fee again
 ;;   - require parameters match the original declaration
 ;;
-;; v1.0.2: hard dedupe early detection:
-;; - reject begin if hash is already sealed (HashToId exists)
+;; Existing HashToId entries are advisory only and do not block duplicate uploads.
 (define-public (begin-inscription (expected-hash (buff 32)) (mime (string-ascii 64)) (total-size uint) (total-chunks uint))
   (begin
     (try! (assert-inscription-allowed))
-    (asserts! (> total-chunks u0) ERR-INVALID-BATCH)
-    (asserts! (<= total-chunks MAX-TOTAL-CHUNKS) ERR-INVALID-BATCH)
-    (asserts! (<= total-size MAX-TOTAL-SIZE) ERR-INVALID-BATCH)
-    (asserts! (<= total-size (* total-chunks CHUNK-SIZE)) ERR-INVALID-BATCH)
-
-    ;; NEW: prevent wasted uploads / spam duplicates
-    (asserts! (is-none (map-get? HashToId expected-hash)) ERR-DUPLICATE)
+    (asserts! (valid-total-shape? total-size total-chunks) ERR-INVALID-BATCH)
 
     (match (map-get? UploadState { owner: tx-sender, hash: expected-hash })
       state
@@ -755,6 +937,13 @@
             purge-index: u0
           }
         )
+        (print {
+          event: "upload-started",
+          owner: tx-sender,
+          hash: expected-hash,
+          total-size: total-size,
+          total-chunks: total-chunks
+        })
         (ok true)
       )
     )
@@ -792,7 +981,7 @@
     (begin
       (asserts! (upload-expired? state) ERR-NOT-EXPIRED)
       (asserts! (> batch-len u0) ERR-INVALID-BATCH)
-      (asserts! (<= batch-len MAX-BATCH-SIZE) ERR-INVALID-BATCH)
+      (asserts! (<= batch-len MAX-GENERAL-LIST-SIZE) ERR-INVALID-BATCH)
       (asserts! (validate-purge-indexes indexes start total) ERR-INVALID-BATCH)
 
       (fold purge-expired-chunk indexes { owner: owner, hash: hash })
@@ -816,7 +1005,7 @@
   )
 )
 
-(define-public (add-chunk-batch (hash (buff 32)) (chunks (list 50 (buff 16384))))
+(define-public (add-chunk-batch (hash (buff 32)) (chunks (list 32 (buff 16384))))
   (begin
     (try! (assert-inscription-allowed))
     (let (
@@ -829,11 +1018,20 @@
       (begin
         (try! (assert-not-expired state))
         (asserts! (> batch-len u0) ERR-INVALID-BATCH)
-        (asserts! (<= batch-len MAX-BATCH-SIZE) ERR-INVALID-BATCH)
+        (asserts! (<= batch-len MAX-UPLOAD-BATCH-SIZE) ERR-INVALID-BATCH)
         (asserts! (<= (+ start-idx batch-len) total) ERR-INVALID-BATCH)
 
         (let ((result (fold process-chunk chunks
-          { idx: start-idx, run-hash: start-hash, target-hash: hash, creator: tx-sender })))
+          {
+            ok: true,
+            idx: start-idx,
+            run-hash: start-hash,
+            target-hash: hash,
+            creator: tx-sender,
+            total-size: (get total-size state),
+            total-chunks: total
+          })))
+          (asserts! (get ok result) ERR-INVALID-BATCH)
           (map-set UploadState
             { owner: tx-sender, hash: hash }
             (merge state {
@@ -851,17 +1049,44 @@
 
 (define-private (process-chunk
   (data (buff 16384))
-  (ctx { idx: uint, run-hash: (buff 32), target-hash: (buff 32), creator: principal })
+  (ctx {
+    ok: bool,
+    idx: uint,
+    run-hash: (buff 32),
+    target-hash: (buff 32),
+    creator: principal,
+    total-size: uint,
+    total-chunks: uint
+  })
 )
-  (let (
-    (current-idx (get idx ctx))
-    (current-hash (get run-hash ctx))
-    (target-hash (get target-hash ctx))
-    (creator (get creator ctx))
-    (next-hash (sha256 (concat current-hash data)))
-  )
-    (map-set Chunks { context: target-hash, creator: creator, index: current-idx } data)
-    { idx: (+ current-idx u1), run-hash: next-hash, target-hash: target-hash, creator: creator }
+  (if (get ok ctx)
+    (let (
+      (current-idx (get idx ctx))
+      (current-hash (get run-hash ctx))
+      (target-hash (get target-hash ctx))
+      (creator (get creator ctx))
+      (total-size (get total-size ctx))
+      (total-chunks (get total-chunks ctx))
+      (expected-len (expected-chunk-length current-idx total-size total-chunks))
+      (next-hash (sha256 (concat current-hash data)))
+    )
+      (if (is-eq (len data) expected-len)
+        (begin
+          (map-set Chunks { context: target-hash, creator: creator, index: current-idx } data)
+          {
+            ok: true,
+            idx: (+ current-idx u1),
+            run-hash: next-hash,
+            target-hash: target-hash,
+            creator: creator,
+            total-size: total-size,
+            total-chunks: total-chunks
+          }
+        )
+        (merge ctx { ok: false })
+      )
+    )
+    ctx
   )
 )
 
@@ -880,66 +1105,41 @@
       (asserts! (is-eq (get current-index state) chunks) ERR-INVALID-BATCH)
       (asserts! (is-eq final-hash expected-hash) ERR-HASH-MISMATCH)
       (asserts! (> (len token-uri-string) u0) ERR-INVALID-URI)
-      (asserts! (is-none (map-get? HashToId expected-hash)) ERR-DUPLICATE)
       (ok { state: state, fee: seal-fee })
     )
-  )
-)
-
-(define-private (seal-commit
-  (expected-hash (buff 32))
-  (token-uri-string (string-ascii 256))
-  (new-id uint)
-  (state {
-    mime-type: (string-ascii 64),
-    total-size: uint,
-    total-chunks: uint,
-    current-index: uint,
-    running-hash: (buff 32),
-    last-touched: uint,
-    purge-index: uint
-  })
-)
-  (begin
-    (asserts! (is-none (map-get? HashToId expected-hash)) ERR-DUPLICATE)
-    (try! (nft-mint? xtrata-inscription new-id tx-sender))
-
-    (map-insert InscriptionMeta new-id {
-      owner: tx-sender,
-      creator: tx-sender,
-      mime-type: (get mime-type state),
-      total-size: (get total-size state),
-      total-chunks: (get total-chunks state),
-      sealed: true,
-      final-hash: (get running-hash state)
-    })
-
-    (map-insert HashToId expected-hash new-id)
-
-    (map-set TokenURIs new-id token-uri-string)
-
-    (map-delete UploadState { owner: tx-sender, hash: expected-hash })
-    (var-set next-id (+ new-id u1))
-    (record-mint new-id)
-
-    (ok new-id)
   )
 )
 
 (define-private (seal-internal
   (expected-hash (buff 32))
   (token-uri-string (string-ascii 256))
+  (dependencies (list 50 uint))
+  (parents (list 50 uint))
   (new-id uint)
 )
   (begin
     (try! (assert-inscription-allowed))
+    (asserts! (validate-dependencies dependencies) ERR-DEPENDENCY-MISSING)
+    (try! (validate-parents parents))
     (let (
       (validation (try! (seal-validate expected-hash token-uri-string)))
       (state (get state validation))
       (seal-fee (get fee validation))
     )
       (try! (maybe-pay seal-fee))
-      (seal-commit expected-hash token-uri-string new-id state)
+      (map-delete UploadState { owner: tx-sender, hash: expected-hash })
+      (commit-inscription
+        expected-hash
+        token-uri-string
+        new-id
+        tx-sender
+        (get mime-type state)
+        (get total-size state)
+        (get total-chunks state)
+        (get running-hash state)
+        dependencies
+        parents
+      )
     )
   )
 )
@@ -969,14 +1169,26 @@
     (new-id (+ (get start current) (get idx current)))
   )
     (begin
-      (try! (seal-commit hash token-uri new-id state))
+      (map-delete UploadState { owner: tx-sender, hash: hash })
+      (try! (commit-inscription
+        hash
+        token-uri
+        new-id
+        tx-sender
+        (get mime-type state)
+        (get total-size state)
+        (get total-chunks state)
+        (get running-hash state)
+        (list)
+        (list)
+      ))
       (ok { idx: (+ (get idx current) u1), start: (get start current) })
     )
   )
 )
 
 (define-public (seal-inscription (expected-hash (buff 32)) (token-uri-string (string-ascii 256)))
-  (seal-internal expected-hash token-uri-string (var-get next-id))
+  (seal-internal expected-hash token-uri-string (list) (list) (var-get next-id))
 )
 
 (define-public (seal-inscription-batch
@@ -1002,12 +1214,235 @@
 )
 
 (define-public (seal-recursive (expected-hash (buff 32)) (token-uri-string (string-ascii 256)) (dependencies (list 50 uint)))
+  (seal-internal expected-hash token-uri-string dependencies (list) (var-get next-id))
+)
+
+(define-public (seal-with-relationships
+  (expected-hash (buff 32))
+  (token-uri-string (string-ascii 256))
+  (dependencies (list 50 uint))
+  (parents (list 50 uint))
+)
+  (seal-internal expected-hash token-uri-string dependencies parents (var-get next-id))
+)
+
+(define-private (assert-single-tx-shape (total-size uint) (chunk-count uint))
+  (begin
+    (asserts! (valid-total-shape? total-size chunk-count) ERR-INVALID-BATCH)
+    (asserts! (<= chunk-count MAX-SINGLE-TX-CHUNKS) ERR-INVALID-BATCH)
+    (ok true)
+  )
+)
+
+(define-private (mint-single-tx-internal
+  (expected-hash (buff 32))
+  (mime (string-ascii 64))
+  (total-size uint)
+  (chunks (list 32 (buff 16384)))
+  (token-uri-string (string-ascii 256))
+  (dependencies (list 50 uint))
+  (parents (list 50 uint))
+)
+  (let ((chunk-count (len chunks)))
+    (begin
+      (try! (assert-inscription-allowed))
+      (try! (assert-single-tx-shape total-size chunk-count))
+      (asserts! (> (len token-uri-string) u0) ERR-INVALID-URI)
+      (asserts! (is-none (map-get? UploadState { owner: tx-sender, hash: expected-hash })) ERR-DUPLICATE)
+      (asserts! (validate-dependencies dependencies) ERR-DEPENDENCY-MISSING)
+      (try! (validate-parents parents))
+      (let (
+        (result (fold process-chunk chunks {
+          ok: true,
+          idx: u0,
+          run-hash: 0x0000000000000000000000000000000000000000000000000000000000000000,
+          target-hash: expected-hash,
+          creator: tx-sender,
+          total-size: total-size,
+          total-chunks: chunk-count
+        }))
+        (fee (single-tx-fee-for-chunks chunk-count))
+      )
+        (begin
+          (asserts! (get ok result) ERR-INVALID-BATCH)
+          (asserts! (is-eq (get idx result) chunk-count) ERR-INVALID-BATCH)
+          (asserts! (is-eq (get run-hash result) expected-hash) ERR-HASH-MISMATCH)
+          (try! (maybe-pay fee))
+          (let ((new-id (try! (commit-inscription
+            expected-hash
+            token-uri-string
+            (var-get next-id)
+            tx-sender
+            mime
+            total-size
+            chunk-count
+            (get run-hash result)
+            dependencies
+            parents
+          ))))
+            (ok { token-id: new-id, existed: false })
+          )
+        )
+      )
+    )
+  )
+)
+
+(define-public (mint-single-tx
+  (expected-hash (buff 32))
+  (mime (string-ascii 64))
+  (total-size uint)
+  (chunks (list 32 (buff 16384)))
+  (token-uri-string (string-ascii 256))
+)
+  (mint-single-tx-internal expected-hash mime total-size chunks token-uri-string (list) (list))
+)
+
+(define-public (mint-single-tx-recursive
+  (expected-hash (buff 32))
+  (mime (string-ascii 64))
+  (total-size uint)
+  (chunks (list 32 (buff 16384)))
+  (token-uri-string (string-ascii 256))
+  (dependencies (list 50 uint))
+)
+  (mint-single-tx-internal expected-hash mime total-size chunks token-uri-string dependencies (list))
+)
+
+(define-public (mint-single-tx-with-relationships
+  (expected-hash (buff 32))
+  (mime (string-ascii 64))
+  (total-size uint)
+  (chunks (list 32 (buff 16384)))
+  (token-uri-string (string-ascii 256))
+  (dependencies (list 50 uint))
+  (parents (list 50 uint))
+)
+  (mint-single-tx-internal expected-hash mime total-size chunks token-uri-string dependencies parents)
+)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; --- MIGRATION (trait-based, faithful, same-id) ---
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; Mint a v3 token at the legacy id after content + ownership + hash are verified,
+;; escrow the legacy NFT into this contract, and record provenance. Does NOT touch
+;; next-id except to keep it above the migrated id (so future native mints are safe).
+(define-private (migrate-mint
+  (legacy <legacy-inscription-trait>)
+  (legacy-id uint)
+  (mime (string-ascii 64))
+  (total-size uint)
+  (total-chunks uint)
+  (final-hash (buff 32))
+  (token-uri-string (string-ascii 256))
+)
+  (let (
+    (source-contract (contract-of legacy))
+    (legacy-owner (unwrap! (try! (contract-call? legacy get-owner legacy-id)) ERR-NOT-FOUND))
+  )
+    (begin
+      (asserts! (is-some (map-get? AllowedMigrationSources source-contract)) ERR-MIGRATION-SOURCE)
+      ;; caller must own the legacy token being ported
+      (asserts! (is-eq legacy-owner tx-sender) ERR-NOT-AUTHORIZED)
+      ;; destination id must be free in v3
+      (asserts! (is-none (nft-get-owner? xtrata-inscription legacy-id)) ERR-DUPLICATE)
+      ;; escrow the legacy NFT into this contract (legacy transfer asserts tx-sender == sender)
+      (try! (contract-call? legacy transfer legacy-id tx-sender SELF))
+      ;; mint the v3 token at the SAME id
+      (try! (nft-mint? xtrata-inscription legacy-id tx-sender))
+      (map-insert InscriptionMeta legacy-id {
+        owner: tx-sender,
+        creator: tx-sender,
+        mime-type: mime,
+        total-size: total-size,
+        total-chunks: total-chunks,
+        sealed: true,
+        final-hash: final-hash
+      })
+      (record-hash-first-seen final-hash legacy-id)
+      (map-set TokenURIs legacy-id token-uri-string)
+      (record-migration-source legacy-id source-contract legacy-id)
+      (record-mint legacy-id)
+      (advance-next-id-if-needed legacy-id)
+      (print {
+        event: "inscription-migrated",
+        token-id: legacy-id,
+        owner: tx-sender,
+        source-contract: source-contract,
+        source-id: legacy-id,
+        final-hash: final-hash,
+        total-size: total-size,
+        total-chunks: total-chunks,
+        token-uri: token-uri-string
+      })
+      (ok legacy-id)
+    )
+  )
+)
+
+;; Single-tx migration: re-supply the whole inscription (<= 32 chunks / 512 KiB) inline.
+(define-public (migrate-single-tx
+  (legacy <legacy-inscription-trait>)
+  (legacy-id uint)
+  (expected-hash (buff 32))
+  (mime (string-ascii 64))
+  (total-size uint)
+  (chunks (list 32 (buff 16384)))
+  (token-uri-string (string-ascii 256))
+)
+  (let ((chunk-count (len chunks)))
+    (begin
+      (try! (assert-inscription-allowed))
+      (try! (assert-single-tx-shape total-size chunk-count))
+      (asserts! (> (len token-uri-string) u0) ERR-INVALID-URI)
+      (let (
+        (result (fold process-chunk chunks {
+          ok: true,
+          idx: u0,
+          run-hash: 0x0000000000000000000000000000000000000000000000000000000000000000,
+          target-hash: expected-hash,
+          creator: tx-sender,
+          total-size: total-size,
+          total-chunks: chunk-count
+        }))
+      )
+        (begin
+          (asserts! (get ok result) ERR-INVALID-BATCH)
+          (asserts! (is-eq (get idx result) chunk-count) ERR-INVALID-BATCH)
+          (asserts! (is-eq (get run-hash result) expected-hash) ERR-HASH-MISMATCH)
+          (try! (maybe-pay (single-tx-fee-for-chunks chunk-count)))
+          (migrate-mint legacy legacy-id mime total-size chunk-count expected-hash token-uri-string)
+        )
+      )
+    )
+  )
+)
+
+;; Staged migration: content already uploaded via begin-or-get + add-chunk-batch for
+;; {tx-sender, expected-hash}; this verifies, escrows, mints at the legacy id, and
+;; clears the upload session. Use for inscriptions larger than one upload batch.
+(define-public (migrate-staged
+  (legacy <legacy-inscription-trait>)
+  (legacy-id uint)
+  (expected-hash (buff 32))
+  (token-uri-string (string-ascii 256))
+)
   (begin
     (try! (assert-inscription-allowed))
-    (asserts! (validate-dependencies dependencies) ERR-DEPENDENCY-MISSING)
-    (let ((new-id (var-get next-id)))
-      (map-set InscriptionDependencies new-id dependencies)
-      (seal-internal expected-hash token-uri-string new-id)
+    (asserts! (> (len token-uri-string) u0) ERR-INVALID-URI)
+    (let (
+      (state (unwrap! (map-get? UploadState { owner: tx-sender, hash: expected-hash }) ERR-NOT-FOUND))
+    )
+      (begin
+        (try! (assert-not-expired state))
+        (asserts! (is-eq (get current-index state) (get total-chunks state)) ERR-INVALID-BATCH)
+        (asserts! (is-eq (get running-hash state) expected-hash) ERR-HASH-MISMATCH)
+        (try! (maybe-pay (seal-fee-for-chunks (get total-chunks state))))
+        (map-delete UploadState { owner: tx-sender, hash: expected-hash })
+        (migrate-mint legacy legacy-id (get mime-type state) (get total-size state)
+                      (get total-chunks state) expected-hash token-uri-string)
+      )
     )
   )
 )
@@ -1059,14 +1494,19 @@
   )
 )
 
+
+
 (define-read-only (get-chunk (id uint) (index uint))
   (match (map-get? InscriptionMeta id)
     meta
-      (map-get? Chunks {
-        context: (get final-hash meta),
-        creator: (get creator meta),
-        index: index
-      })
+      (match (map-get? Chunks {
+          context: (get final-hash meta),
+          creator: (get creator meta),
+          index: index
+        })
+        chunk (some chunk)
+        none
+      )
     none
   )
 )
@@ -1079,8 +1519,7 @@
         creator: (get creator meta),
         chunks: (list)
       })))
-        (get chunks acc)
-      )
+        (get chunks acc))
     (list)
   )
 )
@@ -1090,6 +1529,98 @@
     deps deps
     (list)
   )
+)
+
+(define-read-only (get-parents (id uint))
+  (match (map-get? InscriptionParents id)
+    parents parents
+    (list)
+  )
+)
+
+(define-read-only (get-migration-source (id uint))
+  (map-get? MigrationSource id)
+)
+
+
+(define-read-only (get-chunk-size)
+  (ok CHUNK-SIZE)
+)
+
+(define-read-only (get-contract-info)
+  (ok {
+    version: "xtrata-v3.4.0",
+    chunk-size: CHUNK-SIZE,
+    upload-batch-limit: MAX-UPLOAD-BATCH-SIZE,
+    upload-payload-limit: MAX-UPLOAD-PAYLOAD,
+    single-tx-chunk-limit: MAX-SINGLE-TX-CHUNKS,
+    single-tx-payload-limit: MAX-UPLOAD-PAYLOAD,
+    general-list-limit: MAX-GENERAL-LIST-SIZE,
+    seal-batch-limit: MAX-SEAL-BATCH-SIZE,
+    max-total-chunks: MAX-TOTAL-CHUNKS,
+    max-total-size: MAX-TOTAL-SIZE
+  })
+)
+
+(define-read-only (get-inscription-summary (id uint))
+  (match (map-get? InscriptionMeta id)
+    meta
+      (ok (some {
+        owner: (get owner meta),
+        creator: (get creator meta),
+        mime-type: (get mime-type meta),
+        total-size: (get total-size meta),
+        total-chunks: (get total-chunks meta),
+        chunk-size: CHUNK-SIZE,
+        sealed: (get sealed meta),
+        final-hash: (get final-hash meta),
+        token-uri: (map-get? TokenURIs id),
+        dependencies: (get-dependencies id),
+        parents: (get-parents id),
+        migration-source: (map-get? MigrationSource id)
+      }))
+    (ok none)
+  )
+)
+
+(define-read-only (quote-inscription-fee (total-size uint) (total-chunks uint) (mode uint))
+  (begin
+    (asserts! (or (is-eq mode MODE-STAGED) (is-eq mode MODE-SINGLE-TX)) ERR-INVALID-BATCH)
+    (asserts! (valid-total-shape? total-size total-chunks) ERR-INVALID-BATCH)
+    (asserts!
+      (or
+        (is-eq mode MODE-STAGED)
+        (<= total-chunks MAX-SINGLE-TX-CHUNKS)
+      )
+      ERR-INVALID-BATCH
+    )
+    (let (
+      (begin-fee (var-get begin-fee-unit))
+      (seal-fee (seal-fee-for-chunks total-chunks))
+      (single-fee (single-tx-fee-for-chunks total-chunks))
+      (upload-batches (num-batches total-chunks))
+    )
+      (ok {
+        mode: mode,
+        chunk-size: CHUNK-SIZE,
+        upload-batch-limit: MAX-UPLOAD-BATCH-SIZE,
+        upload-batches: upload-batches,
+        single-tx-eligible: (<= total-chunks MAX-SINGLE-TX-CHUNKS),
+        begin-fee: begin-fee,
+        seal-fee: seal-fee,
+        single-tx-fee: single-fee,
+        total-fee: (if (is-eq mode MODE-STAGED) (+ begin-fee seal-fee) single-fee)
+      })
+    )
+  )
+)
+
+(define-read-only (quote-staged-fee (total-size uint) (total-chunks uint))
+  (quote-inscription-fee total-size total-chunks MODE-STAGED)
+)
+
+(define-read-only (quote-single-tx-fee (total-size uint) (total-chunks uint))
+  (quote-inscription-fee total-size total-chunks MODE-SINGLE-TX)
 )
 
 (define-read-only (get-upload-state (expected-hash (buff 32)) (owner principal))
@@ -1110,6 +1641,10 @@
 
 (define-read-only (is-allowed-caller (caller principal))
   (ok (is-some (map-get? AllowedCallers caller)))
+)
+
+(define-read-only (is-migration-source (source principal))
+  (ok (is-some (map-get? AllowedMigrationSources source)))
 )
 
 (define-read-only (get-royalty-recipient)
@@ -1135,6 +1670,10 @@
 
 (define-read-only (get-seal-fee-unit)
   (ok (var-get seal-fee-unit))
+)
+
+(define-read-only (get-single-tx-fee-unit)
+  (ok (var-get single-tx-fee-unit))
 )
 
 (define-read-only (is-paused)

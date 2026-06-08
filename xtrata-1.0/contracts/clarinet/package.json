@@ -6,6 +6,8 @@
   "private": true,
   "scripts": {
     "test": "vitest run",
+    "test:v3.4.0": "npm run check:v3.4.0 && node tests/xtrata-v3.4.0.core.test.mjs && node tests/xtrata-v3.4.0.migration.test.mjs",
+    "check:v3.4.0": "clarinet check --manifest-path v3.4.0/Clarinet.toml",
     "test:report": "vitest run -- --coverage --costs",
     "test:watch": "chokidar \"tests/**/*.ts\" \"contracts/**/*.clar\" -c \"npm run test:report\""
   },
