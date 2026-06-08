@@ -71,6 +71,7 @@ const deployerKey = async () => {
 
 const PLANS = {
   'pause-legacy': () => ({ contractName: LEGACY_V2, functionName: 'set-paused', functionArgs: [boolTrue()] }),
+  'pause-helper': () => ({ contractName: 'xtrata-small-mint-v1-0', functionName: 'set-paused', functionArgs: [boolTrue()] }),
   'unpause': () => ({ contractName: CORE, functionName: 'set-paused', functionArgs: [boolFalse()] }),
   'set-next-id': (a) => ({ contractName: CORE, functionName: 'set-next-id', functionArgs: [uintCV(reqUint(a[1], 'next-id'))] }),
   'set-royalty': (a) => ({ contractName: CORE, functionName: 'set-royalty-recipient', functionArgs: [principalCV(a[1] ?? DEPLOYER)] }),
