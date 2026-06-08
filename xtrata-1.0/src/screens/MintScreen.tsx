@@ -814,13 +814,27 @@ export default function MintScreen(props: MintScreenProps) {
   }, [resumeState, file, fileBytes, chunks.length]);
   const resumeBlocked =
     !!resumeMismatch || (resumeInfo ? 'error' in resumeInfo : false);
+  // v3+ cores have their own one-transaction mint-single-tx route, so they must
+  // NOT use the external small-mint helper (which is bound to an older core and
+  // would mint into the wrong contract). The helper is only for older cores
+  // (v2.x) that lack a native single-tx route.
+  const supportsNativeSingleTx = capabilities.supportsNativeSingleTx;
   const supportsSmallMintHelper =
-    capabilities.version !== '1.1.1' && !!smallMintHelperContract;
-  const shouldAutoRouteSmallMint =
-    supportsSmallMintHelper &&
+    !supportsNativeSingleTx &&
+    capabilities.version !== '1.1.1' &&
+    !!smallMintHelperContract;
+  const isSmallMintEligible =
     !resumeState &&
     chunks.length > 0 &&
     chunks.length <= SMALL_MINT_HELPER_MAX_CHUNKS;
+  const shouldUseNativeSingleTx = supportsNativeSingleTx && isSmallMintEligible;
+  const shouldUseHelperSingleTx = supportsSmallMintHelper && isSmallMintEligible;
+  const shouldAutoRouteSmallMint =
+    shouldUseNativeSingleTx || shouldUseHelperSingleTx;
+  // Contract id shown for the single-tx route (the core itself when native).
+  const singleTxRouteContractId = shouldUseNativeSingleTx
+    ? getContractId(props.contract)
+    : smallMintHelperContractId;
   const totalBytes = fileBytes ? BigInt(fileBytes.length) : 0n;
   const uploadBatchCount = batches.length;
   const feeUnitNumber = useMemo(() => {
@@ -2008,16 +2022,20 @@ export default function MintScreen(props: MintScreenProps) {
 
     try {
       if (shouldAutoRouteSmallMint) {
-        if (!smallMintHelperContract) {
+        if (shouldUseHelperSingleTx && !smallMintHelperContract) {
           throw new Error('Small mint helper deployment is unavailable for this network.');
         }
-        const helperContractId = getContractId(smallMintHelperContract);
+        const helperContractId = shouldUseNativeSingleTx
+          ? getContractId(props.contract)
+          : getContractId(smallMintHelperContract!);
         activeStage = 'single';
         setBeginState('pending');
         setUploadState('pending');
         setSealState('pending');
         appendLog(
-          `Small-file helper route active (<=${SMALL_MINT_HELPER_MAX_CHUNKS} chunks).`
+          shouldUseNativeSingleTx
+            ? `Native single-tx route active on ${getContractId(props.contract)} (<=${SMALL_MINT_HELPER_MAX_CHUNKS} chunks).`
+            : `Small-file helper route active (<=${SMALL_MINT_HELPER_MAX_CHUNKS} chunks).`
         );
 
         const dependencyCheck = await checkDependencyPresence(
@@ -2055,42 +2073,50 @@ export default function MintScreen(props: MintScreenProps) {
         const helperPostConditions = resolveFeePostConditions(
           feeEstimate.totalMicroStx
         );
+        const hasDependencies = mintInputs.dependencyIds.length > 0;
+        // Native (v3+): call the core's own mint-single-tx, which does NOT take a
+        // target-core principal. Helper (v2.x): call the helper, passing the
+        // target core as the first argument.
+        const singleTxContract = shouldUseNativeSingleTx
+          ? props.contract
+          : smallMintHelperContract!;
+        const singleTxFunctionName = shouldUseNativeSingleTx
+          ? hasDependencies
+            ? 'mint-single-tx-recursive'
+            : 'mint-single-tx'
+          : hasDependencies
+            ? 'mint-small-single-tx-recursive'
+            : 'mint-small-single-tx';
+        const coreArgs = [
+          bufferCV(expectedHash),
+          stringAsciiCV(mintInputs.mimeType),
+          uintCV(BigInt(fileBytes.length)),
+          listCV(chunks.map((chunk) => bufferCV(chunk))),
+          stringAsciiCV(mintInputs.tokenUriValue)
+        ];
+        const dependencyArg = listCV(
+          mintInputs.dependencyIds.map((id) => uintCV(id))
+        );
+        const singleTxArgs = shouldUseNativeSingleTx
+          ? hasDependencies
+            ? [...coreArgs, dependencyArg]
+            : coreArgs
+          : hasDependencies
+            ? [principalCV(getContractId(props.contract)), ...coreArgs, dependencyArg]
+            : [principalCV(getContractId(props.contract)), ...coreArgs];
         const helperTx = await requestContractCall({
-          contract: smallMintHelperContract,
-          functionName:
-            mintInputs.dependencyIds.length > 0
-              ? 'mint-small-single-tx-recursive'
-              : 'mint-small-single-tx',
-          functionArgs:
-            mintInputs.dependencyIds.length > 0
-              ? [
-                  principalCV(getContractId(props.contract)),
-                  bufferCV(expectedHash),
-                  stringAsciiCV(mintInputs.mimeType),
-                  uintCV(BigInt(fileBytes.length)),
-                  listCV(chunks.map((chunk) => bufferCV(chunk))),
-                  stringAsciiCV(mintInputs.tokenUriValue),
-                  listCV(mintInputs.dependencyIds.map((id) => uintCV(id)))
-                ]
-              : [
-                  principalCV(getContractId(props.contract)),
-                  bufferCV(expectedHash),
-                  stringAsciiCV(mintInputs.mimeType),
-                  uintCV(BigInt(fileBytes.length)),
-                  listCV(chunks.map((chunk) => bufferCV(chunk))),
-                  stringAsciiCV(mintInputs.tokenUriValue)
-                ],
+          contract: singleTxContract,
+          functionName: singleTxFunctionName,
+          functionArgs: singleTxArgs,
           postConditionMode: helperPostConditions
             ? PostConditionMode.Deny
             : undefined,
           postConditions: helperPostConditions,
           logDetails: {
-            action:
-              mintInputs.dependencyIds.length > 0
-                ? 'mint-small-single-tx-recursive'
-                : 'mint-small-single-tx',
+            action: singleTxFunctionName,
             helperContractId,
             targetCoreContractId: getContractId(props.contract),
+            route: shouldUseNativeSingleTx ? 'native-single-tx' : 'helper-single-tx',
             totalChunks: chunks.length,
             tokenUriLength: mintInputs.tokenUriValue.length,
             dependencyCount: mintInputs.dependencyIds.length,
@@ -2992,7 +3018,7 @@ export default function MintScreen(props: MintScreenProps) {
                       info="Small-file helper route uses one transaction and internally executes begin, upload, and seal."
                     />
                     <span className="meta-value">
-                      Single transaction via {smallMintHelperContractId}
+                      Single transaction via {singleTxRouteContractId}
                     </span>
                   </div>
                 )}
@@ -3287,7 +3313,7 @@ export default function MintScreen(props: MintScreenProps) {
           <div className="alert">
             <strong>Single transaction route.</strong> This file is within the
             helper limit ({SMALL_MINT_HELPER_MAX_CHUNKS} chunks), so minting
-            will run in one wallet approval via {smallMintHelperContractId}.
+            will run in one wallet approval via {singleTxRouteContractId}.
           </div>
         ) : (
           <div className="alert alert--supportive">
