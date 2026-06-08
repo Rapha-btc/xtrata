@@ -185,25 +185,24 @@ export const fetchTokenSummaryWithFallback = async (params: {
     !!legacyClient && legacyMaxId !== null && params.id <= legacyMaxId;
 
   if (shouldPreferLegacy) {
+    // The current (primary) core is authoritative. If the token exists on
+    // primary it must win, even when its id falls within the legacy id range —
+    // e.g. a native primary mint (the v3 #359 announcement) or a migrated token
+    // whose id overlaps a different legacy token of the same id. Only fall back
+    // to legacy when primary genuinely does not have the token.
+    const primarySummary = await fetchTokenSummary({
+      client: params.primaryClient,
+      id: params.id,
+      senderAddress: params.senderAddress
+    });
+    if (!isEmptySummary(primarySummary)) {
+      return { ...primarySummary, sourceContractId: primaryContractId };
+    }
     const legacySummary = await fetchTokenSummary({
       client: legacyClient!,
       id: params.id,
       senderAddress: params.senderAddress
     });
-    const shouldCheckPrimaryEscrow = isSamePrincipal(
-      legacySummary.owner,
-      escrowOwner
-    );
-    if (shouldCheckPrimaryEscrow) {
-      const primarySummary = await fetchTokenSummary({
-        client: params.primaryClient,
-        id: params.id,
-        senderAddress: params.senderAddress
-      });
-      if (!isEmptySummary(primarySummary)) {
-        return { ...primarySummary, sourceContractId: primaryContractId };
-      }
-    }
     return { ...legacySummary, sourceContractId: legacyContractId ?? legacySummary.sourceContractId };
   }
 
