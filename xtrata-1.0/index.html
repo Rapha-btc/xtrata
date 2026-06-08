@@ -6583,6 +6583,20 @@
       return true;
     };
 
+    // Locate the live grid thumb element for a token without rebuilding the
+    // grid, so a freshly-warmed thumbnail can be applied to just that card
+    // instead of triggering a full re-render (which revokes every blob URL and
+    // restarts all media streams).
+    const findGridThumbElement = (token) => {
+      if (!dom.tokenGrid || !token) {
+        return null;
+      }
+      const card = dom.tokenGrid.querySelector(
+        `.token-card[data-token-id="${token.id.toString()}"]`
+      );
+      return card ? card.querySelector('.token-thumb') : null;
+    };
+
     const warmThumbnailCacheFromBytes = async (token, bytes, mimeType, options = {}) => {
       const kind = getMediaKind(mimeType);
       if (kind !== 'image' && kind !== 'svg') {
@@ -6603,7 +6617,12 @@
           mimeType
         });
         if (options.renderGrid !== false) {
-          scheduleGridRender();
+          const thumbElement = findGridThumbElement(token);
+          if (thumbElement) {
+            renderGridLiveMedia(token, thumbElement, state.gridLiveMediaCache.get(cacheKey));
+          } else {
+            scheduleGridRender();
+          }
         }
         return null;
       }
@@ -6633,7 +6652,12 @@
           mimeType: thumbnail.mimeType
         });
         if (options.renderGrid !== false) {
-          scheduleGridRender();
+          const thumbElement = findGridThumbElement(token);
+          if (thumbElement) {
+            await applyCachedThumbnail(token, thumbElement);
+          } else {
+            scheduleGridRender();
+          }
         }
         return thumbnail;
       } catch (error) {
