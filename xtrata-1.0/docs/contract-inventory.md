@@ -1,5 +1,18 @@
 # Contract Inventory
 
+## Live Mainnet Core (current)
+
+The canonical live core is **`SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v3-2-3`**
+(Clarity 3), deployed 2026-06-08. Lineage: `xtrata-v1-1-1` → `xtrata-v2-1-0` →
+`xtrata-v3-2-3`. The two earlier cores remain live and are the supported
+migration sources (`migrate-from-v1`, `migrate-from-v2-1-0`). Continuity offset
+set so new native mints continue from token id 359. Sealing announcement
+inscribed as token #359. See `docs/mainnet-v3.2.3-deploy-notes.md` for the full
+deploy story, transaction list, and the Clarity-version / derivation gotchas.
+
+Deploy/admin tooling (SDK, wallet-independent):
+`scripts/mainnet-v3.2.3-deploy.mjs`, `scripts/mainnet-v3.2.3-admin.mjs`.
+
 ## xtrata-v1.1.0
 
 Source: `contracts/live/xtrata-v1.1.0.clar`
@@ -131,42 +144,68 @@ Source: `contracts/live/xtrata-v2.1.0.clar`
 
 ## xtrata-v2.1.1
 
-Source: `contracts/live/xtrata-v2.1.1.clar`
+Source: `contracts/clarinet/contracts/xtrata-v2.1.1.clar`
 
 ## Purpose
-- Fee-controls upgrade on top of v2.1.0 with split pricing knobs.
-- Keeps the same begin/upload/seal flow and v2 migration/indexing capabilities.
+- Clarinet-only compatibility stub for historical contracts that reference
+  `.xtrata-v2-1-1`.
+- It was never deployed to testnet or mainnet and is not a deployment target.
+- It is intentionally excluded from three-network contract variant
+  synchronization.
 
-## Fee Model (split knobs)
-- Begin fee: `begin-fee-unit`.
-- Seal fee:
-  - `seal-fee-unit`
-  - `+ upload-chunk-fee-unit * min(total-chunks, 50)`
-  - `+ upload-batch-fee-unit * ceil(max(total-chunks - 50, 0) / 50)`
-- Migration fee: `begin-fee-unit`.
+## xtrata-v3.2.2
 
-## New Public Fee Setters
-- `set-begin-fee-unit(new-fee)`
-- `set-upload-chunk-fee-unit(new-fee)`
-- `set-upload-batch-fee-unit(new-fee)`
-- `set-seal-fee-unit(new-fee)`
+Sources:
+- Clarinet: `contracts/clarinet/contracts/xtrata-v3.2.2.clar`
+- Testnet: `contracts/other/xtrata-v3.2.2.clar`
+- Mainnet: `contracts/live/xtrata-v3.2.2.clar`
 
-## Compatibility Fee Setter
-- `set-fee-unit(new-fee)`
-  - Legacy convenience profile:
-    - `begin = new-fee`
-    - `upload-chunk = max(FEE-MIN, floor(new-fee / 50))`
-    - `upload-batch = new-fee`
-    - `seal = new-fee`
+## Purpose
+- Clarity 3 core using fixed 16 KiB chunks and list-32 upload payloads.
+- Allows duplicate same-hash content while retaining advisory first-seen hash
+  lookup.
+- Supports same-ID migration from the deployed `xtrata-v1-1-1` and
+  `xtrata-v2-1-0` legacy contracts.
+- Removes the undeployable `xtrata-v2-1-1` migration path from v3.2.1.
 
-## New Read-Only Fee Getters
-- `get-begin-fee-unit()`
-- `get-upload-chunk-fee-unit()`
-- `get-upload-batch-fee-unit()`
-- `get-seal-fee-unit()`
+## Deployment Rules
+- Deploy `contracts/live/xtrata-v3.2.2.clar` as Clarity 3.
+- Pause the current live core before computing the one-shot `set-next-id`.
+- Set the starting ID above every migratable legacy token ID before native
+  v3.2.2 minting.
+- Follow `docs/mainnet-v3.2.2-handover.md` for the Xverse deployment sequence.
 
-## Compatibility Fee Getter
-- `get-fee-unit()` (maps to `upload-batch-fee-unit`)
+## xtrata-v3.4.0
+
+Sources:
+- Clarinet: `contracts/clarinet/contracts/xtrata-v3.4.0.clar`
+- Testnet: `contracts/other/xtrata-v3.4.0.clar`
+- Mainnet: `contracts/live/xtrata-v3.4.0.clar`
+
+## Purpose
+- Dependency-free Clarity 4 core with native single-transaction minting.
+- Replaces static legacy-contract references with a trait-based migration parameter.
+- Migrates owned v1/v2 tokens at the same token ID while escrowing the legacy NFT.
+- Uses `current-contract` as the Clarity 4 self-principal.
+
+## Migration Functions
+- `migrate-single-tx(legacy, legacy-id, expected-hash, mime, total-size, chunks, token-uri)`
+- `migrate-staged(legacy, legacy-id, expected-hash, token-uri)`
+- `get-migration-source(token-id)`
+- `set-migration-source(source, allowed)`
+- `is-migration-source(source)`
+
+Migration sources are denied by default. Mainnet setup must approve only
+`xtrata-v1-1-1` and `xtrata-v2-1-0`. Single-transaction migrations pay the
+normal single-transaction fee; staged migrations pay the normal begin and seal
+fees.
+
+## Deployment Rules
+- Deploy `xtrata-v3-4-0` as Clarity 4.
+- Run the dedicated suite with `npm run test:clarinet:v3.4.0`.
+- Verify the mined deployment reports Clarity 4 before calling the one-shot `set-next-id`.
+- Pause the current live core and rerun preflight before calculating the exact `set-next-id`.
+- No small-mint helper or `xtrata-v2-1-1` dependency is required.
 
 ## xtrata-small-mint-v1.0
 
