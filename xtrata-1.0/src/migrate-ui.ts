@@ -16,8 +16,9 @@ const ASSET = 'xtrata-inscription';
 const apiBase = getApiBaseUrls('mainnet')[0];
 const network = toStacksNetwork('mainnet', apiBase);
 // Explicit fee so migrations confirm promptly instead of stalling on a low
-// wallet-estimated fee.
-const FEE_USTX = 30000n;
+// wallet-estimated fee. Kept as a number (not bigint) — @stacks/connect
+// JSON-serializes the call options and cannot serialize a BigInt.
+const FEE_USTX = 30000;
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
