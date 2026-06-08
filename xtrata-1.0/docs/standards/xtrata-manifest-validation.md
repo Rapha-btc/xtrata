@@ -368,7 +368,7 @@ packages/xtrata-manifest-validator
 Recommended CLI:
 
 ```text
-xtrata-manifest validate docs/standards/examples/minimal-marketplace-manifest.json
+xtrata-manifest validate docs/standards/xtrata-manifest-templates/collections/minimal-marketplace-manifest.json
 xtrata-manifest validate --level C --network mainnet manifest.json
 xtrata-manifest canonicalize manifest.json
 xtrata-manifest report manifest.json --out validation-report.json

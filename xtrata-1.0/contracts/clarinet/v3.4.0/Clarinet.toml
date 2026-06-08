@@ -1,0 +1,40 @@
+[project]
+name = 'xtrata-v3-4-0-clarity-4'
+description = 'Dedicated Clarity 4 verification suite for xtrata-v3.4.0'
+authors = []
+telemetry = false
+cache_dir = './.cache'
+requirements = []
+
+[contracts.sip009-nft-trait]
+path = '../contracts/sip009-nft-trait.clar'
+clarity_version = 4
+epoch = 'latest'
+
+[contracts.mock-legacy]
+path = '../contracts/mock-legacy-v3.4.clar'
+clarity_version = 4
+epoch = 'latest'
+
+[contracts.mock-legacy-b]
+path = '../contracts/mock-legacy-b-v3.4.clar'
+clarity_version = 4
+epoch = 'latest'
+
+[contracts.xtrata-v3-4-0]
+path = '../contracts/xtrata-v3.4.0.clar'
+clarity_version = 4
+epoch = 'latest'
+
+[repl.analysis]
+passes = ['check_checker']
+
+[repl.analysis.check_checker]
+strict = false
+trusted_sender = false
+trusted_caller = false
+callee_filter = false
+
+[repl.remote_data]
+enabled = false
+api_url = 'https://api.hiro.so'

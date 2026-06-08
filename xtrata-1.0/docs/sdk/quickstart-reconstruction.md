@@ -38,7 +38,7 @@ console.log({
   mimeType: result.mimeType,
   bytes: result.bytes.length,
   tokenUri: result.tokenUri,
-  finalHash: result.verification.expectedHashHex,
+  rollingChunkHash: result.verification.expectedHashHex,
   chunkSource: result.diagnostics.chunkSourceId,
   dependencies: result.dependencies.nodes.map(String)
 });
@@ -58,6 +58,12 @@ counts, and `X-Xtrata-Runtime-Cache: HIT` on the repeat request.
 
 For the full reconstruction rules, see
 [`docs/reconstruction-spec.md`](../reconstruction-spec.md).
+
+Hash note: Xtrata verification uses the protocol rolling chunk hash
+`sha256(previousHash || chunkBytes)`, starting from 32 zero bytes. For v3.1.1
+summaries this value is named `rolling-chunk-hash`; older contracts expose the
+same value as `final-hash`. It is not necessarily the normal
+`sha256(reconstructedBytes)`.
 
 ## CLI proof
 

@@ -20,6 +20,9 @@ export type HomeTokenGallery = {
   title: string;
   kicker: string;
   description: string;
+  // Optional contract this gallery's token ids resolve against (e.g.
+  // "SP3J….xtrata-v1-1-1"). Defaults to the public contract when omitted.
+  contractId?: string;
   tokens: HomeGalleryToken[];
 };
 

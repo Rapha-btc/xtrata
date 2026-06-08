@@ -16,6 +16,7 @@ Status legend:
 | Xtrata core | `xtrata-v2.1.0` | supported | Legacy fallback source for `xtrata-v2.1.1` migrated/continued IDs. |
 | Xtrata core | `xtrata-v2.1.1` | supported | Current public mainnet default in `src/data/contract-registry.json`. |
 | Xtrata core | `xtrata-v3.0.0` | baseline | Source and SDK capability detection exist; not public default until registry/docs promote it. |
+| Xtrata core | `xtrata-v3.1.1` | planned | Comparison contract source only. SDK/app support must add chunk profiles, profile-specific single-tx functions, and rolling-hash summary parsing before promotion. |
 
 Current public reconstruction fallback chain:
 

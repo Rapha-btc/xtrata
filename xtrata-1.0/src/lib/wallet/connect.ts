@@ -707,6 +707,8 @@ const selectProvider = (options?: {
 export const isLeatherProviderId = (providerId: string | null | undefined) =>
   typeof providerId === 'string' && providerId.toLowerCase().includes('leather');
 
+export const getSelectedWalletProviderId = () => getSelectedProviderId();
+
 export const getStacksProvider = (): StacksProvider | undefined => {
   if (typeof window === 'undefined') {
     return undefined;
@@ -791,10 +793,12 @@ export const showContractCall = (
   provider?: StacksProvider
 ) => {
   const activeProvider = provider ?? getStacksProvider();
-  const providerId = getSelectedProviderId();
   const legacyOptions = toLegacyContractCallOptions(options);
 
-  if (!activeProvider || !isLeatherProviderId(providerId)) {
+  // Prefer the modern stx_callContract request for any provider that exposes a
+  // request() bridge (Xverse, Leather, other WBIP wallets). The legacy popup
+  // flow is rejected by current Xverse builds, so it is only a fallback.
+  if (!activeProvider || typeof activeProvider.request !== 'function') {
     return legacyShowContractCall(legacyOptions, provider);
   }
 
@@ -818,10 +822,14 @@ export const showContractDeploy = (
   provider?: StacksProvider
 ) => {
   const activeProvider = provider ?? getStacksProvider();
-  const providerId = getSelectedProviderId();
   const legacyOptions = toLegacyContractDeployOptions(options);
 
-  if (!activeProvider || !isLeatherProviderId(providerId)) {
+  // Prefer the modern stx_deployContract request for any provider that exposes
+  // it (Xverse, Leather, and other WBIP-compatible wallets). The legacy
+  // showContractDeploy popup flow is rejected by current Xverse builds with
+  // "Unexpected error creating transaction", so it is only used as a fallback
+  // when the provider has no request() bridge or reports the method unsupported.
+  if (!activeProvider || typeof activeProvider.request !== 'function') {
     return legacyShowContractDeploy(legacyOptions, provider);
   }
 
@@ -845,7 +853,6 @@ export const showStxTransfer = (
   provider?: StacksProvider
 ) => {
   const activeProvider = provider ?? getStacksProvider();
-  const providerId = getSelectedProviderId();
   const legacyOptions = toLegacyStxTransferOptions({
     ...options,
     onFinish: (payload) => {
@@ -853,7 +860,9 @@ export const showStxTransfer = (
     }
   });
 
-  if (!activeProvider || !isLeatherProviderId(providerId)) {
+  // Prefer the modern stx_transferStx request for any provider with a request()
+  // bridge; legacy popup is only a fallback (rejected by current Xverse).
+  if (!activeProvider || typeof activeProvider.request !== 'function') {
     return legacyShowSTXTransfer(legacyOptions, provider);
   }
 

@@ -29,30 +29,6 @@ This file captures the core development rules and app constraints for V16.
 - `contracts/` contract sources and references (`contracts/clarinet/`, `contracts/live/`, `contracts/other/`).
 - `recursive-apps/` supporting recursive app assets.
 
-## Arcade Versioning Rules
-
-- Arcade runtime lives under `recursive-apps/21-arcade/` and uses latest-version loading.
-- The launcher main app (`recursive-apps/21-arcade/main.js`) must resolve games through:
-  - `recursive-apps/21-arcade/games/latest-manifest.js`
-  - `recursive-apps/21-arcade/lib/game-loader.js`
-- Version progression policy for arcade game outputs:
-  - default after `v2` is decimal minor (`v2.1`, `v2.2`, `v2.3`, ...)
-  - major jumps only when explicitly requested
-  - helper command: `npm run arcade:next-version -- --game gameNN_slug`
-- Build policy for arcade workspaces:
-  - each new workspace build should mint the next decimal runtime version file in `recursive-apps/21-arcade/games/`
-  - example sequence for repeated builds: `v2 -> v2.1 -> v2.2 -> v2.3`
-  - regenerate `recursive-apps/21-arcade/games/latest-manifest.js` after each build/promotion
-- Launcher tile policy:
-  - main arcade tiles must display resolved version labels in decimal form (`v1.0`, `v2.0`, `v2.1`, ...)
-- Game-type strategy review gate:
-  - initialize strategy profiles: `npm run arcade:strategy:init`
-  - review/audit all workspaces: `npm run arcade:strategy:review`
-  - strict per-game gate before promotion:
-    - `npm run arcade:strategy:review -- --game gameNN_slug --strict`
-- After any promoted game output version, regenerate manifest:
-  - `npm run arcade:games:manifest`
-
 ## UI/UX Constraints
 
 - Grids must remain 4x4 and square at all responsive sizes.

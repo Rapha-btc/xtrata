@@ -1216,15 +1216,17 @@ Recommended repository structure:
 
 ```text
 docs/standards/xtrata-collection-manifest-standard.md
-docs/standards/examples/minimal-marketplace-manifest.json
-docs/standards/examples/preservation-migration-manifest.json
-docs/standards/examples/audiovisual-preservation-manifest.json
-docs/standards/examples/full-composable-manifest.json
+docs/standards/xtrata-manifest-templates/README.md
+docs/standards/xtrata-manifest-templates/00-manifest-index.json
+docs/standards/xtrata-manifest-templates/collections/minimal-marketplace-manifest.json
+docs/standards/xtrata-manifest-templates/collections/preservation-migration-manifest.json
+docs/standards/xtrata-manifest-templates/collections/audiovisual-preservation-manifest.json
+docs/standards/xtrata-manifest-templates/collections/full-composable-manifest.json
 schemas/xtrata-collection-manifest.schema.json
 docs/standards/xtrata-manifest-validation.md
 ```
 
-The main markdown standard should remain the human-readable protocol reference. A JSON schema should become the machine validation target. Example manifests should track real integration cases without requiring readers to infer the standard from production data.
+The main markdown standard should remain the human-readable protocol reference. A JSON schema should become the machine validation target. The manifest template package should track real integration cases without requiring readers to infer the standard from production data.
 
 ## 12. Companion Artifacts and Future Work
 
@@ -1232,10 +1234,12 @@ This document defines the main Xtrata Collection Manifest standard. The current
 companion artifacts are:
 
 - [`schemas/xtrata-collection-manifest.schema.json`](../../schemas/xtrata-collection-manifest.schema.json): draft JSON Schema for automated validation.
-- [`docs/standards/examples/minimal-marketplace-manifest.json`](examples/minimal-marketplace-manifest.json): Level 1 example for a simple art collection.
-- [`docs/standards/examples/preservation-migration-manifest.json`](examples/preservation-migration-manifest.json): Level 2 example for a Froggies-style migration.
-- [`docs/standards/examples/audiovisual-preservation-manifest.json`](examples/audiovisual-preservation-manifest.json): Level 2 audiovisual preservation example for NFTs for Peace-style collections.
-- [`docs/standards/examples/full-composable-manifest.json`](examples/full-composable-manifest.json): Level 3 example for Audionals, BVSTs and generative software-like collections.
+- [`docs/standards/xtrata-manifest-templates/README.md`](xtrata-manifest-templates/README.md): active entry point for the modular manifest template package.
+- [`docs/standards/xtrata-manifest-templates/00-manifest-index.json`](xtrata-manifest-templates/00-manifest-index.json): machine-readable index of root templates, specialist folders and shared template standards.
+- [`docs/standards/xtrata-manifest-templates/collections/minimal-marketplace-manifest.json`](xtrata-manifest-templates/collections/minimal-marketplace-manifest.json): collection template for a simple art marketplace launch.
+- [`docs/standards/xtrata-manifest-templates/collections/preservation-migration-manifest.json`](xtrata-manifest-templates/collections/preservation-migration-manifest.json): collection template for a Froggies-style migration.
+- [`docs/standards/xtrata-manifest-templates/collections/audiovisual-preservation-manifest.json`](xtrata-manifest-templates/collections/audiovisual-preservation-manifest.json): collection template for NFTs for Peace-style audiovisual preservation.
+- [`docs/standards/xtrata-manifest-templates/collections/full-composable-manifest.json`](xtrata-manifest-templates/collections/full-composable-manifest.json): collection template for Audionals, BVSTs and generative software-like collections.
 - [`docs/standards/xtrata-manifest-validation.md`](xtrata-manifest-validation.md): validator behavior, error codes, canonicalization, signature verification and report format.
 
 Future work should turn the draft schema and validation guidance into a tested

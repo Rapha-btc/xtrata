@@ -1,0 +1,329 @@
+{
+  "generated": "2026-06-06T19:03:28.872Z",
+  "network": "mainnet",
+  "apiUrl": "https://api.hiro.so",
+  "hiroApiKey": "not configured",
+  "expectedAdmin": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X",
+  "signerWallet": "Xverse",
+  "signerBns": "Xtrata.btc",
+  "royaltyRecipient": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X",
+  "recommendation": "ready to deploy v2.1.1 dependency with Xverse",
+  "contracts": {
+    "v1_1_1": {
+      "address": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X",
+      "name": "xtrata-v1-1-1",
+      "role": "legacy"
+    },
+    "v2_1_0": {
+      "address": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X",
+      "name": "xtrata-v2-1-0",
+      "role": "current-live"
+    },
+    "v2_1_1": {
+      "address": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X",
+      "name": "xtrata-v2-1-1",
+      "role": "migration-dependency"
+    },
+    "core": {
+      "address": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X",
+      "name": "xtrata-v3-2-1",
+      "role": "new-core"
+    }
+  },
+  "source": {
+    "core": "contracts/live/xtrata-v3.2.1.clar",
+    "coreSha256": "c6b13d0d62087fb219120c64dc93eaa84461732dd9ab01120ea30e117c81c4c9",
+    "coreClarityVersion": 3,
+    "v2_1_1": "contracts/live/xtrata-v2.1.1.clar",
+    "v2_1_1Sha256": "90f99ee940a8c027736f38b552c53222b8facb014649f3ab23c050b24aa603ca",
+    "v2_1_1ClarityVersion": 2,
+    "announcement": "docs/mainnet-v3.2.1-announcement-inscription.md",
+    "announcementSha256": "a85fe80e865824ad2addb7af024a59b0a2420a10ef4f7f46ba0d9c88d5bb126d"
+  },
+  "announcement": {
+    "mime": "text/markdown",
+    "tokenUri": "data:text/markdown,xtrata-v3.2.1-mainnet-handover",
+    "bytes": 1870,
+    "chunkSize": 16384,
+    "chunks": 1,
+    "finalHashHex": "eb626f649e0e41a1f89a1cfa0537f9e3cd4f17b1514944143fbce15730bc4598",
+    "chunkHex": [
+      "23205874726174612076332e322e31204d61696e6e65742048616e646f7665720a0a5468697320696e736372697074696f6e207265636f72647320746865206d61696e6e65742068616e646f76657220746f20607874726174612d76332e322e31602e0a0a232320436f6e7472616374730a0a2d2050726576696f7573206c69766520636f72653a20605350334a4e534558415a5034424453485630444e334d38523350304d593045454251515a58373433582e7874726174612d76322d312d31600a2d204e657720636f72653a20605350334a4e534558415a5034424453485630444e334d38523350304d593045454251515a58373433582e7874726174612d76332d322d31600a0a23232057686174204368616e6765640a0a607874726174612d76332e322e31602070726573657276657320587472617461206173206f70656e20696e736372697074696f6e20696e667261737472756374757265207768696c650a68617264656e696e672075706c6f61642c2072656c6174696f6e736869702c206d6967726174696f6e2c20616e64207265636f6e737472756374696f6e206265686176696f722e0a0a4b65792070726f746f636f6c2070726f706572746965733a0a0a2d206669786564203136204b6942206368756e6b733b0a2d20636f72652075706c6f6164207061796c6f6164732061636365707420757020746f203332206368756e6b73207065722075706c6f61642062617463683b0a2d2074686520636f726520606d696e742d73696e676c652d74786020726f75746520737570706f72747320736d616c6c20696e736372697074696f6e73206469726563746c7920696e206f6e650a20207472616e73616374696f6e3b0a2d2061707020746f6f6c696e67206d6179207573652061203330206368756e6b2070726163746963616c20706f6c69637920666f722077616c6c657420616e6420525043207361666574793b0a2d206475706c69636174652073616d652d6861736820636f6e74656e7420697320616c6c6f77656420746f206d696e74206e657720746f6b656e204944733b0a2d20606765742d69642d62792d68617368602072656d61696e7320616e2061647669736f72792066697273742d7365656e206c6f6f6b75703b0a2d20706172656e742072656c6174696f6e736869707320616e6420646570656e64656e63792072656c6174696f6e73686970732072656d61696e2073657061726174653b0a2d206d6967726174696f6e2066726f6d20737570706f72746564206c656761637920587472617461206c696e65732070726573657276657320746f6b656e206f776e6572736869702c0a2020636f6e74656e74206d657461646174612c20746f6b656e205552492c20616e64206d6967726174696f6e20736f75726365207265636f7264732e0a0a23232048617368204c6f6f6b757020506f6c6963790a0a6048617368546f496460206973206e6f742061207374726963742063616e6f6e6963616c2d636f6e74656e742072656769737472792e0a0a546865206669727374207365616c6564206f72206d696e74656420746f6b656e20666f7220612066696e616c2068617368206973207265636f72646564206173207468652066697273742d7365656e0a49442e204c6174657220696e736372697074696f6e732077697468206964656e746963616c2062797465732063616e207374696c6c206d696e742064697374696e637420746f6b656e204944732e0a54686973206b656570732058747261746120617661696c61626c6520666f7220617274697374732c206170706c69636174696f6e732c206d6972726f72732c2065646974696f6e732c0a61726368697665732c20616e64206f7468657220757365206361736573207768657265206964656e746963616c20636f6e74656e74206d6179206c65676974696d6174656c792061707065617220696e0a646966666572656e74206f776e657273686970206f722072656c6174696f6e7368697020636f6e74657874732e0a0a232320436f6d7061746962696c6974790a0a4578697374696e6720607874726174612d76322e312e786020696e736372697074696f6e732072656d61696e2076616c696420616e64207265636f6e73747275637461626c652e0a4d6967726174696f6e20696e746f20607874726174612d76332e322e316020697320617661696c61626c6520666f7220737570706f72746564206c6567616379206c696e6573207768657265207468650a686f6c6465722077616e747320746865207633206f776e6572736869702c2072656c6174696f6e736869702c20616e64207265736f6c76657220737572666163652e0a0a5468697320696e736372697074696f6e20697320696e74656e64656420746f20626520746865206669727374207075626c6963206e617469766520696e736372697074696f6e206f6e207468650a6e65772076332e322e31206d61696e6e657420636f6e747261637420616674657220746865206f6e652d73686f74206e65787420494420636f6e74696e756974792073657475702e0a"
+    ]
+  },
+  "nextId": {
+    "legacyValues": [
+      {
+        "key": "v1_1_1",
+        "contract": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v1-1-1",
+        "next": 39,
+        "last": 38,
+        "candidate": 39
+      },
+      {
+        "key": "v2_1_0",
+        "contract": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-0",
+        "next": 358,
+        "last": 357,
+        "candidate": 358
+      },
+      {
+        "key": "v2_1_1",
+        "contract": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-1",
+        "next": null,
+        "last": null,
+        "candidate": 0
+      }
+    ],
+    "highestLegacyLastId": 357,
+    "computedNextId": 358
+  },
+  "handoverState": {
+    "currentLiveContract": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-0",
+    "currentLivePaused": false,
+    "setNextIdAllowed": false
+  },
+  "reads": {
+    "v1_1_1": {
+      "get-admin": {
+        "ok": true,
+        "raw": "0x070516e4b32d93d848c808b578027660f3c6f34461508a",
+        "json": {
+          "type": "(response principal UnknownType)",
+          "value": {
+            "type": "principal",
+            "value": "SP3JB6BCKV14CG25NF017CR7KRVSM8RAGHB52DWHX"
+          },
+          "success": true
+        },
+        "value": "SP3JB6BCKV14CG25NF017CR7KRVSM8RAGHB52DWHX"
+      },
+      "is-paused": {
+        "ok": true,
+        "raw": "0x0703",
+        "json": {
+          "type": "(response bool UnknownType)",
+          "value": {
+            "type": "bool",
+            "value": true
+          },
+          "success": true
+        },
+        "value": true
+      },
+      "get-next-token-id": {
+        "ok": true,
+        "raw": "0x070100000000000000000000000000000027",
+        "json": {
+          "type": "(response uint UnknownType)",
+          "value": {
+            "type": "uint",
+            "value": "39"
+          },
+          "success": true
+        },
+        "value": 39
+      },
+      "get-last-token-id": {
+        "ok": true,
+        "raw": "0x070100000000000000000000000000000026",
+        "json": {
+          "type": "(response uint UnknownType)",
+          "value": {
+            "type": "uint",
+            "value": "38"
+          },
+          "success": true
+        },
+        "value": 38
+      },
+      "get-royalty-recipient": {
+        "ok": true,
+        "raw": "0x070516e55cbbaafd88b6e63b036a3a2303b029e039cbbd",
+        "json": {
+          "type": "(response principal UnknownType)",
+          "value": {
+            "type": "principal",
+            "value": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X"
+          },
+          "success": true
+        },
+        "value": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X"
+      },
+      "get-fee-unit": {
+        "ok": true,
+        "raw": "0x0701000000000000000000000000000186a0",
+        "json": {
+          "type": "(response uint UnknownType)",
+          "value": {
+            "type": "uint",
+            "value": "100000"
+          },
+          "success": true
+        },
+        "value": 100000
+      }
+    },
+    "v2_1_0": {
+      "get-admin": {
+        "ok": true,
+        "raw": "0x070516e55cbbaafd88b6e63b036a3a2303b029e039cbbd",
+        "json": {
+          "type": "(response principal UnknownType)",
+          "value": {
+            "type": "principal",
+            "value": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X"
+          },
+          "success": true
+        },
+        "value": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X"
+      },
+      "is-paused": {
+        "ok": true,
+        "raw": "0x0704",
+        "json": {
+          "type": "(response bool UnknownType)",
+          "value": {
+            "type": "bool",
+            "value": false
+          },
+          "success": true
+        },
+        "value": false
+      },
+      "get-next-token-id": {
+        "ok": true,
+        "raw": "0x070100000000000000000000000000000166",
+        "json": {
+          "type": "(response uint UnknownType)",
+          "value": {
+            "type": "uint",
+            "value": "358"
+          },
+          "success": true
+        },
+        "value": 358
+      },
+      "get-last-token-id": {
+        "ok": true,
+        "raw": "0x070100000000000000000000000000000165",
+        "json": {
+          "type": "(response uint UnknownType)",
+          "value": {
+            "type": "uint",
+            "value": "357"
+          },
+          "success": true
+        },
+        "value": 357
+      },
+      "get-royalty-recipient": {
+        "ok": true,
+        "raw": "0x070516e55cbbaafd88b6e63b036a3a2303b029e039cbbd",
+        "json": {
+          "type": "(response principal UnknownType)",
+          "value": {
+            "type": "principal",
+            "value": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X"
+          },
+          "success": true
+        },
+        "value": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X"
+      },
+      "get-fee-unit": {
+        "ok": true,
+        "raw": "0x0701000000000000000000000000000003e8",
+        "json": {
+          "type": "(response uint UnknownType)",
+          "value": {
+            "type": "uint",
+            "value": "1000"
+          },
+          "success": true
+        },
+        "value": 1000
+      }
+    },
+    "v2_1_1": {
+      "get-admin": {
+        "ok": false,
+        "error": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-1.get-admin failed: {\"okay\":false,\"cause\":\"RuntimeCheck(NoSuchContract(\\\"SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-1\\\"))\"}"
+      },
+      "is-paused": {
+        "ok": false,
+        "error": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-1.is-paused failed: {\"okay\":false,\"cause\":\"RuntimeCheck(NoSuchContract(\\\"SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-1\\\"))\"}"
+      },
+      "get-next-token-id": {
+        "ok": false,
+        "error": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-1.get-next-token-id failed: {\"okay\":false,\"cause\":\"RuntimeCheck(NoSuchContract(\\\"SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-1\\\"))\"}"
+      },
+      "get-last-token-id": {
+        "ok": false,
+        "error": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-1.get-last-token-id failed: {\"okay\":false,\"cause\":\"RuntimeCheck(NoSuchContract(\\\"SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-1\\\"))\"}"
+      },
+      "get-royalty-recipient": {
+        "ok": false,
+        "error": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-1.get-royalty-recipient failed: {\"okay\":false,\"cause\":\"RuntimeCheck(NoSuchContract(\\\"SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-1\\\"))\"}"
+      },
+      "get-fee-unit": {
+        "ok": false,
+        "error": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-1.get-fee-unit failed: {\"okay\":false,\"cause\":\"RuntimeCheck(NoSuchContract(\\\"SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-1\\\"))\"}"
+      }
+    },
+    "core": {
+      "get-admin": {
+        "ok": false,
+        "error": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v3-2-1.get-admin failed: {\"okay\":false,\"cause\":\"RuntimeCheck(NoSuchContract(\\\"SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v3-2-1\\\"))\"}"
+      },
+      "is-paused": {
+        "ok": false,
+        "error": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v3-2-1.is-paused failed: {\"okay\":false,\"cause\":\"RuntimeCheck(NoSuchContract(\\\"SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v3-2-1\\\"))\"}"
+      },
+      "get-next-token-id": {
+        "ok": false,
+        "error": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v3-2-1.get-next-token-id failed: {\"okay\":false,\"cause\":\"RuntimeCheck(NoSuchContract(\\\"SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v3-2-1\\\"))\"}"
+      },
+      "get-last-token-id": {
+        "ok": false,
+        "error": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v3-2-1.get-last-token-id failed: {\"okay\":false,\"cause\":\"RuntimeCheck(NoSuchContract(\\\"SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v3-2-1\\\"))\"}"
+      },
+      "get-royalty-recipient": {
+        "ok": false,
+        "error": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v3-2-1.get-royalty-recipient failed: {\"okay\":false,\"cause\":\"RuntimeCheck(NoSuchContract(\\\"SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v3-2-1\\\"))\"}"
+      },
+      "get-fee-unit": {
+        "ok": false,
+        "error": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v3-2-1.get-fee-unit failed: {\"okay\":false,\"cause\":\"RuntimeCheck(NoSuchContract(\\\"SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v3-2-1\\\"))\"}"
+      },
+      "get-minted-count": {
+        "ok": false,
+        "error": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v3-2-1.get-minted-count failed: {\"okay\":false,\"cause\":\"RuntimeCheck(NoSuchContract(\\\"SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v3-2-1\\\"))\"}"
+      },
+      "get-begin-fee-unit": {
+        "ok": false,
+        "error": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v3-2-1.get-begin-fee-unit failed: {\"okay\":false,\"cause\":\"RuntimeCheck(NoSuchContract(\\\"SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v3-2-1\\\"))\"}"
+      },
+      "get-upload-chunk-fee-unit": {
+        "ok": false,
+        "error": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v3-2-1.get-upload-chunk-fee-unit returned non-JSON: Per-second rate limit exceeded for stacks quota.\nPlease try again in 1 seconds or consider upgrading your plan at\nhttps://platform.hiro.so/upgrade\n"
+      },
+      "get-upload-batch-fee-unit": {
+        "ok": false,
+        "error": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v3-2-1.get-upload-batch-fee-unit returned non-JSON: Per-second rate limit exceeded for stacks quota.\nPlease try again in 1 seconds or consider upgrading your plan at\nhttps://platform.hiro.so/upgrade\n"
+      },
+      "get-seal-fee-unit": {
+        "ok": false,
+        "error": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v3-2-1.get-seal-fee-unit failed: {\"okay\":false,\"cause\":\"RuntimeCheck(NoSuchContract(\\\"SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v3-2-1\\\"))\"}"
+      },
+      "get-single-tx-fee-unit": {
+        "ok": false,
+        "error": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v3-2-1.get-single-tx-fee-unit failed: {\"okay\":false,\"cause\":\"RuntimeCheck(NoSuchContract(\\\"SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v3-2-1\\\"))\"}"
+      }
+    }
+  },
+  "failures": [],
+  "warnings": [
+    "xtrata-v2-1-1 is not deployed on mainnet. Deploy it first as an empty paused migration dependency because xtrata-v3.2.1 references it.",
+    "New core is not readable yet. Deploy xtrata-v3-2-1 from contracts/live/xtrata-v3.2.1.clar, then rerun preflight before setup."
+  ]
+}

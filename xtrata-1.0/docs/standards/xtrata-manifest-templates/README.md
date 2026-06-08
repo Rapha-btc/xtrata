@@ -2,6 +2,12 @@
 
 A modular manifest template set for Xtrata.
 
+## Expanded use guide
+
+For a comprehensive explanation of what every manifest is for, how the template
+families fit together, and which manifests to combine for common Xtrata project
+types, see [`MANIFEST_USE_GUIDE.md`](MANIFEST_USE_GUIDE.md).
+
 ## Root-level templates
 
 The root contains the most common/useful templates so they are easy to find:
@@ -35,3 +41,11 @@ For example:
 - A resolver/name manifest explains what `jim.x` points to.
 - A collection/runtime/data/finance manifest describes the target system.
 
+
+## Core standards added
+
+- `CORE-STANDARDS.md` - human-readable shared rules for all manifest templates.
+- `MANIFEST_ALIGNMENT_REPORT.md` - current alignment scan and recommendations.
+- `MANIFEST_USE_GUIDE.md` - narrative guide covering every manifest template,
+  expected uses, project combinations and validation expectations.
+- `schemas/xtrata-core-manifest-standard.json` - machine-readable baseline standard for validators and repo agents.

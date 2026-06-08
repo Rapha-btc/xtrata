@@ -170,19 +170,33 @@ export const fetchTokenSummaryWithFallback = async (params: {
   legacyMaxId?: bigint | null;
   primaryAvailable?: boolean;
   escrowOwner?: string | null;
+  // The set of token ids (as strings) actually minted on the primary core. When
+  // provided, routing is a single read: ids in this set resolve on primary, all
+  // other ids in the legacy range resolve on legacy — no speculative read-miss.
+  primaryMintedIds?: Set<string> | null;
 }): Promise<TokenSummary> => {
   const legacyClient = params.legacyClient ?? null;
   const legacyMaxId = params.legacyMaxId ?? null;
   const primaryAvailable = params.primaryAvailable ?? true;
   const escrowOwner = params.escrowOwner ?? null;
+  const primaryMintedIds = params.primaryMintedIds ?? null;
 
   const primaryContractId = getContractId(params.primaryClient.contract);
   const legacyContractId = legacyClient
     ? getContractId(legacyClient.contract)
     : null;
 
+  // If we know the primary minted this id, it is authoritative — route straight
+  // to the primary path below (single read), even if the id overlaps the legacy
+  // range (native primary mints / migrated tokens).
+  const primaryHasId =
+    primaryMintedIds !== null && primaryMintedIds.has(params.id.toString());
+
   const shouldPreferLegacy =
-    !!legacyClient && legacyMaxId !== null && params.id <= legacyMaxId;
+    !primaryHasId &&
+    !!legacyClient &&
+    legacyMaxId !== null &&
+    params.id <= legacyMaxId;
 
   if (shouldPreferLegacy) {
     const legacySummary = await fetchTokenSummary({
@@ -190,11 +204,12 @@ export const fetchTokenSummaryWithFallback = async (params: {
       id: params.id,
       senderAddress: params.senderAddress
     });
-    const shouldCheckPrimaryEscrow = isSamePrincipal(
-      legacySummary.owner,
-      escrowOwner
-    );
-    if (shouldCheckPrimaryEscrow) {
+    // Safety net only when the primary minted-id set is unknown: if the legacy
+    // token is held by the escrow, the live token lives on primary.
+    if (
+      primaryMintedIds === null &&
+      isSamePrincipal(legacySummary.owner, escrowOwner)
+    ) {
       const primarySummary = await fetchTokenSummary({
         client: params.primaryClient,
         id: params.id,

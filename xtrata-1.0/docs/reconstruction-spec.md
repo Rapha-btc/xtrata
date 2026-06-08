@@ -16,7 +16,8 @@ Fallback source chain for historical and migrated content:
 
 `xtrata-v3.0.0` exists in contract sources and SDK capability detection, but it
 is not the public default until the contract registry and public docs explicitly
-promote it.
+promote it. `xtrata-v3.1.1` exists as a comparison contract source and still
+requires SDK/app capability updates before promotion.
 
 ## Required Public Inputs
 
@@ -65,16 +66,20 @@ Missing chunks are fatal in strict reconstruction.
 ## Hash Verification
 
 Xtrata uses an incremental SHA-256 chain hash, not a plain SHA-256 hash of the
-full file.
+full file. In v3.1.1 this is named `rolling-chunk-hash` in summaries/events;
+older metadata still exposes the same value as `final-hash`.
 
 Algorithm:
 
 1. Start with 32 zero bytes.
 2. For each ordered raw chunk, compute `sha256(previousHash || chunkBytes)`.
-3. The final running hash must equal `final-hash`.
+3. The final running hash must equal `rolling-chunk-hash` / `final-hash`.
 
 Strict reconstruction must fail when the computed hash differs from
-`final-hash`.
+`rolling-chunk-hash` / `final-hash`. A normal `sha256(reconstructedBytes)`
+may be computed as an additional marketplace or preservation proof, but it is
+not the contract-verified Xtrata hash unless it is separately declared and
+verified.
 
 ## Migration Fallback
 
@@ -143,6 +148,21 @@ provide a larger `batchSize`. If a batch still triggers `CostBalanceExceeded`,
 the runtime splits that read; Cloudflare subrequest quota exhaustion is terminal
 and must not fan out into individual chunk reads.
 
+For large v3.2.1 reconstructions, resolvers should prefer direct node map-entry
+reads for stored data when available:
+
+- `InscriptionMeta`
+- `TokenURIs`
+- `MigrationSource`
+- `Chunks`
+
+The final v3.2.1 testnet rehearsal verified a 33-chunk / 540,672-byte token by
+following these map entries directly. Heavy read-only calls such as
+`get-inscription-summary` or large `get-chunk-batch` requests can exceed public
+node `read_length` budgets even when the underlying data is valid. SDK and
+runtime callers must treat read-only helpers as convenience APIs, not as a
+guaranteed whole-token reconstruction surface for large files.
+
 Production readiness checks after a runtime deployment should include:
 
 - purge the target token from runtime cache using the protected
@@ -170,12 +190,32 @@ format rule, not only an SDK default:
 The reconstruction package therefore keeps `CHUNK_SIZE = 16_384` for existing
 contracts and for the legacy `total-chunks: 0` derivation path.
 
-A future contract version could support larger fixed chunks while preserving
-existing inscriptions by routing reconstruction according to contract
-capabilities. Variable per-token chunk sizes would require an explicit
-`chunk-size` metadata field, updated storage/read interfaces with a larger
-compile-time buffer bound, SDK capability detection, and compatibility tests.
-Existing v1, v2.1, and v3 contract sources must continue reconstructing with
+`xtrata-v3.1.1` adds explicit chunk profiles:
+
+- `u1` small: 16,384-byte chunks, max `2048` chunks = 32 MiB.
+- `u2` standard: 65,536-byte chunks, max `2048` chunks = 128 MiB.
+- `u3` maximum: 131,072-byte chunks, max `2048` chunks = 256 MiB.
+
+For v3.1.1 and later profile-aware contracts, resolvers should prefer
+`get-inscription-summary(id)` when present and read:
+
+- `chunk-profile`
+- `chunk-size`
+- `rolling-chunk-hash`
+- `hash-algorithm`
+- `chunk-count`
+
+If summary is unavailable, fall back to `get-inscription-meta(id)`,
+`get-chunk-profile(id)`, and `get-chunk-size(id)`. Do not infer profile from
+file size alone.
+
+The v3.1.1 `get-chunk-batch` read-only helper intentionally remains capped at
+4 indexes because chunks are stored in a `(buff 131072)` map and larger optional
+read lists are not practical as a static Clarity response shape. Small and
+standard profile resolvers may still use repeated 4-index batch reads or
+per-chunk `get-chunk` fallback.
+
+Existing v1, v2.1, and v3.0 contract sources must continue reconstructing with
 16,384-byte chunks.
 
 ## Public Proof Standard
@@ -190,8 +230,9 @@ A third-party proof should record:
 - MIME type;
 - total size;
 - total chunks;
-- final hash;
-- actual reconstructed hash;
+- rolling chunk hash / final hash;
+- actual reconstructed rolling hash;
+- optional normal file SHA-256 if the resolver computes one separately;
 - dependency IDs;
 - whether fallback was used.
 - read mode (`batch`, `single`, or `mixed`) and any read fallback errors.

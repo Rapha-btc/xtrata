@@ -111,6 +111,15 @@ To avoid collisions:
 Without this rule, a migrated token can collide with the next newly minted v3
 token.
 
+Same-ID migration cannot preserve two different legacy tokens with the same
+numeric ID from different source contracts in one destination NFT space. For
+example, if `xtrata-v2.1.0` token `u5` and `xtrata-v2.1.1` token `u5` are both
+real, only one can become v3 token `u5`; the second migration must fail with
+the destination duplicate guard and leave the legacy token with its current
+owner. This is expected safe-fail behavior, not partial migration. Support and
+holder-facing materials must describe any overlapping legacy ID ranges before
+promising same-ID migration for all sources.
+
 Escrow rule
 
 Legacy tokens should be escrowed in the destination contract, not burned.
@@ -152,6 +161,8 @@ Operational checklist before v3 launch
 
 Before announcing migration:
 - confirm which legacy contracts are actually live
+- inventory occupied ID ranges across every migratable legacy contract and
+  identify any numeric overlaps that cannot all preserve same-ID continuity
 - decide whether `v1.1.0` needs support
 - set the initial v3 mint cursor / offset before any fresh mint
 - verify every supported source has a dedicated migrator

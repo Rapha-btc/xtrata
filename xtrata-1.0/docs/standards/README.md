@@ -18,19 +18,26 @@ collection tooling.
 
 - [`../../schemas/xtrata-collection-manifest.schema.json`](../../schemas/xtrata-collection-manifest.schema.json)
   is the draft JSON Schema for Xtrata Collection Manifests.
+- [`xtrata-manifest-templates/schemas/xtrata-core-manifest-standard.json`](xtrata-manifest-templates/schemas/xtrata-core-manifest-standard.json)
+  is the shared machine-readable baseline for the modular manifest template set.
 
-## Examples
+## Manifest Templates
 
-- [`examples/minimal-marketplace-manifest.json`](examples/minimal-marketplace-manifest.json)
-  is a Level 1 example for a simple marketplace-facing art collection.
-- [`examples/preservation-migration-manifest.json`](examples/preservation-migration-manifest.json)
-  is a Level 2 example for a fixed sequential preservation migration.
-- [`examples/audiovisual-preservation-manifest.json`](examples/audiovisual-preservation-manifest.json)
-  is a Level 2 audiovisual preservation example with images, audio and
-  generation context.
-- [`examples/full-composable-manifest.json`](examples/full-composable-manifest.json)
-  is a Level 3 example for Audionals, BVST-style runtime modules and
-  composable data tools.
+- [`xtrata-manifest-templates/README.md`](xtrata-manifest-templates/README.md)
+  is the active entry point for the modular manifest template package.
+- [`xtrata-manifest-templates/00-manifest-index.json`](xtrata-manifest-templates/00-manifest-index.json)
+  indexes root templates, specialist folders and shared standards.
+- [`xtrata-manifest-templates/MANIFEST_USE_GUIDE.md`](xtrata-manifest-templates/MANIFEST_USE_GUIDE.md)
+  expands the manifest index into a practical guide covering every template,
+  expected uses, project combinations and validation expectations.
+- [`xtrata-manifest-templates/collections/minimal-marketplace-manifest.json`](xtrata-manifest-templates/collections/minimal-marketplace-manifest.json)
+  is the collection template for simple marketplace-facing art collections.
+- [`xtrata-manifest-templates/collections/preservation-migration-manifest.json`](xtrata-manifest-templates/collections/preservation-migration-manifest.json)
+  is the collection template for fixed sequential preservation migrations.
+- [`xtrata-manifest-templates/collections/audiovisual-preservation-manifest.json`](xtrata-manifest-templates/collections/audiovisual-preservation-manifest.json)
+  is the collection template for audiovisual preservation with images, audio and generation context.
+- [`xtrata-manifest-templates/collections/full-composable-manifest.json`](xtrata-manifest-templates/collections/full-composable-manifest.json)
+  is the collection template for Audionals, BVST-style runtime modules and composable data tools.
 
 ## Intended Use
 

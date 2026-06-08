@@ -105,6 +105,8 @@ Standards
 	•	docs/standards/README.md
 	•	docs/standards/xtrata-collection-manifest-standard.md
 	•	docs/standards/xtrata-manifest-validation.md
+	•	docs/standards/xtrata-manifest-templates/README.md
+	•	docs/standards/xtrata-manifest-templates/00-manifest-index.json
 	•	schemas/xtrata-collection-manifest.schema.json
 
 SDK + builder track

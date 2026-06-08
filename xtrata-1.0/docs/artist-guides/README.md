@@ -15,3 +15,4 @@ It explains:
 - `docs/artist-guides/collection-template-deploy-guide.md`
 - `docs/artist-guides/collection-mint-setup-flow-blueprint.md`
 - `docs/standards/xtrata-collection-manifest-standard.md`
+- `docs/standards/xtrata-manifest-templates/README.md`

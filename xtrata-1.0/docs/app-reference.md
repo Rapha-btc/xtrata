@@ -104,7 +104,6 @@ Purpose: one-stop map of where code lives and which files to touch for common up
 - `functions/hiro/[network]/[[path]].ts` proxies Hiro API calls and injects API keys when present.
 - `functions/bnsv2/[network]/[[path]].ts` proxies BNSv2 API lookups used for address-to-name resolution.
 - `functions/explorer/[[path]].ts` proxies Explorer HTML pages used by BNS name/address scraping.
-- `functions/arcade/attest-score.ts` signs `xtrata-arcade-scores-v1.1` submit attestations (nonce + expiry + RSV signature) for on-chain high-score verification.
 - `src/lib/wallet/session.ts` and `src/lib/wallet/storage.ts` persist wallet sessions.
 - `src/lib/wallet/adapter.ts` centralizes wallet request calls and types.
 
@@ -147,7 +146,9 @@ Purpose: one-stop map of where code lives and which files to touch for common up
 - `docs/standards/xtrata-collection-manifest-standard.md` defines the Xtrata Collection Manifest standard for collection identity, item mapping, provenance, reconstruction, marketplace display, validation, rights, and preservation context.
 - `docs/standards/xtrata-manifest-validation.md` defines expected validator behavior, validation levels, error codes, canonicalization, signatures, and validation report shape.
 - `schemas/xtrata-collection-manifest.schema.json` is the draft machine-readable schema for Xtrata Collection Manifest validation.
-- `docs/standards/examples/*.json` contains example manifests for marketplace, preservation, audiovisual, and full composable collection use cases.
+- `docs/standards/xtrata-manifest-templates/README.md` is the active entry point for the modular manifest template package.
+- `docs/standards/xtrata-manifest-templates/00-manifest-index.json` indexes root templates, specialist folders, and shared template standards.
+- `docs/standards/xtrata-manifest-templates/collections/*.json` contains collection templates for marketplace, preservation, audiovisual, and full composable use cases.
 - `docs/sdk/README.md` defines SDK mission, package boundaries, and implementation posture.
 - `docs/sdk/test-gates.md` defines required tests and release-quality gates.
 - `docs/sdk/changelog.md` tracks completed delivery iterations.
@@ -272,11 +273,6 @@ Notes: ensure tests or guards in `src/lib/network/__tests__/` still pass.
   - `/functions/explorer` remains the HTML fallback path.
   - Optional Explorer overrides: `VITE_STACKS_EXPLORER_BASE`, `VITE_STACKS_EXPLORER_BASE_MAINNET`, `VITE_STACKS_EXPLORER_BASE_TESTNET`.
   - Explorer runtime override: `STACKS_EXPLORER_BASE`.
-- **Arcade score attestation (`xtrata-arcade-scores-v1.1`)**
-  - Pages Functions signer key: `ARCADE_SCORE_ATTESTATION_PRIVATE_KEY` (required for `/arcade/attest-score`).
-  - Optional expiry window in blocks: `ARCADE_SCORE_ATTESTATION_EXPIRY_BLOCKS` (default `30`, max `500`).
-  - Optional Hiro API bases: `ARCADE_HIRO_API_BASE_MAINNET`, `ARCADE_HIRO_API_BASE_TESTNET`, `ARCADE_HIRO_API_BASE_DEVNET`.
-
 12) New media types or preview behavior.
 Files: `src/components/TokenCardMedia.tsx`, `src/components/TokenContentPreview.tsx`, `src/lib/viewer/content.ts`.
 Notes: keep rendering logic consistent between grid and preview.

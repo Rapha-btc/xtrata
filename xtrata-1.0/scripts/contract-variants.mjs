@@ -52,29 +52,6 @@ const VARIANT_SETS = [
     ]
   },
   {
-    id: 'xtrata-v2.1.1',
-    variants: [
-      {
-        name: 'clarinet',
-        trait: 'local',
-        file: 'contracts/clarinet/contracts/xtrata-v2.1.1.clar',
-        fallback: 'contracts/other/xtrata-v2.1.1.clar'
-      },
-      {
-        name: 'testnet',
-        trait: 'testnet',
-        file: 'contracts/other/xtrata-v2.1.1.clar',
-        fallback: 'contracts/clarinet/contracts/xtrata-v2.1.1.clar'
-      },
-      {
-        name: 'mainnet',
-        trait: 'mainnet',
-        file: 'contracts/live/xtrata-v2.1.1.clar',
-        fallback: 'contracts/other/xtrata-v2.1.1.clar'
-      }
-    ]
-  },
-  {
     id: 'xtrata-v3.0.0',
     variants: [
       {
@@ -98,6 +75,124 @@ const VARIANT_SETS = [
     ]
   },
   {
+    id: 'xtrata-v3.2.0',
+    variants: [
+      {
+        name: 'clarinet',
+        trait: 'local',
+        file: 'contracts/clarinet/contracts/xtrata-v3.2.0.clar',
+        fallback: 'contracts/other/xtrata-v3.2.0.clar'
+      },
+      {
+        name: 'testnet',
+        trait: 'testnet',
+        file: 'contracts/other/xtrata-v3.2.0.clar',
+        fallback: 'contracts/clarinet/contracts/xtrata-v3.2.0.clar'
+      },
+      {
+        name: 'mainnet',
+        trait: 'mainnet',
+        file: 'contracts/live/xtrata-v3.2.0.clar',
+        fallback: 'contracts/other/xtrata-v3.2.0.clar'
+      }
+    ]
+  },
+  {
+    id: 'xtrata-v3.2.1',
+    // Preserve the already-deployed testnet fee floor while still checking
+    // that each historical source enables the correct network trait.
+    compareBody: false,
+    variants: [
+      {
+        name: 'clarinet',
+        trait: 'local',
+        file: 'contracts/clarinet/contracts/xtrata-v3.2.1.clar',
+        fallback: 'contracts/other/xtrata-v3.2.1.clar'
+      },
+      {
+        name: 'testnet',
+        trait: 'testnet',
+        file: 'contracts/other/xtrata-v3.2.1.clar',
+        fallback: 'contracts/clarinet/contracts/xtrata-v3.2.1.clar'
+      },
+      {
+        name: 'mainnet',
+        trait: 'mainnet',
+        file: 'contracts/live/xtrata-v3.2.1.clar',
+        fallback: 'contracts/other/xtrata-v3.2.1.clar'
+      }
+    ]
+  },
+  {
+    id: 'xtrata-v3.2.2',
+    variants: [
+      {
+        name: 'clarinet',
+        trait: 'local',
+        file: 'contracts/clarinet/contracts/xtrata-v3.2.2.clar',
+        fallback: 'contracts/other/xtrata-v3.2.2.clar'
+      },
+      {
+        name: 'testnet',
+        trait: 'testnet',
+        file: 'contracts/other/xtrata-v3.2.2.clar',
+        fallback: 'contracts/clarinet/contracts/xtrata-v3.2.2.clar'
+      },
+      {
+        name: 'mainnet',
+        trait: 'mainnet',
+        file: 'contracts/live/xtrata-v3.2.2.clar',
+        fallback: 'contracts/other/xtrata-v3.2.2.clar'
+      }
+    ]
+  },
+  {
+    id: 'xtrata-v3.2.3',
+    variants: [
+      {
+        name: 'clarinet',
+        trait: 'local',
+        file: 'contracts/clarinet/contracts/xtrata-v3.2.3.clar',
+        fallback: 'contracts/other/xtrata-v3.2.3.clar'
+      },
+      {
+        name: 'testnet',
+        trait: 'testnet',
+        file: 'contracts/other/xtrata-v3.2.3.clar',
+        fallback: 'contracts/clarinet/contracts/xtrata-v3.2.3.clar'
+      },
+      {
+        name: 'mainnet',
+        trait: 'mainnet',
+        file: 'contracts/live/xtrata-v3.2.3.clar',
+        fallback: 'contracts/other/xtrata-v3.2.3.clar'
+      }
+    ]
+  },
+  {
+    id: 'xtrata-v3.4.0',
+    variants: [
+      {
+        name: 'clarinet',
+        trait: 'local',
+        file: 'contracts/clarinet/contracts/xtrata-v3.4.0.clar',
+        fallback: 'contracts/other/xtrata-v3.4.0.clar'
+      },
+      {
+        name: 'testnet',
+        trait: 'testnet',
+        file: 'contracts/other/xtrata-v3.4.0.clar',
+        fallback: 'contracts/clarinet/contracts/xtrata-v3.4.0.clar'
+      },
+      {
+        name: 'mainnet',
+        trait: 'mainnet',
+        file: 'contracts/live/xtrata-v3.4.0.clar',
+        fallback: 'contracts/other/xtrata-v3.4.0.clar'
+      }
+    ]
+  },
+  {
     id: 'xtrata-small-mint-v1.0',
     syncMode: 'plain',
     variants: [
@@ -115,6 +210,27 @@ const VARIANT_SETS = [
         name: 'mainnet',
         file: 'contracts/live/xtrata-small-mint-v1.0.clar',
         fallback: 'contracts/other/xtrata-small-mint-v1.0.clar'
+      }
+    ]
+  },
+  {
+    id: 'xtrata-small-mint-v1.1',
+    syncMode: 'plain',
+    variants: [
+      {
+        name: 'clarinet',
+        file: 'contracts/clarinet/contracts/xtrata-small-mint-v1.1.clar',
+        fallback: 'contracts/other/xtrata-small-mint-v1.1.clar'
+      },
+      {
+        name: 'testnet',
+        file: 'contracts/other/xtrata-small-mint-v1.1.clar',
+        fallback: 'contracts/clarinet/contracts/xtrata-small-mint-v1.1.clar'
+      },
+      {
+        name: 'mainnet',
+        file: 'contracts/live/xtrata-small-mint-v1.1.clar',
+        fallback: 'contracts/other/xtrata-small-mint-v1.1.clar'
       }
     ]
   },
@@ -342,13 +458,15 @@ const main = async () => {
       setResults.push(entry);
     }
 
-    const reference = stripTraitBlock(setResults[0].content);
-    for (const result of setResults.slice(1)) {
-      const normalized = stripTraitBlock(result.content);
-      if (normalized !== reference) {
-        throw new Error(
-          `Contract sources differ beyond trait block (${set.id}): ${setResults[0].file} vs ${result.file}`
-        );
+    if (set.compareBody !== false) {
+      const reference = stripTraitBlock(setResults[0].content);
+      for (const result of setResults.slice(1)) {
+        const normalized = stripTraitBlock(result.content);
+        if (normalized !== reference) {
+          throw new Error(
+            `Contract sources differ beyond trait block (${set.id}): ${setResults[0].file} vs ${result.file}`
+          );
+        }
       }
     }
 

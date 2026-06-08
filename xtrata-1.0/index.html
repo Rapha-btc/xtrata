@@ -2960,6 +2960,15 @@
                 <button
                   class="wallet-example-chip"
                   type="button"
+                  data-curated-gallery="v3-core"
+                  title="The current live core, xtrata-v3-2-3."
+                >
+                  v3 core
+                </button>
+
+                <button
+                  class="wallet-example-chip"
+                  type="button"
                   data-wallet-showcase="dyle.btc"
                   data-default-token-id="296"
                   title="Early Stacks-native art inscriptions by DYLE."
@@ -2992,6 +3001,24 @@
                   title="Early autonomous agent memory inscriptions."
                 >
                   Agent 27
+                </button>
+
+                <button
+                  class="wallet-example-chip"
+                  type="button"
+                  data-curated-gallery="v1-origins"
+                  title="The original Xtrata core, xtrata-v1-1-1."
+                >
+                  v1 origins
+                </button>
+
+                <button
+                  class="wallet-example-chip"
+                  type="button"
+                  data-curated-gallery="stacksboard"
+                  title="The Stacksboard inscription (#350)."
+                >
+                  Stacksboard
                 </button>
 
 
@@ -3186,6 +3213,7 @@
         <a href="#docs">Documentation</a>
         <a href="/opus-file-generator/" target="_blank" rel="noopener noreferrer">Opus audio tool</a>
         <a href="/manage">Artist portal</a>
+        <a href="/web/migrate.html">Migrate to v3</a>
         <a href="https://x.com/XtrataLayers" target="_blank" rel="noreferrer">Xtrata on X</a>
       </nav>
       <label class="footer-theme">
@@ -3329,12 +3357,17 @@
       entry.protocolVersion === '2.1.0' ||
       entry.protocolVersion === '2.1.1' ||
       entry.protocolVersion === '3.0.0' ||
+      entry.protocolVersion === '3.2.3' ||
       entry.contractName?.toLowerCase().includes('v2-1-0') === true ||
       entry.contractName?.toLowerCase().includes('v2-1-1') === true ||
-      entry.contractName?.toLowerCase().includes('v3-0-0') === true;
+      entry.contractName?.toLowerCase().includes('v3-0-0') === true ||
+      entry.contractName?.toLowerCase().includes('v3-2-3') === true;
 
     const coreContracts = CONTRACT_REGISTRY.filter(isCoreEntry);
     const versionWeight = (entry) => {
+      if (entry.protocolVersion === '3.2.3' || entry.contractName?.includes('v3-2-3')) {
+        return 30203;
+      }
       if (entry.protocolVersion === '3.0.0' || entry.contractName?.includes('v3-0-0')) {
         return 30000;
       }
@@ -3352,8 +3385,8 @@
     const DEFAULT_CONTRACT =
       ACTIVE_CONTRACTS.find(
         (entry) =>
-          entry.protocolVersion === '2.1.0' ||
-          entry.contractName?.toLowerCase().includes('v2-1-0')
+          entry.protocolVersion === '3.2.3' ||
+          entry.contractName?.toLowerCase().includes('v3-2-3')
       ) ?? ACTIVE_CONTRACTS[0];
     const SMALL_MINT_HELPER_TARGET_CORE_CONTRACT_ID =
       `${SMALL_MINT_HELPER_MAINNET_ADDRESS}.xtrata-v2-1-0`;
@@ -3453,6 +3486,12 @@
     const THEME_IDS = new Set(['classic', 'terminal', 'midnight', 'neon', 'monochrome', 'obsidian', 'ember', 'ultraviolet', 'arctic', 'ruby']);
     const CURATED_GALLERIES = [
           {
+            id: 'v3-core',
+            title: 'v3',
+            tokenIds: [359n, 313n, 14n],
+            primaryOnly: true
+          },
+          {
             id: 'jim-music',
             title: 'music',
             tokenIds: [312n, 288n, 269n, 315n]
@@ -3466,6 +3505,18 @@
             id: 'agent-27',
             title: 'Agent 27',
             tokenIds: [ 107n, 112n, 121n, 123n, 128n, 135n,137n, 152n, 161n, 162n, 163n, 175n, 188n, 194n, 196n, 200n, 213n]
+          },
+          {
+            id: 'v1-origins',
+            title: 'v1 origins',
+            // Read strictly from the original core, xtrata-v1-1-1.
+            contractId: 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v1-1-1',
+            tokenIds: [1n, 2n, 3n, 4n, 5n, 6n, 7n, 8n, 9n, 10n, 11n, 12n, 14n, 20n, 25n, 38n]
+          },
+          {
+            id: 'stacksboard',
+            title: 'Stacksboard',
+            tokenIds: [350n]
           }
         ];
 
@@ -3477,6 +3528,33 @@
           'jim-music': 269n,
           'code-various': 287n
         });
+
+        // Per-gallery read clients: a gallery may pin a specific core in the
+        // lineage (e.g. v1 origins reads xtrata-v1-1-1). Cached by contract id.
+        const galleryReadClientCache = new Map();
+        const getGalleryReadClient = (contractId) => {
+          if (!contractId) {
+            return null;
+          }
+          if (galleryReadClientCache.has(contractId)) {
+            return galleryReadClientCache.get(contractId);
+          }
+          const entry = findContractById(contractId);
+          const client = entry ? createXtrataClient({ contract: entry }) : null;
+          galleryReadClientCache.set(contractId, client);
+          return client;
+        };
+        const getActiveGalleryReadClient = () => {
+          if (!state.curatedGalleryId) {
+            return null;
+          }
+          const gallery = CURATED_GALLERIES.find(
+            (entry) => entry.id === state.curatedGalleryId
+          );
+          return gallery?.contractId
+            ? getGalleryReadClient(gallery.contractId)
+            : null;
+        };
     
         let activeExampleDescriptionKey = null;
 
@@ -3487,6 +3565,14 @@
         tooltip: 'Early Stacks-native art inscriptions by DYLE.',
         description:
           'A very early Stacks art collection by OG artist DYLE, inscribed through Xtrata as permanent on-chain media.'
+      },
+
+      'v3-core': {
+        label: 'v3 core',
+        heading: 'Viewing the v3 core',
+        tooltip: 'The current live core, xtrata-v3-2-3.',
+        description:
+          'The current Xtrata core (xtrata-v3-2-3): the v3 sealing inscription and tokens carried forward by migration from earlier cores.'
       },
 
       'jim-music': {
@@ -3511,6 +3597,22 @@
         tooltip: 'Early autonomous agent memory inscriptions.',
         description:
           'An early on-chain agent memory test, where an automated agent used a wallet to inscribe its thoughts over time.'
+      },
+
+      'v1-origins': {
+        label: 'v1 origins',
+        heading: 'Viewing v1 origins',
+        tooltip: 'The original Xtrata core, xtrata-v1-1-1.',
+        description:
+          'The earliest inscriptions on the original Xtrata core (xtrata-v1-1-1), still live and readable on-chain.'
+      },
+
+      'stacksboard': {
+        label: 'Stacksboard',
+        heading: 'Viewing Stacksboard',
+        tooltip: 'The Stacksboard inscription (#350).',
+        description:
+          'A single featured inscription: Stacksboard, recorded on-chain through Xtrata as #350.'
       }
     });
     
@@ -5136,6 +5238,7 @@
       state.legacyClient = state.legacyContract
         ? createXtrataClient({ contract: state.legacyContract })
         : null;
+      state.primaryMintedIdCache = null;
       refreshConnectedWalletMatureMode();
       logApiConfiguration();
       setExperienceMode();
@@ -5803,6 +5906,10 @@
     };
 
     const getTokenClient = (token) => {
+      const galleryClient = getActiveGalleryReadClient();
+      if (galleryClient) {
+        return galleryClient;
+      }
       const legacyId = state.legacyClient ? getContractId(state.legacyClient.contract) : null;
       return legacyId && token.sourceContractId === legacyId
         ? state.legacyClient
@@ -6477,6 +6584,20 @@
       return true;
     };
 
+    // Locate the live grid thumb element for a token without rebuilding the
+    // grid, so a freshly-warmed thumbnail can be applied to just that card
+    // instead of triggering a full re-render (which revokes every blob URL and
+    // restarts all media streams).
+    const findGridThumbElement = (token) => {
+      if (!dom.tokenGrid || !token) {
+        return null;
+      }
+      const card = dom.tokenGrid.querySelector(
+        `.token-card[data-token-id="${token.id.toString()}"]`
+      );
+      return card ? card.querySelector('.token-thumb') : null;
+    };
+
     const warmThumbnailCacheFromBytes = async (token, bytes, mimeType, options = {}) => {
       const kind = getMediaKind(mimeType);
       if (kind !== 'image' && kind !== 'svg') {
@@ -6497,7 +6618,12 @@
           mimeType
         });
         if (options.renderGrid !== false) {
-          renderTokenGrid();
+          const thumbElement = findGridThumbElement(token);
+          if (thumbElement) {
+            renderGridLiveMedia(token, thumbElement, state.gridLiveMediaCache.get(cacheKey));
+          } else {
+            scheduleGridRender();
+          }
         }
         return null;
       }
@@ -6527,7 +6653,12 @@
           mimeType: thumbnail.mimeType
         });
         if (options.renderGrid !== false) {
-          renderTokenGrid();
+          const thumbElement = findGridThumbElement(token);
+          if (thumbElement) {
+            await applyCachedThumbnail(token, thumbElement);
+          } else {
+            scheduleGridRender();
+          }
         }
         return thumbnail;
       } catch (error) {
@@ -6806,7 +6937,7 @@
           ) {
             renderGridLiveMedia(token, thumbElement, state.gridLiveMediaCache.get(cacheKey));
           } else if (getWalletPageIds().some((id) => id === token.id)) {
-            renderTokenGrid();
+            scheduleGridRender();
           }
           debugLog('cache', 'background audio grid display ready', {
             tokenId: token.id.toString(),
@@ -6828,7 +6959,7 @@
           ) {
             renderGridLiveMedia(token, thumbElement, state.gridLiveMediaCache.get(cacheKey));
           } else if (getWalletPageIds().some((id) => id === token.id)) {
-            renderTokenGrid();
+            scheduleGridRender();
           }
           debugLog('cache', 'background video grid display ready', {
             tokenId: token.id.toString(),
@@ -6854,7 +6985,7 @@
           ) {
             renderGridLiveMedia(token, thumbElement, state.gridLiveMediaCache.get(cacheKey));
           } else if (getWalletPageIds().some((id) => id === token.id)) {
-            renderTokenGrid();
+            scheduleGridRender();
           }
           debugLog('cache', 'background html grid display ready', {
             tokenId: token.id.toString(),
@@ -6876,7 +7007,7 @@
           ) {
             renderGridLiveMedia(token, thumbElement, state.gridLiveMediaCache.get(cacheKey));
           } else if (getWalletPageIds().some((id) => id === token.id)) {
-            renderTokenGrid();
+            scheduleGridRender();
           }
           return;
         }
@@ -6900,7 +7031,7 @@
           ) {
             renderGridLiveMedia(token, thumbElement, state.gridLiveMediaCache.get(cacheKey));
           } else if (getWalletPageIds().some((id) => id === token.id)) {
-            renderTokenGrid();
+            scheduleGridRender();
           }
           debugLog('cache', 'background animated image grid display ready', {
             tokenId: token.id.toString(),
@@ -6922,7 +7053,7 @@
         ) {
           await applyCachedThumbnail(token, thumbElement);
         } else if (getWalletPageIds().some((id) => id === token.id)) {
-          renderTokenGrid();
+          scheduleGridRender();
         }
       } catch (error) {
         debugLog(
@@ -6998,6 +7129,29 @@
       });
       pumpBackgroundThumbnailHydrationQueue();
       return true;
+    };
+
+    // Coalesce hydration-triggered re-renders into one per frame. A full
+    // renderTokenGrid revokes every grid blob URL and rebuilds the DOM, which
+    // invalidates the thumbElement references held by in-flight media/thumbnail
+    // callbacks — each of which would then trigger another full render, causing
+    // a render storm and visible flicker (images briefly reverting to the mime
+    // placeholder). Scheduling collapses that cascade.
+    let gridRenderScheduled = false;
+    const scheduleGridRender = () => {
+      if (gridRenderScheduled) {
+        return;
+      }
+      gridRenderScheduled = true;
+      const run = () => {
+        gridRenderScheduled = false;
+        renderTokenGrid();
+      };
+      if (typeof requestAnimationFrame === 'function') {
+        requestAnimationFrame(run);
+      } else {
+        setTimeout(run, 16);
+      }
     };
 
     const renderTokenGrid = (options = {}) => {
@@ -7532,7 +7686,9 @@ const openCuratedGallery = async (galleryId) => {
   renderTokenGridPlaceholders('...');
 
   try {
-    const summaries = await fetchWalletTokenSummaries(gallery.tokenIds);
+    const summaries = await fetchWalletTokenSummaries(gallery.tokenIds, {
+      primaryOnly: gallery.primaryOnly === true
+    });
     debugLog('grid', 'curated gallery summaries fetched', {
       viewRequestId,
       galleryId: gallery.id,
@@ -7730,15 +7886,71 @@ const openCuratedGallery = async (galleryId) => {
       };
     };
 
-    const fetchWalletTokenSummaries = async (ids) => {
+    // Fetch (cached per primary contract) the set of primary-minted token ids
+    // that fall within the legacy id range, so reads can be routed in one shot.
+    const getPrimaryMintedIdSet = async (sender, legacyMaxId) => {
+      if (!state.client || legacyMaxId === null) {
+        return null;
+      }
+      const cacheKey = getContractId(state.contract);
+      if (state.primaryMintedIdCache && state.primaryMintedIdCache.key === cacheKey) {
+        return state.primaryMintedIdCache.set;
+      }
+      try {
+        const count = await state.client.getMintedCount(sender);
+        const total = Number(count);
+        if (!Number.isFinite(total) || total <= 0) {
+          const empty = new Set();
+          state.primaryMintedIdCache = { key: cacheKey, set: empty };
+          return empty;
+        }
+        const scanCount = Math.min(total, 2000);
+        const indices = Array.from({ length: scanCount }, (_, index) => BigInt(index));
+        const mintedIds = await runLimited(indices, 6, async (index) => {
+          try {
+            return await state.client.getMintedId(index, sender);
+          } catch (error) {
+            return null;
+          }
+        });
+        const set = new Set(
+          mintedIds
+            .filter((id) => id !== null && id <= legacyMaxId)
+            .map((id) => id.toString())
+        );
+        state.primaryMintedIdCache = { key: cacheKey, set };
+        return set;
+      } catch (error) {
+        return null;
+      }
+    };
+
+    const fetchWalletTokenSummaries = async (ids, options = {}) => {
       const startedAt = performance.now();
+      // primaryOnly: read strictly from the active (primary) contract, skipping
+      // the legacy fallback. Used by galleries whose token ids live on the
+      // primary core but fall within the legacy id range (e.g. v3 #359, which
+      // would otherwise be shadowed by the v2 token of the same id).
+      const primaryOnly = options.primaryOnly === true;
+      // A gallery pinned to a specific core (e.g. v1 origins) reads strictly
+      // from that core's client, with no legacy fallback.
+      const galleryReadClient = getActiveGalleryReadClient();
+      const directReadClient = galleryReadClient ?? state.client;
+      const useDirectRead = primaryOnly || !!galleryReadClient;
       const sender = getReadOnlySenderAddress();
       let legacyMaxId = null;
-      if (state.legacyClient) {
+      let primaryMintedIds = null;
+      if (state.legacyClient && !useDirectRead) {
         try {
           legacyMaxId = await state.legacyClient.getLastTokenId(sender);
         } catch (error) {
           legacyMaxId = null;
+        }
+        // Fetch (and cache) the set of primary-minted ids that fall within the
+        // legacy id range. This lets each token route in a single read: ids on
+        // primary resolve on primary, all others on legacy — no read-misses.
+        if (legacyMaxId !== null) {
+          primaryMintedIds = await getPrimaryMintedIdSet(sender, legacyMaxId);
         }
       }
       const visibleIds = [...ids]
@@ -7755,17 +7967,18 @@ const openCuratedGallery = async (galleryId) => {
       });
       const summaries = await runLimited(visibleIds, 4, async (id) => {
         try {
-          if (state.legacyClient) {
+          if (state.legacyClient && !useDirectRead) {
             return await fetchTokenSummaryWithFallback({
               primaryClient: state.client,
               legacyClient: state.legacyClient,
               id,
               senderAddress: sender,
-              legacyMaxId
+              legacyMaxId,
+              primaryMintedIds
             });
           }
           return await fetchTokenSummary({
-            client: state.client,
+            client: directReadClient,
             id,
             senderAddress: sender
           });
