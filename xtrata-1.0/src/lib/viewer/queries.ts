@@ -170,39 +170,55 @@ export const fetchTokenSummaryWithFallback = async (params: {
   legacyMaxId?: bigint | null;
   primaryAvailable?: boolean;
   escrowOwner?: string | null;
+  // The set of token ids (as strings) actually minted on the primary core. When
+  // provided, routing is a single read: ids in this set resolve on primary, all
+  // other ids in the legacy range resolve on legacy — no speculative read-miss.
+  primaryMintedIds?: Set<string> | null;
 }): Promise<TokenSummary> => {
   const legacyClient = params.legacyClient ?? null;
   const legacyMaxId = params.legacyMaxId ?? null;
   const primaryAvailable = params.primaryAvailable ?? true;
   const escrowOwner = params.escrowOwner ?? null;
+  const primaryMintedIds = params.primaryMintedIds ?? null;
 
   const primaryContractId = getContractId(params.primaryClient.contract);
   const legacyContractId = legacyClient
     ? getContractId(legacyClient.contract)
     : null;
 
+  // If we know the primary minted this id, it is authoritative — route straight
+  // to the primary path below (single read), even if the id overlaps the legacy
+  // range (native primary mints / migrated tokens).
+  const primaryHasId =
+    primaryMintedIds !== null && primaryMintedIds.has(params.id.toString());
+
   const shouldPreferLegacy =
-    !!legacyClient && legacyMaxId !== null && params.id <= legacyMaxId;
+    !primaryHasId &&
+    !!legacyClient &&
+    legacyMaxId !== null &&
+    params.id <= legacyMaxId;
 
   if (shouldPreferLegacy) {
-    // The current (primary) core is authoritative. If the token exists on
-    // primary it must win, even when its id falls within the legacy id range —
-    // e.g. a native primary mint (the v3 #359 announcement) or a migrated token
-    // whose id overlaps a different legacy token of the same id. Only fall back
-    // to legacy when primary genuinely does not have the token.
-    const primarySummary = await fetchTokenSummary({
-      client: params.primaryClient,
-      id: params.id,
-      senderAddress: params.senderAddress
-    });
-    if (!isEmptySummary(primarySummary)) {
-      return { ...primarySummary, sourceContractId: primaryContractId };
-    }
     const legacySummary = await fetchTokenSummary({
       client: legacyClient!,
       id: params.id,
       senderAddress: params.senderAddress
     });
+    // Safety net only when the primary minted-id set is unknown: if the legacy
+    // token is held by the escrow, the live token lives on primary.
+    if (
+      primaryMintedIds === null &&
+      isSamePrincipal(legacySummary.owner, escrowOwner)
+    ) {
+      const primarySummary = await fetchTokenSummary({
+        client: params.primaryClient,
+        id: params.id,
+        senderAddress: params.senderAddress
+      });
+      if (!isEmptySummary(primarySummary)) {
+        return { ...primarySummary, sourceContractId: primaryContractId };
+      }
+    }
     return { ...legacySummary, sourceContractId: legacyContractId ?? legacySummary.sourceContractId };
   }
 

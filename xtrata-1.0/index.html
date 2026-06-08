@@ -3003,6 +3003,24 @@
                   Agent 27
                 </button>
 
+                <button
+                  class="wallet-example-chip"
+                  type="button"
+                  data-curated-gallery="v1-origins"
+                  title="The original Xtrata core, xtrata-v1-1-1."
+                >
+                  v1 origins
+                </button>
+
+                <button
+                  class="wallet-example-chip"
+                  type="button"
+                  data-curated-gallery="stacksboard"
+                  title="The Stacksboard inscription (#350)."
+                >
+                  Stacksboard
+                </button>
+
 
               </div>
 
@@ -3486,6 +3504,18 @@
             id: 'agent-27',
             title: 'Agent 27',
             tokenIds: [ 107n, 112n, 121n, 123n, 128n, 135n,137n, 152n, 161n, 162n, 163n, 175n, 188n, 194n, 196n, 200n, 213n]
+          },
+          {
+            id: 'v1-origins',
+            title: 'v1 origins',
+            // Read strictly from the original core, xtrata-v1-1-1.
+            contractId: 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v1-1-1',
+            tokenIds: [1n, 2n, 3n, 4n, 5n, 6n, 7n, 8n, 9n, 10n, 11n, 12n, 14n, 20n, 25n, 38n]
+          },
+          {
+            id: 'stacksboard',
+            title: 'Stacksboard',
+            tokenIds: [350n]
           }
         ];
 
@@ -3497,6 +3527,33 @@
           'jim-music': 269n,
           'code-various': 287n
         });
+
+        // Per-gallery read clients: a gallery may pin a specific core in the
+        // lineage (e.g. v1 origins reads xtrata-v1-1-1). Cached by contract id.
+        const galleryReadClientCache = new Map();
+        const getGalleryReadClient = (contractId) => {
+          if (!contractId) {
+            return null;
+          }
+          if (galleryReadClientCache.has(contractId)) {
+            return galleryReadClientCache.get(contractId);
+          }
+          const entry = findContractById(contractId);
+          const client = entry ? createXtrataClient({ contract: entry }) : null;
+          galleryReadClientCache.set(contractId, client);
+          return client;
+        };
+        const getActiveGalleryReadClient = () => {
+          if (!state.curatedGalleryId) {
+            return null;
+          }
+          const gallery = CURATED_GALLERIES.find(
+            (entry) => entry.id === state.curatedGalleryId
+          );
+          return gallery?.contractId
+            ? getGalleryReadClient(gallery.contractId)
+            : null;
+        };
     
         let activeExampleDescriptionKey = null;
 
@@ -3539,6 +3596,22 @@
         tooltip: 'Early autonomous agent memory inscriptions.',
         description:
           'An early on-chain agent memory test, where an automated agent used a wallet to inscribe its thoughts over time.'
+      },
+
+      'v1-origins': {
+        label: 'v1 origins',
+        heading: 'Viewing v1 origins',
+        tooltip: 'The original Xtrata core, xtrata-v1-1-1.',
+        description:
+          'The earliest inscriptions on the original Xtrata core (xtrata-v1-1-1), still live and readable on-chain.'
+      },
+
+      'stacksboard': {
+        label: 'Stacksboard',
+        heading: 'Viewing Stacksboard',
+        tooltip: 'The Stacksboard inscription (#350).',
+        description:
+          'A single featured inscription: Stacksboard, recorded on-chain through Xtrata as #350.'
       }
     });
     
@@ -5164,6 +5237,7 @@
       state.legacyClient = state.legacyContract
         ? createXtrataClient({ contract: state.legacyContract })
         : null;
+      state.primaryMintedIdCache = null;
       refreshConnectedWalletMatureMode();
       logApiConfiguration();
       setExperienceMode();
@@ -5831,6 +5905,10 @@
     };
 
     const getTokenClient = (token) => {
+      const galleryClient = getActiveGalleryReadClient();
+      if (galleryClient) {
+        return galleryClient;
+      }
       const legacyId = state.legacyClient ? getContractId(state.legacyClient.contract) : null;
       return legacyId && token.sourceContractId === legacyId
         ? state.legacyClient
@@ -7760,6 +7838,45 @@ const openCuratedGallery = async (galleryId) => {
       };
     };
 
+    // Fetch (cached per primary contract) the set of primary-minted token ids
+    // that fall within the legacy id range, so reads can be routed in one shot.
+    const getPrimaryMintedIdSet = async (sender, legacyMaxId) => {
+      if (!state.client || legacyMaxId === null) {
+        return null;
+      }
+      const cacheKey = getContractId(state.contract);
+      if (state.primaryMintedIdCache && state.primaryMintedIdCache.key === cacheKey) {
+        return state.primaryMintedIdCache.set;
+      }
+      try {
+        const count = await state.client.getMintedCount(sender);
+        const total = Number(count);
+        if (!Number.isFinite(total) || total <= 0) {
+          const empty = new Set();
+          state.primaryMintedIdCache = { key: cacheKey, set: empty };
+          return empty;
+        }
+        const scanCount = Math.min(total, 2000);
+        const indices = Array.from({ length: scanCount }, (_, index) => BigInt(index));
+        const mintedIds = await runLimited(indices, 6, async (index) => {
+          try {
+            return await state.client.getMintedId(index, sender);
+          } catch (error) {
+            return null;
+          }
+        });
+        const set = new Set(
+          mintedIds
+            .filter((id) => id !== null && id <= legacyMaxId)
+            .map((id) => id.toString())
+        );
+        state.primaryMintedIdCache = { key: cacheKey, set };
+        return set;
+      } catch (error) {
+        return null;
+      }
+    };
+
     const fetchWalletTokenSummaries = async (ids, options = {}) => {
       const startedAt = performance.now();
       // primaryOnly: read strictly from the active (primary) contract, skipping
@@ -7767,13 +7884,25 @@ const openCuratedGallery = async (galleryId) => {
       // primary core but fall within the legacy id range (e.g. v3 #359, which
       // would otherwise be shadowed by the v2 token of the same id).
       const primaryOnly = options.primaryOnly === true;
+      // A gallery pinned to a specific core (e.g. v1 origins) reads strictly
+      // from that core's client, with no legacy fallback.
+      const galleryReadClient = getActiveGalleryReadClient();
+      const directReadClient = galleryReadClient ?? state.client;
+      const useDirectRead = primaryOnly || !!galleryReadClient;
       const sender = getReadOnlySenderAddress();
       let legacyMaxId = null;
-      if (state.legacyClient && !primaryOnly) {
+      let primaryMintedIds = null;
+      if (state.legacyClient && !useDirectRead) {
         try {
           legacyMaxId = await state.legacyClient.getLastTokenId(sender);
         } catch (error) {
           legacyMaxId = null;
+        }
+        // Fetch (and cache) the set of primary-minted ids that fall within the
+        // legacy id range. This lets each token route in a single read: ids on
+        // primary resolve on primary, all others on legacy — no read-misses.
+        if (legacyMaxId !== null) {
+          primaryMintedIds = await getPrimaryMintedIdSet(sender, legacyMaxId);
         }
       }
       const visibleIds = [...ids]
@@ -7790,17 +7919,18 @@ const openCuratedGallery = async (galleryId) => {
       });
       const summaries = await runLimited(visibleIds, 4, async (id) => {
         try {
-          if (state.legacyClient && !primaryOnly) {
+          if (state.legacyClient && !useDirectRead) {
             return await fetchTokenSummaryWithFallback({
               primaryClient: state.client,
               legacyClient: state.legacyClient,
               id,
               senderAddress: sender,
-              legacyMaxId
+              legacyMaxId,
+              primaryMintedIds
             });
           }
           return await fetchTokenSummary({
-            client: state.client,
+            client: directReadClient,
             id,
             senderAddress: sender
           });
