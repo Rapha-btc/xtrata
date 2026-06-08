@@ -3329,12 +3329,17 @@
       entry.protocolVersion === '2.1.0' ||
       entry.protocolVersion === '2.1.1' ||
       entry.protocolVersion === '3.0.0' ||
+      entry.protocolVersion === '3.2.3' ||
       entry.contractName?.toLowerCase().includes('v2-1-0') === true ||
       entry.contractName?.toLowerCase().includes('v2-1-1') === true ||
-      entry.contractName?.toLowerCase().includes('v3-0-0') === true;
+      entry.contractName?.toLowerCase().includes('v3-0-0') === true ||
+      entry.contractName?.toLowerCase().includes('v3-2-3') === true;
 
     const coreContracts = CONTRACT_REGISTRY.filter(isCoreEntry);
     const versionWeight = (entry) => {
+      if (entry.protocolVersion === '3.2.3' || entry.contractName?.includes('v3-2-3')) {
+        return 30203;
+      }
       if (entry.protocolVersion === '3.0.0' || entry.contractName?.includes('v3-0-0')) {
         return 30000;
       }
@@ -3352,8 +3357,8 @@
     const DEFAULT_CONTRACT =
       ACTIVE_CONTRACTS.find(
         (entry) =>
-          entry.protocolVersion === '2.1.0' ||
-          entry.contractName?.toLowerCase().includes('v2-1-0')
+          entry.protocolVersion === '3.2.3' ||
+          entry.contractName?.toLowerCase().includes('v3-2-3')
       ) ?? ACTIVE_CONTRACTS[0];
     const SMALL_MINT_HELPER_TARGET_CORE_CONTRACT_ID =
       `${SMALL_MINT_HELPER_MAINNET_ADDRESS}.xtrata-v2-1-0`;
