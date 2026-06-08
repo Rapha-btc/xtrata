@@ -23,3 +23,9 @@ coverage
 *.mp3
 /Narrate-AI-v2/V12.0-Original-Eleven-Labs-powered-app/output/projects
 *.zip
+
+# Large generated wallet/contract history dumps (the .jsonl is ~346MB; over GitHub's 100MB limit)
+xtrata-wallet-contract-history.*
+
+# Build artifacts
+xtrata-1.0/artifacts/
