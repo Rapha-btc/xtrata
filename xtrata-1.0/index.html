@@ -2960,6 +2960,15 @@
                 <button
                   class="wallet-example-chip"
                   type="button"
+                  data-curated-gallery="v3-core"
+                  title="The current live core, xtrata-v3-2-3."
+                >
+                  v3 core
+                </button>
+
+                <button
+                  class="wallet-example-chip"
+                  type="button"
                   data-wallet-showcase="dyle.btc"
                   data-default-token-id="296"
                   title="Early Stacks-native art inscriptions by DYLE."
@@ -3458,6 +3467,11 @@
     const THEME_IDS = new Set(['classic', 'terminal', 'midnight', 'neon', 'monochrome', 'obsidian', 'ember', 'ultraviolet', 'arctic', 'ruby']);
     const CURATED_GALLERIES = [
           {
+            id: 'v3-core',
+            title: 'v3',
+            tokenIds: [359n, 313n, 14n]
+          },
+          {
             id: 'jim-music',
             title: 'music',
             tokenIds: [312n, 288n, 269n, 315n]
@@ -3492,6 +3506,14 @@
         tooltip: 'Early Stacks-native art inscriptions by DYLE.',
         description:
           'A very early Stacks art collection by OG artist DYLE, inscribed through Xtrata as permanent on-chain media.'
+      },
+
+      'v3-core': {
+        label: 'v3 core',
+        heading: 'Viewing the v3 core',
+        tooltip: 'The current live core, xtrata-v3-2-3.',
+        description:
+          'The current Xtrata core (xtrata-v3-2-3): the v3 sealing inscription and tokens carried forward by migration from earlier cores.'
       },
 
       'jim-music': {
