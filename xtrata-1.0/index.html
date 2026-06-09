@@ -5399,6 +5399,50 @@
       );
       const dependencyIds = state.prepared.dependencyIds ?? [];
       const dependencyLabel = dependencyIds.map((id) => id.toString()).join(', ');
+
+      // Per-stage protocol fee breakdown, so the user sees what is charged when.
+      // Fees are only really paid on delivery: a small anti-spam fee up front,
+      // nothing on each upload batch, and the bulk only on the seal that mints
+      // the token.
+      const usdBook = state.usdPriceBook;
+      let feeBreakdownRows;
+      if (shouldUseNativeSingleTx() && typeof singleTxFeeMicroStx === 'number') {
+        feeBreakdownRows = [
+          {
+            key: 'Inscription fee',
+            subkey: 'Charged on mint — one transaction',
+            value: formatMicroStxWithUsd(singleTxFeeMicroStx, usdBook),
+            layout: 'stack'
+          }
+        ];
+      } else if (stagedFee) {
+        const batchCount = Math.max(0, transactionCount - 2);
+        feeBreakdownRows = [
+          {
+            key: 'Begin — anti-spam fee',
+            subkey: 'Paid now, on the first transaction',
+            value: formatMicroStxWithUsd(stagedFee.beginMicroStx, usdBook),
+            layout: 'stack'
+          },
+          {
+            key: `Upload batch${batchCount === 1 ? '' : 'es'}${batchCount > 0 ? ` (${batchCount})` : ''}`,
+            subkey: 'No fee — your data is uploaded free',
+            value: 'Free',
+            layout: 'stack'
+          },
+          {
+            key: 'Seal — mints your token',
+            subkey: 'The remaining fee, paid only on delivery',
+            value: formatMicroStxWithUsd(stagedFee.sealMicroStx, usdBook),
+            layout: 'stack'
+          }
+        ];
+      } else {
+        feeBreakdownRows = [
+          { key: 'Protocol fee', value: formatExtraFee(effectiveFeeEstimate), layout: 'stack' }
+        ];
+      }
+
       renderMeta(dom.preparedMeta, [
         { section: 'File' },
         {
@@ -5436,13 +5480,9 @@
           layout: 'stat',
           valueClass: 'meta-value--count'
         },
-        { section: 'Cost estimate' },
+        { section: 'Protocol fee — paid on delivery' },
         ['Live exchange rate', getLiveStxUsdRateLabel()],
-        {
-          key: 'Extra fee',
-          value: formatExtraFee(effectiveFeeEstimate),
-          layout: 'stack'
-        },
+        ...feeBreakdownRows,
         {
           key: 'Mining fee',
           value: dataMiningEstimate.label,
