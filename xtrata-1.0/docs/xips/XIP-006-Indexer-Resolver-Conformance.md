@@ -21,13 +21,13 @@ introduces no new on-chain behaviour; it makes independent indexers reach the
 
 ## Core principle
 
-> Two honest indexers given the same chain state and the same reference SHOULD
-> return the same resolution and the same trust tier — or both SHOULD fail closed.
+> Two honest indexers given the same chain state and the same reference MUST
+> return the same resolution and the same trust tier — or both MUST fail closed.
 
 ## 1. Trust tiers (normative vocabulary)
 
 Every resolved identity claim carries exactly one tier. UIs **SHOULD** map tiers to
-distinct visual treatments and **SHOULD NOT** present a lower tier as a higher one.
+distinct visual treatments and **MUST NOT** present a lower tier as a higher one.
 
 | Tier | Label | Meaning | Source |
 |------|-------|---------|--------|
@@ -40,7 +40,7 @@ distinct visual treatments and **SHOULD NOT** present a lower tier as a higher o
 
 - A "verified" badge **SHOULD** be reserved for T1–T2 (and T3 only for item display,
   never collection identity).
-- T4/T5/A **SHOULD NOT** be shown as canonical identity.
+- T4/T5/A **MUST NOT** be shown as canonical identity.
 
 ## 2. Canonical resolution (single algorithm)
 
@@ -57,13 +57,13 @@ function resolve(reference, context = {}):      # reference per XIP-002
     return { asset, identity }
 ```
 
-All consumers **SHOULD** key assets by `canonicalId` so a migrated asset and its
+All consumers **MUST** key assets by `canonicalId` so a migrated asset and its
 originals collapse to one (XIP-002 §4.3).
 
 `context` is an OPTIONAL caller-supplied resolution context (§3.1). It may carry a
 **claimed namespace** or a **claimed collection manifest** the caller wants
 checked first. It can only ever cause a claim to be **verified or rejected** — it
-**SHOULD NOT** be able to upgrade an asset's tier without passing the same checks a
+**MUST NOT** be able to upgrade an asset's tier without passing the same checks a
 discovered claim would.
 
 ## 3. Identity resolution (the §5.2 ladder, made executable)
@@ -86,12 +86,12 @@ function resolveIdentity(asset, context = {}):
 ```
 
 `latestVersion` returns **UNRESOLVED on a fork** (≥2 parent-chain tips); the
-resolver **SHOULD** then fall through / fail closed, never pick arbitrarily.
+resolver **MUST** then fall through / fail closed, never pick arbitrarily.
 
 ### 3.1 Namespace discovery (determinism rule)
 
 "Which namespaces claim this asset" **SHOULD NOT** be magic — two indexers given the
-same chain state and the same `context` **SHOULD** compute the same claim set.
+same chain state and the same `context` **MUST** compute the same claim set.
 `namespacesClaiming(asset, context)` is **exactly** the union of:
 
 1. **Caller-provided** — any namespace in `context.namespace` (e.g. a marketplace
@@ -115,7 +115,7 @@ identity it does not — the two still agree *given the same configured scope*.
 
 ## 4. Determinism requirements
 
-To guarantee two indexers agree, an XIP-006-conformant resolver **SHOULD**:
+To guarantee two indexers agree, an XIP-006-conformant resolver **MUST**:
 
 1. Use XIP-001 canonicalisation/hashing for every manifest hash and integrity
    check (recompute, never trust a stated hash).
@@ -146,9 +146,9 @@ root cause of indexer disagreement.
 ## 6. Failure semantics
 
 - Resolution failures (missing owner, fork, authority mismatch, integrity
-  mismatch, offset-crossing) **SHOULD fail closed**: return unresolved, surface the
-  reason, and **SHOULD NOT** substitute a lower-tier or third-party manifest.
-- A consumer **SHOULD** be able to distinguish *NotFound* (no such inscription) from
+  mismatch, offset-crossing) **MUST fail closed**: return unresolved, surface the
+  reason, and **MUST NOT** substitute a lower-tier or third-party manifest.
+- A consumer **MUST** be able to distinguish *NotFound* (no such inscription) from
   *Unverified* (inscription exists, no qualifying identity) from *Conflict* (fork
   / ambiguous).
 

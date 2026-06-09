@@ -133,7 +133,7 @@ function resolveNamespace(ref):
 **FAIL_CLOSED** means resolution returns "unresolved" and the consumer **SHOULD
 NOT** fall back to an unverified or third-party manifest. Multiple Method-B
 candidates that do not reduce to a single parent-chain tip are a **fork** and
-**SHOULD** fail closed (no guessing).
+**MUST** fail closed (no guessing).
 
 ## 5. Owner change & finality (anti-race)
 
@@ -153,7 +153,7 @@ a brand:
 
 - The **current** BNS/BNSv2 owner of a name is the **sole** authority for that
   name. A namespace claim whose root-manifest `creator` does not match current
-  BNS ownership **SHOULD** be rejected.
+  BNS ownership **MUST** be rejected.
 - If a name changes hands, resolution follows current ownership; prior root
   manifests lose authority over the name (their inscriptions remain valid as
   data, just not as *this name's* root).
@@ -195,7 +195,7 @@ separate proposal.
 
 - **SHOULD** resolve names per §4, failing closed on missing owner, mismatched
   authorship, or fork.
-- **SHOULD** reject Method-B claims whose `creator` ≠ current BNS owner (§3.2, §6).
+- **MUST** reject Method-B claims whose `creator` ≠ current BNS owner (§3.2, §6).
 - **SHOULD** re-resolve before trust decisions and honour finality depth (§5).
 - **SHOULD** treat a namespace-anchored manifest as XIP-001 §5.2 tier 1, not invent
   a different order.
