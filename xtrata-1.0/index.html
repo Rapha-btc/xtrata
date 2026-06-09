@@ -5371,6 +5371,7 @@
       // When the core charges a single flat single-tx fee (quoted in advance),
       // show that real amount instead of the summed 3-stage estimate.
       const singleTxFeeMicroStx = state.prepared.singleTxFeeMicroStx;
+      const stagedFee = state.prepared.stagedFee;
       const effectiveFeeEstimate =
         shouldUseNativeSingleTx() && typeof singleTxFeeMicroStx === 'number'
           ? {
@@ -5379,7 +5380,14 @@
               totalMicroStx: singleTxFeeMicroStx,
               feeBatches: 0
             }
-          : feeEstimate;
+          : stagedFee
+            ? {
+                beginMicroStx: stagedFee.beginMicroStx,
+                sealMicroStx: stagedFee.sealMicroStx,
+                totalMicroStx: stagedFee.totalMicroStx,
+                feeBatches: feeEstimate.feeBatches
+              }
+            : feeEstimate;
       const sequentialTxEstimate = estimateSequentialMintTransactions({
         totalChunks: state.prepared.chunks.length,
         batchSize: Math.min(DEFAULT_BATCH_SIZE, MAX_UPLOAD_BATCH_SIZE)
@@ -5632,25 +5640,38 @@
         state.duplicateId = null;
       }
 
-      // For the native single-tx route, quote the exact fee the core will charge
-      // (single-tx-fee-unit + chunks·upload-chunk-fee-unit) so the user is told
-      // the real cost and the post-condition caps at the right amount.
+      // Quote the exact fees the core will charge so the user is told the real
+      // cost and each transaction's post-condition caps at the right amount.
+      // Single-tx: one flat fee. Staged: begin-fee on begin, seal-fee on seal.
       state.prepared.singleTxFeeMicroStx = null;
+      state.prepared.stagedFee = null;
       const capabilities = resolveContractCapabilities(state.contract);
-      if (
-        capabilities.supportsNativeSingleTx === true &&
-        chunks.length > 0 &&
-        chunks.length <= SMALL_MINT_HELPER_MAX_CHUNKS
-      ) {
+      if (capabilities.supportsNativeSingleTx === true && chunks.length > 0) {
+        if (chunks.length <= SMALL_MINT_HELPER_MAX_CHUNKS) {
+          try {
+            const quoted = await state.client.quoteSingleTxFee(
+              BigInt(bytes.length),
+              BigInt(chunks.length),
+              sender
+            );
+            state.prepared.singleTxFeeMicroStx = Number(quoted);
+          } catch (error) {
+            state.prepared.singleTxFeeMicroStx = null;
+          }
+        }
         try {
-          const quoted = await state.client.quoteSingleTxFee(
+          const staged = await state.client.quoteStagedFee(
             BigInt(bytes.length),
             BigInt(chunks.length),
             sender
           );
-          state.prepared.singleTxFeeMicroStx = Number(quoted);
+          state.prepared.stagedFee = {
+            beginMicroStx: Number(staged.beginFee),
+            sealMicroStx: Number(staged.sealFee),
+            totalMicroStx: Number(staged.totalFee)
+          };
         } catch (error) {
-          state.prepared.singleTxFeeMicroStx = null;
+          state.prepared.stagedFee = null;
         }
       }
 
@@ -5859,7 +5880,9 @@
               uintCV(BigInt(prepared.bytes.length)),
               uintCV(BigInt(prepared.chunks.length))
             ],
-            postConditions: resolveFeePostConditions(feeEstimate.beginMicroStx)
+            postConditions: resolveFeePostConditions(
+              prepared.stagedFee?.beginMicroStx ?? feeEstimate.beginMicroStx
+            )
           });
           appendLog(`Begin tx sent: ${normalizeTxId(beginTx)}`);
           setStep('begin', 'done', 'Submitted');
@@ -5935,7 +5958,9 @@
                   bufferCV(prepared.expectedHash),
                   stringAsciiCV(prepared.tokenUriValue)
                 ],
-          postConditions: resolveFeePostConditions(feeEstimate.sealMicroStx)
+          postConditions: resolveFeePostConditions(
+            prepared.stagedFee?.sealMicroStx ?? feeEstimate.sealMicroStx
+          )
         });
         const sealTxId = normalizeTxId(sealTx);
         state.lastSubmittedTxId = sealTxId;

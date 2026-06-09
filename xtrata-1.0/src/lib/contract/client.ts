@@ -30,6 +30,7 @@ import {
   parseGetAdmin,
   parseGetFeeUnit,
   parseQuoteSingleTxFee,
+  parseQuoteStagedFee,
   parseGetInscriptionMeta,
   parseGetLastTokenId,
   parseGetNextTokenId,
@@ -330,6 +331,13 @@ export type XtrataClient = {
     totalChunks: bigint,
     senderAddress: string
   ) => Promise<bigint>;
+  // Exact staged-flow fees (microSTX): begin-fee charged on begin-inscription,
+  // seal-fee charged on seal-inscription. Used to post-condition each stage.
+  quoteStagedFee: (
+    totalSize: bigint,
+    totalChunks: bigint,
+    senderAddress: string
+  ) => Promise<{ beginFee: bigint; sealFee: bigint; totalFee: bigint }>;
   isPaused: (senderAddress: string) => Promise<boolean>;
   getTokenUri: (id: bigint, senderAddress: string) => Promise<string | null>;
   getOwner: (id: bigint, senderAddress: string) => Promise<string | null>;
@@ -472,6 +480,17 @@ export const createXtrataClient = (params: {
         senderAddress
       });
       return parseQuoteSingleTxFee(value);
+    },
+    quoteStagedFee: async (totalSize, totalChunks, senderAddress) => {
+      const value = await callReadOnly({
+        caller,
+        contract: params.contract,
+        network: stacksNetwork,
+        functionName: 'quote-staged-fee',
+        functionArgs: [uintCV(totalSize), uintCV(totalChunks)],
+        senderAddress
+      });
+      return parseQuoteStagedFee(value);
     },
     isPaused: async (senderAddress) => {
       const value = await callReadOnly({

@@ -154,6 +154,21 @@ export const parseQuoteSingleTxFee = (value: ClarityValue) => {
   );
 };
 
+// quote-staged-fee returns (ok { begin-fee, seal-fee, total-fee, … }). The
+// staged flow charges begin-fee on begin-inscription and seal-fee on
+// seal-inscription, so each tx's post-condition must match its own stage.
+export const parseQuoteStagedFee = (value: ClarityValue) => {
+  const tuple = expectTuple(
+    expectContractOk(value, 'quote-staged-fee'),
+    'quote-staged-fee'
+  );
+  return {
+    beginFee: expectUInt(getTupleValue(tuple, 'begin-fee', 'quote-staged-fee'), 'quote-staged-fee.begin-fee'),
+    sealFee: expectUInt(getTupleValue(tuple, 'seal-fee', 'quote-staged-fee'), 'quote-staged-fee.seal-fee'),
+    totalFee: expectUInt(getTupleValue(tuple, 'total-fee', 'quote-staged-fee'), 'quote-staged-fee.total-fee')
+  };
+};
+
 export const parseGetNextTokenId = (value: ClarityValue) =>
   expectUInt(expectContractOk(value, 'get-next-token-id'), 'get-next-token-id');
 
