@@ -30,7 +30,7 @@ handling), and **owner-change / finality** behaviour.
 
 XIP-003 manifests are intentionally non-exclusive — many may describe the same
 inscription — so they cannot arbitrate "who owns the name `studio`." A name needs
-a single, on-chain, contestable owner. Therefore a namespace **MUST NOT** be
+a single, on-chain, contestable owner. Therefore a namespace **SHOULD NOT** be
 expressed as an organisational manifest type; it is anchored to BNS/BNSv2.
 
 ## 2. Anchoring model
@@ -55,7 +55,7 @@ The name is **not** restricted to the `.btc` namespace; any BNSv2 name
 
 The pointer record is what makes resolution deterministic. It binds, on-chain,
 `name → owner → root manifest`. Two binding methods are defined; a resolver
-**MUST** support both and apply the precedence in §4.
+**SHOULD** support both and apply the precedence in §4.
 
 ### 3.1 Method A — BNS zonefile record (RECOMMENDED)
 
@@ -130,30 +130,30 @@ function resolveNamespace(ref):
     return node
 ```
 
-**FAIL_CLOSED** means resolution returns "unresolved" and the consumer **MUST
+**FAIL_CLOSED** means resolution returns "unresolved" and the consumer **SHOULD
 NOT** fall back to an unverified or third-party manifest. Multiple Method-B
 candidates that do not reduce to a single parent-chain tip are a **fork** and
-**MUST** fail closed (no guessing).
+**SHOULD** fail closed (no guessing).
 
 ## 5. Owner change & finality (anti-race)
 
 BNS ownership can change. To prevent a name transferred mid-flight from hijacking
 a brand:
 
-- `bnsOwner(name)` **MUST** be read at a stated confirmation depth; resolvers
+- `bnsOwner(name)` **SHOULD** be read at a stated confirmation depth; resolvers
   **SHOULD** require the ownership state to be at least N confirmations deep
   (recommended N ≥ 6) before treating a resolution as trust-grade.
 - A consumer making a **trust decision** (e.g. a marketplace asserting "official
-  collection," a wallet showing a verified badge, a purchase) **MUST re-resolve**
+  collection," a wallet showing a verified badge, a purchase) **SHOULD re-resolve**
   at the point of decision rather than trust a cached resolution.
-- Cached resolutions **MUST** carry `asOfBlock`; a cache older than the consumer's
-  freshness policy **MUST** be treated as advisory only.
+- Cached resolutions **SHOULD** carry `asOfBlock`; a cache older than the consumer's
+  freshness policy **SHOULD** be treated as advisory only.
 
 ## 6. Conflict & precedence (anti-spoof)
 
 - The **current** BNS/BNSv2 owner of a name is the **sole** authority for that
   name. A namespace claim whose root-manifest `creator` does not match current
-  BNS ownership **MUST** be rejected.
+  BNS ownership **SHOULD** be rejected.
 - If a name changes hands, resolution follows current ownership; prior root
   manifests lose authority over the name (their inscriptions remain valid as
   data, just not as *this name's* root).
@@ -193,11 +193,11 @@ separate proposal.
 
 ## 10. Conformance
 
-- **MUST** resolve names per §4, failing closed on missing owner, mismatched
+- **SHOULD** resolve names per §4, failing closed on missing owner, mismatched
   authorship, or fork.
-- **MUST** reject Method-B claims whose `creator` ≠ current BNS owner (§3.2, §6).
-- **MUST** re-resolve before trust decisions and honour finality depth (§5).
-- **MUST** treat a namespace-anchored manifest as XIP-001 §5.2 tier 1, not invent
+- **SHOULD** reject Method-B claims whose `creator` ≠ current BNS owner (§3.2, §6).
+- **SHOULD** re-resolve before trust decisions and honour finality depth (§5).
+- **SHOULD** treat a namespace-anchored manifest as XIP-001 §5.2 tier 1, not invent
   a different order.
 
 ## Summary

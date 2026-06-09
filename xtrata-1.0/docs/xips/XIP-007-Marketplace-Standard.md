@@ -34,19 +34,19 @@ describes the economics **as the deployed contracts actually implement them**
 | Marketplace contract | listing, price, payment token, protocol fee, settlement | hard, on-chain |
 
 The core's `get-royalty-recipient` is the **global storage/protocol-fee
-recipient** only and **MUST NOT** be read or displayed as a sale royalty
+recipient** only and **SHOULD NOT** be read or displayed as a sale royalty
 (XIP-002 §6).
 
 ## 2. Collection identity (anti-fraud)
 
-Before grouping listings, a marketplace **MUST** establish an authoritative
+Before grouping listings, a marketplace **SHOULD** establish an authoritative
 collection identity, to stop a third party wrapping a token into a fake
 collection:
 
 1. Resolve the collection manifest (XIP-003) via the XIP-006 resolver.
 2. Accept it only at **tier T1 (verified-namespace)** or **T2 (verified-creator)**
    per XIP-001 §5.2 / XIP-006 §1. T3 (owner) is acceptable for *item display* but
-   **MUST NOT** define collection membership. T4/T5 **MUST** be shown as
+   **SHOULD NOT** define collection membership. T4/T5 **SHOULD** be shown as
    unverified.
 3. Verify the member set per **XIP-001 §4.1** (the single membership-verification
    rule): recompute the `integrity.root` where one is present (always for
@@ -54,22 +54,22 @@ collection:
    without a root, verify the manifest hash equals the sealed inscription hash and
    each member's on-chain hash matches. Never trust a stated hash.
 
-Listings whose collection identity fails verification **MUST** be shown as
+Listings whose collection identity fails verification **SHOULD** be shown as
 unverified, never as the canonical collection.
 
 ## 3. Membership & enumeration
 
-- A marketplace **MUST** be able to enumerate a collection's exact member set and
+- A marketplace **SHOULD** be able to enumerate a collection's exact member set and
   verify it is complete and tamper-evident.
 - Membership comes from the XIP-001 mapping (explicit, or sequential with
   `exclusions` + `integrity.root`). Raw id ranges without an integrity commitment
-  **MUST NOT** be trusted; ranges that cross the id-space offset boundary
-  **MUST** be rejected (XIP-002 §3).
+  **SHOULD NOT** be trusted; ranges that cross the id-space offset boundary
+  **SHOULD** be rejected (XIP-002 §3).
 
 ## 4. Migration-aware identity
 
 A migrated token and its pre-migration originals are the **same logical asset**
-(XIP-002 §4.3). A marketplace **MUST** key listings by the **canonical-core
+(XIP-002 §4.3). A marketplace **SHOULD** key listings by the **canonical-core
 identity**, de-duplicate listings of the same logical asset, and present prior
 references as historical aliases — so the same work cannot be double-listed as
 "two NFTs."
@@ -84,15 +84,15 @@ protocol fee** (`get-fee-bps`) paid to the **market contract owner**, and settle
 a sale by transferring `price − fee` to the **seller** and `fee` to the fee
 recipient, in one transaction, in the contract's payment token. **There is no
 automatic creator/artist royalty split in these contracts.** A consumer
-**MUST NOT** imply the artist receives a secondary royalty unless a specific
+**SHOULD NOT** imply the artist receives a secondary royalty unless a specific
 deployed contract demonstrably enforces one.
 
 A standard-conformant marketplace:
 
-- **MUST** read fee and settlement terms from the marketplace contract via the
+- **SHOULD** read fee and settlement terms from the marketplace contract via the
   trait (§6), not from any manifest.
-- **MUST** surface the payment token and fee to the user before purchase.
-- **MUST NOT** present the core storage-fee recipient as a creator royalty.
+- **SHOULD** surface the payment token and fee to the user before purchase.
+- **SHOULD NOT** present the core storage-fee recipient as a creator royalty.
 - **MAY**, where a contract *does* enforce a creator split, read and display it —
   but only from the contract, and labelled as enforced-on-chain.
 
@@ -164,14 +164,14 @@ resolve(reference) -> {
 
 ## 8. Anti-fraud requirements
 
-- **MUST NOT** present an unverified (T3-for-membership / T4 / T5) manifest as
+- **SHOULD NOT** present an unverified (T3-for-membership / T4 / T5) manifest as
   canonical collection identity.
-- **MUST NOT** display the core storage-fee recipient as a creator royalty.
-- **MUST** verify content hash and (where present) membership `integrity.root`
+- **SHOULD NOT** display the core storage-fee recipient as a creator royalty.
+- **SHOULD** verify content hash and (where present) membership `integrity.root`
   before asserting authenticity.
-- **MUST** confirm the market's `get-core-contract` matches the asset's core
+- **SHOULD** confirm the market's `get-core-contract` matches the asset's core
   before trusting a listing.
-- **MUST** re-resolve namespace ownership and current owner at point of sale
+- **SHOULD** re-resolve namespace ownership and current owner at point of sale
   (XIP-005 §5, XIP-006 §4).
 
 ## 9. Conformance
