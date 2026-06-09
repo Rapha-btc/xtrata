@@ -29,6 +29,7 @@ import {
   parseGetDependencies,
   parseGetAdmin,
   parseGetFeeUnit,
+  parseQuoteSingleTxFee,
   parseGetInscriptionMeta,
   parseGetLastTokenId,
   parseGetNextTokenId,
@@ -470,7 +471,7 @@ export const createXtrataClient = (params: {
         functionArgs: [uintCV(totalSize), uintCV(totalChunks)],
         senderAddress
       });
-      return parseGetFeeUnit(value);
+      return parseQuoteSingleTxFee(value);
     },
     isPaused: async (senderAddress) => {
       const value = await callReadOnly({

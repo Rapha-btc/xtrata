@@ -141,6 +141,19 @@ export const parseGetLastTokenId = (value: ClarityValue) =>
 export const parseGetFeeUnit = (value: ClarityValue) =>
   expectUInt(expectContractOk(value, 'get-fee-unit'), 'get-fee-unit');
 
+// quote-single-tx-fee returns (ok { …, single-tx-fee, total-fee, … }); for the
+// single-tx mode total-fee equals the single-tx fee — the exact amount charged.
+export const parseQuoteSingleTxFee = (value: ClarityValue) => {
+  const tuple = expectTuple(
+    expectContractOk(value, 'quote-single-tx-fee'),
+    'quote-single-tx-fee'
+  );
+  return expectUInt(
+    getTupleValue(tuple, 'total-fee', 'quote-single-tx-fee'),
+    'quote-single-tx-fee.total-fee'
+  );
+};
+
 export const parseGetNextTokenId = (value: ClarityValue) =>
   expectUInt(expectContractOk(value, 'get-next-token-id'), 'get-next-token-id');
 
