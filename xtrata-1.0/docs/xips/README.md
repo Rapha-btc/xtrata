@@ -138,3 +138,6 @@ The reference vector generator lives at [`vectors/generate.py`](vectors/generate
 This corpus is currently in Draft.
 
 The documents are intended for review by protocol contributors, indexer implementers, marketplace builders, wallet developers, artists, collectors and other ecosystem participants before any Final status is proposed.
+
+
+...
