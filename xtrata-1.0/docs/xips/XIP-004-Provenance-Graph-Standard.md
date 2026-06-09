@@ -13,7 +13,7 @@
 > This XIP is **Informational**: it defines a derived *view*, not new on-chain or
 > wire behaviour. Per XIP-000 §3, its normative keywords are confined to
 > **fidelity constraints** — rules a graph must follow to remain a faithful lens
-> over contract facts (e.g. "MUST NOT invent edges", "MUST label advisory
+> over contract facts (e.g. "SHOULD NOT invent edges", "SHOULD label advisory
 > edges"). Implementation mechanics (traversal limits, rendering) are expressed as
 > SHOULD/MAY guidance.
 
@@ -31,8 +31,8 @@ for keeping that lens honest.
 > Provenance is hard. The graph only reveals it. Anything the chain cannot
 > confirm is curatorial context and belongs in an XIP-003 manifest, not here.
 
-A provenance graph **MUST** be reconstructable purely from contract facts
-(possibly across contracts, per XIP-002 §4) and **MUST NOT** introduce a claim
+A provenance graph **SHOULD** be reconstructable purely from contract facts
+(possibly across contracts, per XIP-002 §4) and **SHOULD NOT** introduce a claim
 the chain cannot confirm.
 
 ## 1. Source facts (from the core, via XIP-002)
@@ -74,13 +74,13 @@ maps to one specific contract fact**:
 }
 ```
 
-Node ids **MUST** be fully qualified (XIP-002 §1) — a provenance graph spans
+Node ids **SHOULD** be fully qualified (XIP-002 §1) — a provenance graph spans
 contracts and bare ids are ambiguous.
 
 ## 3. Parent vs dependency — the authority asymmetry (IMPORTANT)
 
 The core enforces **different invariants** on the two relations, and a faithful
-graph **MUST** preserve the difference:
+graph **SHOULD** preserve the difference:
 
 - **`parent`** — at seal time the core requires that **the creator owned each
   parent** (`validate-parent` asserts the parent's NFT owner equals the sealing
@@ -91,9 +91,9 @@ graph **MUST** preserve the difference:
   (`dep-id < next-id` at seal). It carries **no ownership claim**. A recursive
   inscription that *uses/references* another is a `dependency`.
 
-Collapsing the two **MUST NOT** happen: it would either fabricate ownership
+Collapsing the two **SHOULD NOT** happen: it would either fabricate ownership
 (treating a dependency as lineage) or discard it (treating lineage as a mere
-reference). Consumers presenting "descends from" semantics **MUST** use `parent`
+reference). Consumers presenting "descends from" semantics **SHOULD** use `parent`
 only.
 
 ## 4. Migration continuity (single-hop fact; multi-hop reconstruction)
@@ -104,8 +104,8 @@ contracts via XIP-002 §4.2. Therefore:
 
 - Each `migratedFrom` edge is authoritative **for its single hop**, and **only if
   the source contract is reachable and the source token's record confirms it**.
-- A consumer presenting multi-hop continuity **MUST** label it as an indexer
-  reconstruction and **MUST** mark any hop whose source contract could not be
+- A consumer presenting multi-hop continuity **SHOULD** label it as an indexer
+  reconstruction and **SHOULD** mark any hop whose source contract could not be
   verified with `"verified": false`.
 - Canonical asset identity across the chain is the live canonical-core token
   (XIP-002 §4.3); the graph presents older tokens as historical, de-duplicated
@@ -117,8 +117,8 @@ contracts via XIP-002 §4.2. Therefore:
 uses `map-insert`, preserving the original). Identical content does **not** imply
 intent, authorship, or relationship. The `derivedHash` edge:
 
-- **MUST** be labelled advisory/non-authoritative wherever displayed,
-- **MUST NOT** be used to assert authenticity, authorship, or "original vs copy,"
+- **SHOULD** be labelled advisory/non-authoritative wherever displayed,
+- **SHOULD NOT** be used to assert authenticity, authorship, or "original vs copy,"
 - **MAY** be surfaced as "same bytes also seen at …" for user awareness only.
 
 This blocks the "my copy points at your original, so it looks endorsed" spoof.
@@ -132,7 +132,7 @@ This blocks the "my copy points at your original, so it looks endorsed" spoof.
   construction.** Cycle handling is therefore needed **only** across contracts
   (migration chains) and for the advisory `derivedHash` edge.
 - A traversal **SHOULD** bound depth and total nodes (recommended defaults: depth
-  ≤ 64, nodes ≤ 10,000) and **MUST** detect and break cross-contract cycles
+  ≤ 64, nodes ≤ 10,000) and **SHOULD** detect and break cross-contract cycles
   (track visited `contract:id`) — unbounded or cyclic traversal would not
   faithfully terminate.
 - Fan-out per node is bounded by the core's 50-entry caps on each relation
@@ -148,8 +148,8 @@ This blocks the "my copy points at your original, so it looks endorsed" spoof.
   the edge set; the leaf for an edge is the JCS bytes of
   `{ type, from, to }` (the `verified` flag is a presentation hint and is
   excluded from the leaf).
-- Cached graphs **MUST** record an `asOfBlock`; owner/transfer history and
-  `derivedHash` results are time-sensitive and **MUST** be re-validated before
+- Cached graphs **SHOULD** record an `asOfBlock`; owner/transfer history and
+  `derivedHash` results are time-sensitive and **SHOULD** be re-validated before
   use in a trust decision (e.g. a marketplace sale).
 
 ## 8. Display rules (do not mislead)
@@ -157,7 +157,7 @@ This blocks the "my copy points at your original, so it looks endorsed" spoof.
 - Authoritative edges (`parent`, `dependency`, verified `migratedFrom`) and
   advisory edges (`derivedHash`, unverified migration hops) **SHOULD** be visually
   distinguished.
-- A UI **MUST NOT** render `derivedHash` as authorship or "verified original"
+- A UI **SHOULD NOT** render `derivedHash` as authorship or "verified original"
   (a fidelity/anti-spoof constraint, not mere styling).
 - Multi-hop migration **SHOULD** render as one continuous asset with an expandable
   history, not as multiple assets.
@@ -170,10 +170,10 @@ This blocks the "my copy points at your original, so it looks endorsed" spoof.
 
 ## 10. Conformance
 
-- **MUST** reconstruct every edge from contract facts; **MUST NOT** invent edges.
-- **MUST** preserve the parent/dependency asymmetry (§3).
-- **MUST** label advisory edges and unverified migration hops (§5, §4).
-- **MUST** use fully-qualified node ids and cycle-protect traversal; **SHOULD**
+- **SHOULD** reconstruct every edge from contract facts; **SHOULD NOT** invent edges.
+- **SHOULD** preserve the parent/dependency asymmetry (§3).
+- **SHOULD** label advisory edges and unverified migration hops (§5, §4).
+- **SHOULD** use fully-qualified node ids and cycle-protect traversal; **SHOULD**
   bound traversal depth/size (§2, §6).
 
 ## Summary

@@ -26,7 +26,7 @@ introduces no new on-chain behaviour; it makes independent indexers reach the
 
 ## 1. Trust tiers (normative vocabulary)
 
-Every resolved identity claim carries exactly one tier. UIs **MUST** map tiers to
+Every resolved identity claim carries exactly one tier. UIs **SHOULD** map tiers to
 distinct visual treatments and **MUST NOT** present a lower tier as a higher one.
 
 | Tier | Label | Meaning | Source |
@@ -38,7 +38,7 @@ distinct visual treatments and **MUST NOT** present a lower tier as a higher one
 | **T5** | `unendorsed` | Third-party / unverified view. | XIP-001 §5.2(5) |
 | **A** | `advisory` | Derivable-but-non-authoritative facts (e.g. `derivedHash`, unverified migration hop). | XIP-004 §4/§5 |
 
-- A "verified" badge **MUST** be reserved for T1–T2 (and T3 only for item display,
+- A "verified" badge **SHOULD** be reserved for T1–T2 (and T3 only for item display,
   never collection identity).
 - T4/T5/A **MUST NOT** be shown as canonical identity.
 
@@ -90,7 +90,7 @@ resolver **MUST** then fall through / fail closed, never pick arbitrarily.
 
 ### 3.1 Namespace discovery (determinism rule)
 
-"Which namespaces claim this asset" **MUST NOT** be magic — two indexers given the
+"Which namespaces claim this asset" **SHOULD NOT** be magic — two indexers given the
 same chain state and the same `context` **MUST** compute the same claim set.
 `namespacesClaiming(asset, context)` is **exactly** the union of:
 
@@ -109,7 +109,7 @@ asset has no T1 identity** and resolution falls through to T2 — it does **not*
 fail the whole resolution. A claim that fails `resolveNamespace` (missing owner,
 authorship mismatch, fork) is **dropped**, never downgraded into a lower tier.
 
-An indexer that limits discovery (e.g. to an indexed name allowlist) **MUST**
+An indexer that limits discovery (e.g. to an indexed name allowlist) **SHOULD**
 disclose that scope, because a peer with broader discovery may surface a T1
 identity it does not — the two still agree *given the same configured scope*.
 
@@ -137,9 +137,9 @@ root cause of indexer disagreement.
 
 - Read facts (creator, hash, parents, dependencies, migration source) are
   immutable once sealed and **MAY** be cached indefinitely.
-- Mutable facts (owner, namespace ownership, `live` membership) **MUST** carry
+- Mutable facts (owner, namespace ownership, `live` membership) **SHOULD** carry
   `asOfBlock` and be refreshed per the consumer's freshness policy and §4(6).
-- An inscribed snapshot (provenance graph, member set) is citable but **MUST** be
+- An inscribed snapshot (provenance graph, member set) is citable but **SHOULD** be
   re-verified edge-by-edge / leaf-by-leaf against current chain state before being
   used to authorise value transfer.
 

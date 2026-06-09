@@ -59,7 +59,7 @@ unverified, never as the canonical collection.
 
 ## 3. Membership & enumeration
 
-- A marketplace **MUST** be able to enumerate a collection's exact member set and
+- A marketplace **SHOULD** be able to enumerate a collection's exact member set and
   verify it is complete and tamper-evident.
 - Membership comes from the XIP-001 mapping (explicit, or sequential with
   `exclusions` + `integrity.root`). Raw id ranges without an integrity commitment

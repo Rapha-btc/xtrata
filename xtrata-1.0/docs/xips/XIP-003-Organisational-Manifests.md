@@ -38,7 +38,7 @@ may describe the same inscription differently, and that is legitimate (XIP-001
 
 Out of scope (other XIPs): provenance views (XIP-004), names/uniqueness
 (XIP-005), packages (XIP-008), marketplace economics (XIP-007). An organisational
-manifest **MUST NOT** carry economic terms, namespace ownership, or provenance
+manifest **SHOULD NOT** carry economic terms, namespace ownership, or provenance
 claims.
 
 ## 2. Soft fields (all OPTIONAL, all non-authoritative)
@@ -53,12 +53,12 @@ claims.
 | `traits` | object[] | Per-member trait annotations (see §4). |
 | `links` | object[] | `{ rel, href }` external links (lower-trust, off-chain). |
 
-All soft fields are curatorial context. A consumer **MUST NOT** derive authority,
+All soft fields are curatorial context. A consumer **SHOULD NOT** derive authority,
 ownership, or economics from any of them.
 
 ## 3. Member set (REQUIRED)
 
-Every organisational manifest **MUST** carry an XIP-001 `mapping` (§4 of XIP-001)
+Every organisational manifest **SHOULD** carry an XIP-001 `mapping` (§4 of XIP-001)
 and, where `mapping.type` is `sequential` or `predicate`, an `integrity`
 commitment. Members are referenced per XIP-002 (contract-qualified, or bare with
 `defaultContract`).
@@ -116,9 +116,9 @@ Authority is inherited from XIP-001 §5 and resolved by XIP-001 §5.2 precedence
   creator-authored, then owner-authored.
 - `artistDisplayName` is **never** identity. To present a verified artist,
   resolve via namespace (XIP-005). A manifest claiming an artist name it cannot
-  anchor **MUST** be shown as unverified (XIP-006 trust tiers).
+  anchor **SHOULD** be shown as unverified (XIP-006 trust tiers).
 
-A consumer grouping listings or building a collection page **MUST NOT** present a
+A consumer grouping listings or building a collection page **SHOULD NOT** present a
 tier-4/5 manifest as the official collection (XIP-007 enforces this for
 marketplaces).
 
@@ -126,7 +126,7 @@ marketplaces).
 
 - A collection **MAY** reference sub-collections by including child manifest
   references as members (`type`-agnostic references), forming a shallow tree.
-  Cycles are PROHIBITED; a consumer **MUST** bound traversal depth and reject
+  Cycles are PROHIBITED; a consumer **SHOULD** bound traversal depth and reject
   cycles.
 - When an organisational manifest is itself an inscription, it **MAY** also
   express membership through the contract's `dependencies`/`parents` graph so the
@@ -141,11 +141,11 @@ closed; retraction uses `withdrawn: true`.
 
 ## 8. Conformance
 
-- **MUST** be a valid XIP-001 envelope (canonicalisation, mapping, integrity,
+- **SHOULD** be a valid XIP-001 envelope (canonicalisation, mapping, integrity,
   authority all per XIP-001).
-- **MUST** reference members per XIP-002 and honour `membershipSemantics`.
-- **MUST NOT** carry economics, namespace ownership, or provenance claims.
-- **MUST** treat `artistDisplayName` and `links` as non-authoritative.
+- **SHOULD** reference members per XIP-002 and honour `membershipSemantics`.
+- **SHOULD NOT** carry economics, namespace ownership, or provenance claims.
+- **SHOULD** treat `artistDisplayName` and `links` as non-authoritative.
 
 ## Summary
 
