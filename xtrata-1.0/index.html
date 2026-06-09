@@ -4286,15 +4286,16 @@
       if (!sender || !Number.isFinite(amountMicroStx) || amountMicroStx < 0) {
         return undefined;
       }
-      const royaltyRecipient = state.adminStatus?.royaltyRecipient ?? null;
-      const conditionCode =
-        !royaltyRecipient || addressesEqual(royaltyRecipient, sender)
-          ? FungibleConditionCode.LessEqual
-          : FungibleConditionCode.Equal;
+      // A fee post-condition only needs to CAP the sender's spend. Using an
+      // exact (Equal) condition adds a "pays no less" constraint with no benefit
+      // to the sender and breaks whenever the real protocol fee differs from the
+      // estimate — e.g. the v3 core-native single-tx fee (single-tx-fee-unit +
+      // chunks·upload-chunk-fee-unit) is far below the summed 3-stage estimate.
+      // LessEqual protects the sender and tolerates the contract charging less.
       return [
         makeStandardSTXPostCondition(
           sender,
-          conditionCode,
+          FungibleConditionCode.LessEqual,
           BigInt(Math.round(amountMicroStx))
         )
       ];
