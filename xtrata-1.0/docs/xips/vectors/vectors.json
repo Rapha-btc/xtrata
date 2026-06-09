@@ -1,0 +1,14 @@
+{
+  "algo": "xtrata-merkle-v1",
+  "vectors": {
+    "xip-001.manifestHash": "0xfe70c7740fddb6e9197bdae6183147ec1f2a1b95eb33af780bcbc13c73a33e46",
+    "xip-001.leaf.359": "0x263046c2cec65ecb9e6e5e4a550e1e64cdeb408d57c7f3c037151f10cc636fa2",
+    "xip-001.leaf.360": "0xc93f9cbd0dcd3be716c0e295a460ef8f09a39339261481e4a6cd7ffa708d0a3a",
+    "xip-001.leaf.361": "0x0c5c98fe26aded1d59aafae4b2eb218a25c5159ddb73bc557ec5c836cbdd69ae",
+    "xip-001.integrityRoot.3items": "0x2c9d8361cc7b6b507c3c67ff475330c2d8b9fec1a9afe4a9605df1ed89a21e97",
+    "xip-001.integrityRoot.item359": "0x263046c2cec65ecb9e6e5e4a550e1e64cdeb408d57c7f3c037151f10cc636fa2",
+    "xip-001.integrityRoot.empty": "0x6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d",
+    "xip-002.reference": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v3-2-3:359",
+    "xip-002.referenceHash": "0x8856e9b194e4b03513d0f5f887cb822a0a4e5c360949262230abc07f0bcffce7"
+  }
+}
