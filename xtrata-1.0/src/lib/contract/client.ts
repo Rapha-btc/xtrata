@@ -321,6 +321,14 @@ export type XtrataClient = {
   getAdmin: (senderAddress: string) => Promise<string>;
   getRoyaltyRecipient: (senderAddress: string) => Promise<string>;
   getFeeUnit: (senderAddress: string) => Promise<bigint>;
+  // Exact protocol fee (microSTX) the core charges for a one-transaction
+  // mint-single-tx of the given payload. Used to quote and post-condition the
+  // native single-tx route accurately.
+  quoteSingleTxFee: (
+    totalSize: bigint,
+    totalChunks: bigint,
+    senderAddress: string
+  ) => Promise<bigint>;
   isPaused: (senderAddress: string) => Promise<boolean>;
   getTokenUri: (id: bigint, senderAddress: string) => Promise<string | null>;
   getOwner: (id: bigint, senderAddress: string) => Promise<string | null>;
@@ -449,6 +457,17 @@ export const createXtrataClient = (params: {
         network: stacksNetwork,
         functionName: 'get-fee-unit',
         functionArgs: [],
+        senderAddress
+      });
+      return parseGetFeeUnit(value);
+    },
+    quoteSingleTxFee: async (totalSize, totalChunks, senderAddress) => {
+      const value = await callReadOnly({
+        caller,
+        contract: params.contract,
+        network: stacksNetwork,
+        functionName: 'quote-single-tx-fee',
+        functionArgs: [uintCV(totalSize), uintCV(totalChunks)],
         senderAddress
       });
       return parseGetFeeUnit(value);

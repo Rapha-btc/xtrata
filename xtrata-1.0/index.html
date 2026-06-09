@@ -5368,6 +5368,18 @@
 
       const feeEstimate = getFeeEstimate(state.prepared.chunks.length);
       const usesSingleTx = shouldUseSingleTx();
+      // When the core charges a single flat single-tx fee (quoted in advance),
+      // show that real amount instead of the summed 3-stage estimate.
+      const singleTxFeeMicroStx = state.prepared.singleTxFeeMicroStx;
+      const effectiveFeeEstimate =
+        shouldUseNativeSingleTx() && typeof singleTxFeeMicroStx === 'number'
+          ? {
+              beginMicroStx: singleTxFeeMicroStx,
+              sealMicroStx: 0,
+              totalMicroStx: singleTxFeeMicroStx,
+              feeBatches: 0
+            }
+          : feeEstimate;
       const sequentialTxEstimate = estimateSequentialMintTransactions({
         totalChunks: state.prepared.chunks.length,
         batchSize: Math.min(DEFAULT_BATCH_SIZE, MAX_UPLOAD_BATCH_SIZE)
@@ -5420,7 +5432,7 @@
         ['Live exchange rate', getLiveStxUsdRateLabel()],
         {
           key: 'Extra fee',
-          value: formatExtraFee(feeEstimate),
+          value: formatExtraFee(effectiveFeeEstimate),
           layout: 'stack'
         },
         {
@@ -5433,7 +5445,7 @@
           key: 'Total estimated cost',
           subkey: 'For this inscription',
           value: formatEstimatedTotalFees(
-            feeEstimate,
+            effectiveFeeEstimate,
             dataMiningEstimate.miningFeeMicroStx
           ),
           layout: 'total'
@@ -5620,6 +5632,28 @@
         state.duplicateId = null;
       }
 
+      // For the native single-tx route, quote the exact fee the core will charge
+      // (single-tx-fee-unit + chunks·upload-chunk-fee-unit) so the user is told
+      // the real cost and the post-condition caps at the right amount.
+      state.prepared.singleTxFeeMicroStx = null;
+      const capabilities = resolveContractCapabilities(state.contract);
+      if (
+        capabilities.supportsNativeSingleTx === true &&
+        chunks.length > 0 &&
+        chunks.length <= SMALL_MINT_HELPER_MAX_CHUNKS
+      ) {
+        try {
+          const quoted = await state.client.quoteSingleTxFee(
+            BigInt(bytes.length),
+            BigInt(chunks.length),
+            sender
+          );
+          state.prepared.singleTxFeeMicroStx = Number(quoted);
+        } catch (error) {
+          state.prepared.singleTxFeeMicroStx = null;
+        }
+      }
+
       await refreshUploadState(expectedHash);
       renderPreparedState();
       void loadUsdPriceBook();
@@ -5727,6 +5761,12 @@
             listCV(prepared.chunks.map((chunk) => bufferCV(chunk))),
             stringAsciiCV(prepared.tokenUriValue)
           ];
+          // Cap at the quoted single-tx fee when known; fall back to the 3-stage
+          // estimate (always >= the single-tx fee) if the quote is unavailable.
+          const singleTxCapMicroStx =
+            typeof prepared.singleTxFeeMicroStx === 'number'
+              ? prepared.singleTxFeeMicroStx
+              : feeEstimate.totalMicroStx;
           const singleTx = await requestContractCall({
             functionName:
               dependencyIds.length > 0 ? 'mint-single-tx-recursive' : 'mint-single-tx',
@@ -5734,7 +5774,7 @@
               dependencyIds.length > 0
                 ? [...coreArgs, listCV(dependencyIds.map((id) => uintCV(id)))]
                 : coreArgs,
-            postConditions: resolveFeePostConditions(feeEstimate.totalMicroStx)
+            postConditions: resolveFeePostConditions(singleTxCapMicroStx)
           });
           const singleTxId = normalizeTxId(singleTx);
           state.lastSubmittedTxId = singleTxId;
