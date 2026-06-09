@@ -4246,19 +4246,40 @@
           }
         : null;
 
-    const shouldUseSmallMintHelper = () => {
+    const smallMintEligible = () => {
       const prepared = state.prepared;
-      const capabilities = resolveContractCapabilities(state.contract);
       return (
         !!prepared &&
-        !!getSmallMintHelperContract() &&
-        capabilities.version !== '1.1.1' &&
         !state.uploadState &&
         prepared.chunks.length > 0 &&
         (prepared.dependencyIds ?? []).length <= 50 &&
         prepared.chunks.length <= SMALL_MINT_HELPER_MAX_CHUNKS
       );
     };
+
+    // v3+ cores expose their own one-transaction mint-single-tx route, so small
+    // inscriptions (<= SMALL_MINT_HELPER_MAX_CHUNKS) are minted in a single
+    // wallet signature directly on the core — no 3-stage begin/upload/seal and no
+    // external helper contract.
+    const shouldUseNativeSingleTx = () =>
+      resolveContractCapabilities(state.contract).supportsNativeSingleTx === true &&
+      smallMintEligible();
+
+    // Older cores (v2.x) lack a native single-tx route; they use the external
+    // helper contract instead.
+    const shouldUseSmallMintHelper = () => {
+      const capabilities = resolveContractCapabilities(state.contract);
+      return (
+        !shouldUseNativeSingleTx() &&
+        !!getSmallMintHelperContract() &&
+        capabilities.version !== '1.1.1' &&
+        smallMintEligible()
+      );
+    };
+
+    // True when the inscription will be minted in one transaction by either path.
+    const shouldUseSingleTx = () =>
+      shouldUseNativeSingleTx() || shouldUseSmallMintHelper();
 
     const resolveFeePostConditions = (amountMicroStx) => {
       const sender = state.walletSession.address;
@@ -5114,7 +5135,7 @@
         duplicateBlocked;
       dom.inscribeButton.textContent = state.uploadState
         ? 'Resume inscription'
-        : shouldUseSmallMintHelper()
+        : shouldUseSingleTx()
           ? (state.prepared?.dependencyIds?.length ?? 0) > 0
             ? 'Start recursive single-tx inscription'
             : 'Start single-tx inscription'
@@ -5345,7 +5366,7 @@
       }
 
       const feeEstimate = getFeeEstimate(state.prepared.chunks.length);
-      const usesSingleTx = shouldUseSmallMintHelper();
+      const usesSingleTx = shouldUseSingleTx();
       const sequentialTxEstimate = estimateSequentialMintTransactions({
         totalChunks: state.prepared.chunks.length,
         batchSize: Math.min(DEFAULT_BATCH_SIZE, MAX_UPLOAD_BATCH_SIZE)
@@ -5687,6 +5708,48 @@
         const feeEstimate = getFeeEstimate(prepared.chunks.length);
         const hasUploadState = !!state.uploadState;
         let didSendBeforeSeal = false;
+
+        if (shouldUseNativeSingleTx()) {
+          // v3+ native one-transaction mint directly on the core.
+          setStep('begin', 'pending', 'Wallet prompt');
+          setStep('upload', 'pending', 'Single tx');
+          setStep('seal', 'pending', 'Single tx');
+          appendLog(
+            `Native single-tx mint on ${getContractId(state.contract)} (<=${SMALL_MINT_HELPER_MAX_CHUNKS} chunks)${
+              dependencyIds.length > 0 ? ` with ${dependencyIds.length} recursive dependency${dependencyIds.length === 1 ? '' : 'ies'}` : ''
+            }.`
+          );
+          const coreArgs = [
+            bufferCV(prepared.expectedHash),
+            stringAsciiCV(prepared.mimeType),
+            uintCV(BigInt(prepared.bytes.length)),
+            listCV(prepared.chunks.map((chunk) => bufferCV(chunk))),
+            stringAsciiCV(prepared.tokenUriValue)
+          ];
+          const singleTx = await requestContractCall({
+            functionName:
+              dependencyIds.length > 0 ? 'mint-single-tx-recursive' : 'mint-single-tx',
+            functionArgs:
+              dependencyIds.length > 0
+                ? [...coreArgs, listCV(dependencyIds.map((id) => uintCV(id)))]
+                : coreArgs,
+            postConditions: resolveFeePostConditions(feeEstimate.totalMicroStx)
+          });
+          const singleTxId = normalizeTxId(singleTx);
+          state.lastSubmittedTxId = singleTxId;
+          appendLog(`Single-tx mint sent: ${singleTxId}`);
+          setStep('begin', 'done', 'Submitted');
+          setStep('upload', 'done', 'Submitted');
+          setStep('seal', 'done', 'Submitted');
+          setStatus(
+            dom.walletStatus,
+            `<strong>Submitted</strong> ${truncateMiddle(singleTxId, 8, 8)}`,
+            'pending',
+            'blue'
+          );
+          await loadWalletInscriptions();
+          return;
+        }
 
         if (shouldUseSmallMintHelper()) {
           const smallMintHelperContract = getSmallMintHelperContract();
