@@ -426,6 +426,36 @@ message = "XIP-001-v1\n"          (domain tag, exact, with trailing \n)
   derives to `address`; the message rebuilds with the consumer's own
   recomputed `manifestHash`. Any failure ⇒ treat as tier-5 (unsigned).
 
+### 5.1.1 Test vector — signing message
+
+Deterministic (RFC 6979), low-S, recoverable. `manifestHash` is the §3.4 hash
+(authority omitted). Reproduced and verified by
+[`vectors/generate-signing.mjs`](vectors/generate-signing.mjs).
+
+```
+privateKey  = 0x1111111111111111111111111111111111111111111111111111111111111111
+publicKey   = 0x034f355bdcb7cc0af728ef3cceb9615d90684bb5b2ca5f859ab0f0b704075871aa
+address      = SP3Y74M5227FDVHREWPH773F5Y1W1ED8WXY3RAVG4
+authority.type = creator
+chainId      = stacks-mainnet
+manifestHash = 0xfe70c7740fddb6e9197bdae6183147ec1f2a1b95eb33af780bcbc13c73a33e46
+
+message (newlines literal):
+    XIP-001-v1
+    manifest
+    fe70c7740fddb6e9197bdae6183147ec1f2a1b95eb33af780bcbc13c73a33e46
+    creator
+    SP3Y74M5227FDVHREWPH773F5Y1W1ED8WXY3RAVG4
+    stacks-mainnet
+
+SHA-256(message) = 0x46f5555d4a848c1e4fa3f94a61363f4a613f44ffe8757e19a093d1021e76d343
+signature (R||S||recId, 65 bytes) =
+  0xd47ccae5b9e36d10dbc20ff8fbb52ae3b4398e6e743648e4cc54ed898d3314646af94cad131f74f12c2909ae0a72a1a75e6e691fbf7c0bfd3456046979181c3500
+```
+
+A verifier recovers `publicKey` from `SHA-256(message)` and `recId`, confirms it
+derives (c32 mainnet) to `address`, and that `S` is low-S.
+
 ### 5.2 Conflict precedence (single ruleset — referenced by XIP-007/004/008)
 
 When multiple manifests reference the same inscription, a consumer resolving a
