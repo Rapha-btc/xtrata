@@ -5,6 +5,7 @@
 - Status: Draft
 - Category: Standards Track
 - Requires: XIP-000, XIP-001, XIP-002
+- Required-By: XIP-006, XIP-007
 - Spec version: 1.0.0
 
 > RFC 2119 / RFC 8174 keywords apply (see XIP-001).

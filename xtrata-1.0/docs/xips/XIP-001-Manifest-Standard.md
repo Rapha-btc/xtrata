@@ -40,8 +40,9 @@ speak.
 ## 1. The envelope
 
 Every XIP-001 manifest is a single JSON object with the following top-level
-fields. Profiles (XIP-007/004/005/007) add a single profile-specific object
-(e.g. `package`, `namespace`) but **MUST NOT** redefine these fields.
+fields. Profiles defined by other XIPs add profile-specific fields or objects
+(e.g. `package`, `namespace`) but **MUST NOT** redefine, repurpose, or relax the
+envelope fields in this document.
 
 | Field | Type | Req. | Description |
 |-------|------|------|-------------|
@@ -211,6 +212,20 @@ integrity root (the list *is* the commitment, once the manifest is inscribed).
 - `order` is REQUIRED and **MUST** be a strictly increasing integer sequence over
   the array as written. Items **MUST** be unique by `(contract, inscriptionId)`.
 - Items **MAY** carry their own `finalHash` for stronger integrity leaves (§4.4).
+- `integrity` is OPTIONAL for explicit mappings (RECOMMENDED for large
+  collections and to enable partial/streamed verification). It is **not** required
+  because the inscribed manifest's own sealed content hash already commits to the
+  exact `items` list.
+
+**Membership verification for explicit mappings (normative — referenced by
+XIP-007).** A consumer **MUST** treat an inscribed explicit mapping as
+integrity-verified when **both**: (a) the manifest's recomputed `manifestHash`
+(§3.2) equals the contract's sealed `get-inscription-hash` for the manifest
+inscription, and (b) each member's on-chain `get-inscription-hash` matches the
+member's `finalHash` where the manifest supplies one. Where an `integrity.root`
+is also present, the consumer **MUST** additionally recompute and match it (§4.4).
+This is the single membership-verification rule; XIP-007 references it rather than
+mandating a separate root.
 
 ### 4.2 Sequential (OPTIONAL compression)
 
@@ -220,6 +235,14 @@ tamper-evident. Sequential mapping **MUST NOT** cross the id-space offset
 boundary defined in XIP-002 (the boundary between migrated/legacy ids and native
 ids); a range that would cross it **MUST** be expressed as two manifests or as
 explicit mapping.
+
+> *Future note (non-normative):* a single collection that spans the offset
+> boundary (e.g. migrated low ids plus native high ids) is awkward to express as
+> two manifests. A `mapping.type: "segments"` form — an ordered array of
+> per-region `sequential` blocks, each with its own bounds and exclusions, under
+> one `integrity.root` — is the anticipated MINOR addition to this XIP. It is not
+> defined in 1.0.0; until then, use explicit mapping for boundary-spanning
+> collections.
 
 ```json
 {
@@ -379,17 +402,29 @@ to prevent cross-context and cross-chain replay:
 message = "XIP-001-v1\n"          (domain tag, exact, with trailing \n)
         || "manifest\n"
         || lowercase-hex(manifestHash) || "\n"
+        || authority.type || "\n"                   # bound, so type cannot be swapped
         || authority.address || "\n"
         || chainId                                  # "stacks-mainnet" | "stacks-testnet"
 ```
 
-- Hash: SHA-256 of `message`, signed with **secp256k1** (Stacks' curve), 65-byte
-  recoverable signature, `0x`-prefixed lowercase.
-- The recovered/asserted `publicKey` **MUST** derive to `authority.address`.
 - The `manifestHash` inside the message is computed with `authority` and
   `signature` **removed** from the object (you cannot sign your own signature):
   canonicalise the manifest with the entire `authority` field omitted, hash that,
   and that is the `manifestHash` bound in the message.
+- **Signature (exact):** `sig = ECDSA-secp256k1( SHA-256(message) )` — a sign of
+  the **raw 32-byte digest** (no Stacks `\x18Stacks Message…` wrapper; the
+  `XIP-001-v1` domain tag *is* the separation). Encoded as the 65-byte
+  recoverable form `R(32) || S(32) || recId(1)`, `0x`-prefixed lowercase.
+- `S` **MUST** be low-S normalised (`S ≤ n/2`); a high-S signature **MUST** be
+  rejected (non-malleability).
+- `recId` ∈ {0,1,2,3} encodes recovery; the recovered key **MUST** equal
+  `authority.publicKey`.
+- `authority.publicKey` **MUST** be the 33-byte **compressed** secp256k1 point,
+  `0x`-prefixed lowercase, and **MUST** derive (c32, same version byte as the
+  declared `chainId`) to `authority.address`.
+- A verifier **MUST** check, in order: low-S; recovery to `publicKey`; `publicKey`
+  derives to `address`; the message rebuilds with the consumer's own
+  recomputed `manifestHash`. Any failure ⇒ treat as tier-5 (unsigned).
 
 ### 5.2 Conflict precedence (single ruleset — referenced by XIP-007/004/008)
 
@@ -495,10 +530,13 @@ An implementation conforms to XIP-001 if it:
 ## Reference implementation
 
 A reference generator for all vectors in this document (JCS profile + Merkle
-`xtrata-merkle-v1`) is maintained alongside the XIPs and is normative by example:
-where prose and the reference generator disagree on a published vector, the
-vector is authoritative and the prose is errata. Implementers **SHOULD** port the
-reference and diff against §3.4/§4.5 before shipping.
+`xtrata-merkle-v1`) is maintained alongside the XIPs at
+[`vectors/generate.py`](vectors/generate.py) and is normative by example: where
+prose and the reference generator disagree on a published vector, the vector is
+authoritative and the prose is errata. Running `python3 vectors/generate.py`
+reproduces and verifies every published hash in the corpus (XIP-001 §3.4/§4.5 and
+XIP-002 §1.1) and emits [`vectors/vectors.json`](vectors/vectors.json).
+Implementers **SHOULD** port it and diff before shipping.
 
 ## Summary
 

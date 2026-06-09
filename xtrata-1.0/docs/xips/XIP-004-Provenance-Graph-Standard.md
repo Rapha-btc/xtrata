@@ -5,9 +5,17 @@
 - Status: Draft
 - Category: Informational
 - Requires: XIP-001, XIP-002
+- Required-By: XIP-006, XIP-008
 - Spec version: 1.0.0
 
 > RFC 2119 / RFC 8174 keywords apply (see XIP-001).
+>
+> This XIP is **Informational**: it defines a derived *view*, not new on-chain or
+> wire behaviour. Per XIP-000 §3, its normative keywords are confined to
+> **fidelity constraints** — rules a graph must follow to remain a faithful lens
+> over contract facts (e.g. "MUST NOT invent edges", "MUST label advisory
+> edges"). Implementation mechanics (traversal limits, rendering) are expressed as
+> SHOULD/MAY guidance.
 
 ## Abstract
 
@@ -123,9 +131,10 @@ This blocks the "my copy points at your original, so it looks endorsed" spoof.
   a contract, so native `parent`/`dependency` subgraphs are **DAGs by
   construction.** Cycle handling is therefore needed **only** across contracts
   (migration chains) and for the advisory `derivedHash` edge.
-- A traversal **MUST** bound depth and total nodes (recommended defaults: depth
+- A traversal **SHOULD** bound depth and total nodes (recommended defaults: depth
   ≤ 64, nodes ≤ 10,000) and **MUST** detect and break cross-contract cycles
-  (track visited `contract:id`).
+  (track visited `contract:id`) — unbounded or cyclic traversal would not
+  faithfully terminate.
 - Fan-out per node is bounded by the core's 50-entry caps on each relation
   (XIP-002 §7); deep closures still require iterative expansion.
 
@@ -146,9 +155,10 @@ This blocks the "my copy points at your original, so it looks endorsed" spoof.
 ## 8. Display rules (do not mislead)
 
 - Authoritative edges (`parent`, `dependency`, verified `migratedFrom`) and
-  advisory edges (`derivedHash`, unverified migration hops) **MUST** be visually
+  advisory edges (`derivedHash`, unverified migration hops) **SHOULD** be visually
   distinguished.
-- A UI **MUST NOT** render `derivedHash` as authorship or "verified original."
+- A UI **MUST NOT** render `derivedHash` as authorship or "verified original"
+  (a fidelity/anti-spoof constraint, not mere styling).
 - Multi-hop migration **SHOULD** render as one continuous asset with an expandable
   history, not as multiple assets.
 
@@ -163,7 +173,8 @@ This blocks the "my copy points at your original, so it looks endorsed" spoof.
 - **MUST** reconstruct every edge from contract facts; **MUST NOT** invent edges.
 - **MUST** preserve the parent/dependency asymmetry (§3).
 - **MUST** label advisory edges and unverified migration hops (§5, §4).
-- **MUST** use fully-qualified node ids and bound/cycle-protect traversal (§2, §6).
+- **MUST** use fully-qualified node ids and cycle-protect traversal; **SHOULD**
+  bound traversal depth/size (§2, §6).
 
 ## Summary
 

@@ -5,6 +5,7 @@
 - Status: Draft
 - Category: Standards Track
 - Requires: XIP-000, XIP-001, XIP-002
+- Required-By: XIP-006, XIP-007
 - Spec version: 1.0.0
 
 > RFC 2119 / RFC 8174 keywords apply (see XIP-001).
@@ -61,10 +62,11 @@ The pointer record is what makes resolution deterministic. It binds, on-chain,
 The name owner publishes, in the name's BNS/BNSv2 zonefile, a TXT-style record:
 
 ```
-_xtrata.<name>   "xip-004=1; root=<canonical-reference>"
+_xtrata.<fullName>   "xip-005=1; root=<canonical-reference>"
 ```
 
-where `<canonical-reference>` is an XIP-002 reference
+where `<fullName>` is the complete BNS name (e.g. `studio.btc`) and
+`<canonical-reference>` is an XIP-002 reference
 (`contract:inscriptionId`) to the `namespace-root` manifest. This is the
 strongest binding: it is published by the name owner through the naming system
 itself.
@@ -98,20 +100,20 @@ A namespaced reference has the form:
 
 ```
 function resolveNamespace(ref):
-    (name, path, inscriptionId) = parse(ref)
-    A = bnsOwner(name)                          # 1. on-chain owner, at trust depth (§5)
+    (fullName, path, inscriptionId) = parse(ref)   # fullName = complete BNS name, e.g. "studio.btc"
+    A = bnsOwner(fullName)                       # 1. on-chain owner, at trust depth (§5)
     if A is none: FAIL_CLOSED
 
     # 2. find the root manifest, by precedence
     root = null
-    if zonefile record _xtrata.<name> exists and parses:        # Method A
+    if zonefile record _xtrata.<fullName> exists and parses:    # Method A
         cand = inscription at record.root
         if cand.creator == A and cand.type == "namespace-root"
-           and cand.namespace.name == name:
+           and cand.namespace.name == fullName:
             root = cand
     if root is null:                                            # Method B fallback
         cands = inscribed manifests where type == "namespace-root"
-                and namespace.name == name and creator == A
+                and namespace.name == fullName and creator == A
                 and withdrawn != true
         root = latestVersion(A, cands)          # XIP-001 §6 parent-chain tip
         if root == UNRESOLVED: FAIL_CLOSED      # 0 or forked candidates

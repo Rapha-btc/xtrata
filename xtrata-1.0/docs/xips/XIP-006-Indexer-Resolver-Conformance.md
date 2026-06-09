@@ -3,7 +3,7 @@
 - XIP: 006
 - Title: Indexer & Resolver Conformance
 - Status: Draft
-- Category: Informational
+- Category: Standards Track
 - Requires: XIP-001, XIP-002, XIP-003, XIP-004, XIP-005
 - Spec version: 1.0.0
 
@@ -45,7 +45,7 @@ distinct visual treatments and **MUST NOT** present a lower tier as a higher one
 ## 2. Canonical resolution (single algorithm)
 
 ```
-function resolve(reference):                    # reference per XIP-002
+function resolve(reference, context = {}):      # reference per XIP-002
     (contract, id) = qualify(reference)         # apply defaultContract if bare
     asset = readCoreFacts(contract, id)         # XIP-002 §7 getters
     if asset is none: return NotFound
@@ -53,22 +53,28 @@ function resolve(reference):                    # reference per XIP-002
     asset.migration = migrationChain(contract, id)     # XIP-002 §4.2 (label hops)
     asset.canonicalId = canonicalAssetId(asset)        # XIP-002 §4.3 (live token)
 
-    identity = resolveIdentity(asset)           # §3 -> {manifest, tier} | none
+    identity = resolveIdentity(asset, context)  # §3 -> {manifest, tier} | none
     return { asset, identity }
 ```
 
 All consumers **MUST** key assets by `canonicalId` so a migrated asset and its
 originals collapse to one (XIP-002 §4.3).
 
+`context` is an OPTIONAL caller-supplied resolution context (§3.1). It may carry a
+**claimed namespace** or a **claimed collection manifest** the caller wants
+checked first. It can only ever cause a claim to be **verified or rejected** — it
+**MUST NOT** be able to upgrade an asset's tier without passing the same checks a
+discovered claim would.
+
 ## 3. Identity resolution (the §5.2 ladder, made executable)
 
 ```
-function resolveIdentity(asset):
-    # tier 1: namespace
-    for ns in namespacesClaiming(asset):                  # XIP-005 §4, fail-closed
+function resolveIdentity(asset, context = {}):
+    # tier 1: namespace — over the discovered ∪ caller-provided claim set (§3.1)
+    for ns in namespacesClaiming(asset, context):        # XIP-005 §4, fail-closed
         r = resolveNamespace(ns)
         if r ok and r covers asset and r.root.creator == bnsOwner(ns):
-            return { manifest: r.root, tier: T1 }
+            return { manifest: r.root, tier: T1, namespace: ns }
     # tier 2: creator-authored
     m = latestVersion(asset.creator, identityKey(asset))  # XIP-001 §6
     if m and m != UNRESOLVED: return { manifest: m, tier: T2 }
@@ -82,6 +88,31 @@ function resolveIdentity(asset):
 `latestVersion` returns **UNRESOLVED on a fork** (≥2 parent-chain tips); the
 resolver **MUST** then fall through / fail closed, never pick arbitrarily.
 
+### 3.1 Namespace discovery (determinism rule)
+
+"Which namespaces claim this asset" **MUST NOT** be magic — two indexers given the
+same chain state and the same `context` **MUST** compute the same claim set.
+`namespacesClaiming(asset, context)` is **exactly** the union of:
+
+1. **Caller-provided** — any namespace in `context.namespace` (e.g. a marketplace
+   resolving a listing it believes belongs to `studio.btc`).
+2. **Pointer-record discovered** — every BNS/BNSv2 name whose `_xtrata.<fullName>`
+   zonefile record (XIP-005 §3.1) resolves to a `namespace-root` manifest whose
+   **resolved member set includes `asset.canonicalId`**.
+3. **Manifest-discovered** — every inscribed `namespace-root` manifest whose
+   member set includes `asset.canonicalId` **and** whose `namespace.name` the
+   manifest `creator` currently owns in BNS (XIP-005 §3.2 / §6).
+
+Every candidate is then independently re-verified by `resolveNamespace` (XIP-005
+§4), so discovery only proposes; verification disposes. **If the set is empty, the
+asset has no T1 identity** and resolution falls through to T2 — it does **not**
+fail the whole resolution. A claim that fails `resolveNamespace` (missing owner,
+authorship mismatch, fork) is **dropped**, never downgraded into a lower tier.
+
+An indexer that limits discovery (e.g. to an indexed name allowlist) **MUST**
+disclose that scope, because a peer with broader discovery may surface a T1
+identity it does not — the two still agree *given the same configured scope*.
+
 ## 4. Determinism requirements
 
 To guarantee two indexers agree, an XIP-006-conformant resolver **MUST**:
@@ -92,8 +123,9 @@ To guarantee two indexers agree, an XIP-006-conformant resolver **MUST**:
    offset-crossing sequential mappings).
 3. Apply the **single** XIP-001 §5.2 precedence ladder — no local variations.
 4. Select latest versions by parent-chain tip; **fail closed on forks**.
-5. Recompute `integrity.root` for sequential/predicate mappings before trusting
-   membership.
+5. Verify membership before trusting it: recompute `integrity.root` for
+   sequential/predicate mappings, and for inscribed explicit mappings verify per
+   XIP-001 §4.1 (manifest hash == sealed inscription hash, plus member hashes).
 6. Stamp every cached result with `asOfBlock` and re-validate time-sensitive
    facts (ownership, `derivedHash`, `live` membership, namespace ownership) before
    any trust decision.

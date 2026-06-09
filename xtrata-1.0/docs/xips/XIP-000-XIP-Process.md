@@ -28,15 +28,21 @@ data.
 Standards Track and Process XIPs **MUST** use RFC 2119 / RFC 8174 keywords
 (**MUST**, **SHOULD**, **MAY**, etc.) with their RFC meanings, and **MUST**
 include the standard RFC 8174 boilerplate near the top. Informational XIPs
-**SHOULD** avoid normative keywords except when quoting another XIP.
+**SHOULD** avoid normative keywords, except (a) when quoting another XIP, or
+(b) for **fidelity constraints** — rules that a derived view or report must obey
+to stay faithful to on-chain facts (e.g. "MUST NOT invent a relationship the
+contract cannot confirm"). Such keywords constrain *representation accuracy*, not
+new on-chain or wire behaviour. Anything that defines *implementable conformance*
+behaviour belongs in a Standards Track XIP, not an Informational one.
 
 ## 3. Categories
 
 - **Standards Track** — defines interoperable, normative formats and behaviours
-  third parties implement (e.g. XIP-001, XIP-007, XIP-005, XIP-008, XIP-002).
+  third parties implement (e.g. XIP-001 envelope, XIP-002 identity, XIP-006
+  resolver conformance, XIP-007 marketplace).
 - **Informational** — guidance, conventions, and *views* that introduce no new
   normative on-chain or wire behaviour (e.g. XIP-004 provenance, which only
-  reveals contract facts; XIP-006 conformance guidance).
+  reveals contract facts under fidelity constraints, §2).
 - **Process** — governance and procedure (this document).
 
 ## 4. Header schema (REQUIRED)
@@ -173,7 +179,7 @@ XIP-000 preserves the standards themselves.
 | 003 | Organisational Manifests | Standards Track | Draft | 001, 002 |
 | 004 | Provenance Graph | Informational | Draft | 001, 002 |
 | 005 | Namespace | Standards Track | Draft | 001, 002 |
-| 006 | Indexer & Resolver Conformance | Informational | Draft | 001–005 |
+| 006 | Indexer & Resolver Conformance | Standards Track | Draft | 001–005 |
 | 007 | Marketplace | Standards Track | Draft | 001, 002, 003, 005, 006 |
 | 008 | Software Package | Standards Track | Draft | 001, 002, 004, 006 |
 

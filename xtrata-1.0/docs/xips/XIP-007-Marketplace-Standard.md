@@ -48,8 +48,11 @@ collection:
    per XIP-001 §5.2 / XIP-006 §1. T3 (owner) is acceptable for *item display* but
    **MUST NOT** define collection membership. T4/T5 **MUST** be shown as
    unverified.
-3. Verify the member set against the manifest's `integrity.root` (XIP-001 §4.4) —
-   recomputed, never trusted as stated.
+3. Verify the member set per **XIP-001 §4.1** (the single membership-verification
+   rule): recompute the `integrity.root` where one is present (always for
+   sequential/predicate mappings), **or**, for an inscribed explicit mapping
+   without a root, verify the manifest hash equals the sealed inscription hash and
+   each member's on-chain hash matches. Never trust a stated hash.
 
 Listings whose collection identity fails verification **MUST** be shown as
 unverified, never as the canonical collection.
