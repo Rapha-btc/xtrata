@@ -4,7 +4,10 @@ description = ''
 authors = []
 telemetry = true
 cache_dir = './.cache'
-requirements = []
+requirements = [
+  { contract_id = "SP2PABAF9FTAJYNFZH93XENAJ8FVY99RRM50D2JG9.nft-trait" },
+  { contract_id = "SP3D6PV2ACBPEKYJTCMH7HEN02KP87QSP8KTEH335.commission-trait" },
+]
 
 [contracts.sip009-nft-trait]
 path = "contracts/sip009-nft-trait.clar"
@@ -55,6 +58,18 @@ epoch = 'latest'
 path = 'contracts/xtrata-v3.0.0.clar'
 clarity_version = 3
 epoch = 'latest'
+
+# Live mainnet deployment (SP3JNSEX….xtrata-v3-2-3) — byte-identical source, for faithful bridge tests
+[contracts.xtrata-v3-2-3]
+path = 'contracts/xtrata-v3.2.3.clar'
+clarity_version = 3
+epoch = 'latest'
+
+# Real Gamma collection (SP16SRR…bitcoin-pepe) — byte-identical source, bridge source-collection
+[contracts.bitcoin-pepe]
+path = 'contracts/bitcoin-pepe.clar'
+clarity_version = 2
+epoch = 2.5
 
 [contracts.xtrata-small-mint-v1-0]
 path = 'contracts/xtrata-small-mint-v1.0.clar'
