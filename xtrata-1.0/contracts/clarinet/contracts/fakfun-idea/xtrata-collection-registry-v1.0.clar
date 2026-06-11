@@ -45,7 +45,8 @@
 
 (define-constant MASTER 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v3-2-3)        ;; xtrata master inscriber
 (define-constant SOURCE 'SP16SRR777TVB1WS5XSS9QT3YEZEC9JQFKYZENRAJ.bitcoin-pepe)        ;; this collection (clone: change these two lines)
-(define-constant current-contract (as-contract tx-sender))  ;; this registry's own principal (escrow vault)
+;; `current-contract` is a Clarity-4 built-in keyword = this contract's own
+;; principal (the escrow vault). No definition needed.
 (define-data-var contract-owner principal tx-sender)
 (define-data-var free-threshold uint u69)          ;; first N inscriptions are free
 (define-data-var inscribe-fee uint u3000000)       ;; 3 STX after the free tier, split 50/50
@@ -96,15 +97,19 @@
           (ok true)))
       (ok true))))
 
-;; Release an escrowed asset OUT of the vault to `recipient`. The transfer must
-;; run as the contract (it owns the escrowed token), so `as-contract` is wrapped
-;; here and the recipient is passed in -- that is why the public swap functions
-;; don't need to capture tx-sender themselves.
+;; Release an escrowed asset OUT of the vault to `recipient`. The transfer runs
+;; as the contract (it owns the escrowed token), so we wrap `as-contract?` here
+;; and pass the recipient in -- that is why the public swaps don't capture
+;; tx-sender. The `with-nft` allowance is an IN-CONTRACT POST CONDITION: the
+;; vault is permitted to move ONLY that one token id of that one collection in
+;; this call, so a bug can never drain other escrowed NFTs.
 (define-private (release-xtrata-to (id uint) (recipient principal))
-  (as-contract (contract-call? MASTER transfer id tx-sender recipient)))
+  (as-contract? ((with-nft MASTER "xtrata-inscription" (list id)))
+    (try! (contract-call? MASTER transfer id current-contract recipient))))
 
 (define-private (release-pepe-to (id uint) (recipient principal))
-  (as-contract (contract-call? SOURCE transfer id tx-sender recipient)))
+  (as-contract? ((with-nft SOURCE "bitcoin-pepe" (list id)))
+    (try! (contract-call? SOURCE transfer id current-contract recipient))))
 
 ;; ---------------------------------------------------------------------------
 ;; Inscribe: owner of the pepe mints its Xtrata doppelganger into escrow
@@ -160,8 +165,10 @@
 ;; ---------------------------------------------------------------------------
 
 (define-public (swap-pepe-for-xtrata (token-id uint))
-  (let ((b (unwrap! (map-get? Bindings token-id) ERR-NOT-INSCRIBED))
-        (x-id (get xtrata-id b)))
+  (let (
+      (b (unwrap! (map-get? Bindings token-id) ERR-NOT-INSCRIBED))
+      (x-id (get xtrata-id b))
+    )
     (asserts! (get xtrata-escrowed b) ERR-WRONG-STATE)
     ;; deposit pepe into escrow (the pepe transfer asserts the caller owns it)
     (try! (contract-call? SOURCE transfer token-id tx-sender current-contract))
@@ -172,8 +179,10 @@
     (ok true)))
 
 (define-public (swap-xtrata-for-pepe (token-id uint))
-  (let ((b (unwrap! (map-get? Bindings token-id) ERR-NOT-INSCRIBED))
-        (x-id (get xtrata-id b)))
+  (let (
+      (b (unwrap! (map-get? Bindings token-id) ERR-NOT-INSCRIBED))
+      (x-id (get xtrata-id b))
+    )
     (asserts! (not (get xtrata-escrowed b)) ERR-WRONG-STATE)
     ;; deposit the Xtrata into escrow (the xtrata transfer asserts the caller owns it)
     (try! (contract-call? MASTER transfer x-id tx-sender current-contract))
