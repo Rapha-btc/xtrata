@@ -36,39 +36,43 @@
 ;; the master is paused, this registry must be on its AllowedCallers list.
 ;; ---------------------------------------------------------------------------
 
-(define-constant ERR-NOT-OWNER (err u200))         ;; caller does not own the token in question
+(define-constant ERR-NOT-OWNER (err u200)) ;; caller does not own the token in question
 (define-constant ERR-ALREADY-INSCRIBED (err u201)) ;; this token already has a binding
-(define-constant ERR-NOT-INSCRIBED (err u202))     ;; no binding for this token
-(define-constant ERR-WRONG-STATE (err u203))       ;; the side you want is not the side escrowed
-(define-constant ERR-NOT-AUTHORIZED (err u204))    ;; not contract owner
-(define-constant ERR-BAD-DISCOUNT (err u205))      ;; discount fee must be < inscribe-fee
+(define-constant ERR-NOT-INSCRIBED (err u202)) ;; no binding for this token
+(define-constant ERR-WRONG-STATE (err u203)) ;; the side you want is not the side escrowed
+(define-constant ERR-NOT-AUTHORIZED (err u204)) ;; not contract owner
+(define-constant ERR-BAD-DISCOUNT (err u205)) ;; discount fee must be < inscribe-fee
 
-(define-constant MASTER 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v3-2-3)        ;; xtrata master inscriber
-(define-constant SOURCE 'SP16SRR777TVB1WS5XSS9QT3YEZEC9JQFKYZENRAJ.bitcoin-pepe)        ;; this collection (clone: change these two lines)
+(define-constant MASTER 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v3-2-3) ;; xtrata master inscriber
+(define-constant SOURCE 'SP16SRR777TVB1WS5XSS9QT3YEZEC9JQFKYZENRAJ.bitcoin-pepe) ;; this collection (clone: change these two lines)
 ;; `current-contract` is a Clarity-4 built-in keyword = this contract's own
 ;; principal (the escrow vault). No definition needed.
 (define-data-var contract-owner principal tx-sender)
-(define-data-var free-threshold uint u69)          ;; first N inscriptions are free
-(define-data-var inscribe-fee uint u3000000)       ;; 3 STX after the free tier, split 50/50
-(define-data-var payout-a principal tx-sender)                                       ;; deployer (our 50%)
-(define-data-var payout-b principal 'SP10W2EEM757922QTVDZZ5CSEW55JEFNN30J69TM7)      ;; Jim / xtrata (his 50%)
+(define-data-var free-threshold uint u69) ;; first N inscriptions are free
+(define-data-var inscribe-fee uint u3000000) ;; 3 STX after the free tier, split 50/50
+(define-data-var payout-a principal tx-sender) ;; deployer (our 50%)
+(define-data-var payout-b principal 'SP10W2EEM757922QTVDZZ5CSEW55JEFNN30J69TM7) ;; Jim / xtrata (his 50%)
 (define-data-var inscribed-count uint u0)
 
 ;; Per-address fee override (absolute microSTX). Whitelisted addresses pay this
 ;; instead of `inscribe-fee` once the free tier is used up. e.g. a big holder
 ;; like chadstx.btc could be pinned to u1000000 (1 STX).
-(define-map Discounts principal uint)
+(define-map Discounts
+  principal
+  uint
+)
 
 ;; source-token-id -> binding. Presence means an Xtrata doppelganger exists.
 ;; `xtrata-escrowed` true  = registry holds the Xtrata, holder holds the pepe.
 ;; `xtrata-escrowed` false = registry holds the pepe,   holder holds the Xtrata.
-(define-map Bindings uint
+(define-map Bindings
+  uint
   {
     xtrata-id: uint,
     content-hash: (buff 32),
     inscriber: principal,
     xtrata-escrowed: bool,
-    at: uint
+    at: uint,
   }
 )
 
@@ -85,7 +89,9 @@
 (define-read-only (fee-for (payer principal))
   (if (< (var-get inscribed-count) (var-get free-threshold))
     u0
-    (default-to (var-get inscribe-fee) (map-get? Discounts payer))))
+    (default-to (var-get inscribe-fee) (map-get? Discounts payer))
+  )
+)
 
 (define-private (charge-fee (payer principal))
   (let ((fee (fee-for payer)))
@@ -94,8 +100,13 @@
         (begin
           (try! (stx-transfer? half payer (var-get payout-a)))
           (try! (stx-transfer? (- fee half) payer (var-get payout-b)))
-          (ok true)))
-      (ok true))))
+          (ok true)
+        )
+      )
+      (ok true)
+    )
+  )
+)
 
 ;; Release an escrowed asset OUT of the vault to `recipient`. The transfer runs
 ;; as the contract (it owns the escrowed token), so we wrap `as-contract?` here
@@ -103,13 +114,23 @@
 ;; tx-sender. The `with-nft` allowance is an IN-CONTRACT POST CONDITION: the
 ;; vault is permitted to move ONLY that one token id of that one collection in
 ;; this call, so a bug can never drain other escrowed NFTs.
-(define-private (release-xtrata-to (id uint) (recipient principal))
+(define-private (release-xtrata-to
+    (id uint)
+    (recipient principal)
+  )
   (as-contract? ((with-nft MASTER "xtrata-inscription" (list id)))
-    (try! (contract-call? MASTER transfer id current-contract recipient))))
+    (try! (contract-call? MASTER transfer id current-contract recipient))
+  )
+)
 
-(define-private (release-pepe-to (id uint) (recipient principal))
+(define-private (release-pepe-to
+    (id uint)
+    (recipient principal)
+  )
   (as-contract? ((with-nft SOURCE "bitcoin-pepe" (list id)))
-    (try! (contract-call? SOURCE transfer id current-contract recipient))))
+    (try! (contract-call? SOURCE transfer id current-contract recipient))
+  )
+)
 
 ;; ---------------------------------------------------------------------------
 ;; Inscribe: owner of the pepe mints its Xtrata doppelganger into escrow
@@ -127,16 +148,19 @@
     ;; 1. tx-sender must own the bitcoin pepe in question
     (asserts!
       (is-eq (some tx-sender)
-        (unwrap! (contract-call? SOURCE get-owner token-id) ERR-NOT-OWNER))
-      ERR-NOT-OWNER)
+        (unwrap! (contract-call? SOURCE get-owner token-id) ERR-NOT-OWNER)
+      )
+      ERR-NOT-OWNER
+    )
     ;; 2. one doppelganger per token
     (asserts! (is-none (map-get? Bindings token-id)) ERR-ALREADY-INSCRIBED)
     ;; 3. registry fee (on top of the master's ~0.1 STX), split 50/50
     (try! (charge-fee tx-sender))
     ;; 4. mint the Xtrata inscription (the caller pays the master fee, mints to them)
     (let (
-        (result (try! (contract-call? MASTER mint-single-tx
-                        expected-hash mime total-size chunks token-uri)))
+        (result (try! (contract-call? MASTER mint-single-tx expected-hash mime total-size
+          chunks token-uri
+        )))
         (xtrata-id (get token-id result))
         (total-inscribed (+ (var-get inscribed-count) u1))
       )
@@ -147,7 +171,7 @@
         content-hash: expected-hash,
         inscriber: tx-sender,
         xtrata-escrowed: true,
-        at: stacks-block-height
+        at: stacks-block-height,
       })
       (var-set inscribed-count total-inscribed)
       (print {
@@ -156,9 +180,12 @@
         xtrata-id: xtrata-id,
         content-hash: expected-hash,
         inscriber: tx-sender,
-        inscribed-count: total-inscribed
+        inscribed-count: total-inscribed,
       })
-      (ok xtrata-id))))
+      (ok xtrata-id)
+    )
+  )
+)
 
 ;; ---------------------------------------------------------------------------
 ;; Swap: deposit the pepe, withdraw the Xtrata (and back)
@@ -175,8 +202,15 @@
     ;; release the escrowed Xtrata to the caller
     (try! (release-xtrata-to x-id tx-sender))
     (map-set Bindings token-id (merge b { xtrata-escrowed: false }))
-    (print { event: "swap-pepe-for-xtrata", token-id: token-id, xtrata-id: x-id, holder: tx-sender })
-    (ok true)))
+    (print {
+      event: "swap-pepe-for-xtrata",
+      token-id: token-id,
+      xtrata-id: x-id,
+      holder: tx-sender,
+    })
+    (ok true)
+  )
+)
 
 (define-public (swap-xtrata-for-pepe (token-id uint))
   (let (
@@ -189,63 +223,116 @@
     ;; release the escrowed pepe to the caller
     (try! (release-pepe-to token-id tx-sender))
     (map-set Bindings token-id (merge b { xtrata-escrowed: true }))
-    (print { event: "swap-xtrata-for-pepe", token-id: token-id, xtrata-id: x-id, holder: tx-sender })
-    (ok true)))
+    (print {
+      event: "swap-xtrata-for-pepe",
+      token-id: token-id,
+      xtrata-id: x-id,
+      holder: tx-sender,
+    })
+    (ok true)
+  )
+)
 
 ;; ---------------------------------------------------------------------------
 ;; Admin
 ;; ---------------------------------------------------------------------------
 
 (define-private (assert-owner)
-  (ok (asserts! (is-eq tx-sender (var-get contract-owner)) ERR-NOT-AUTHORIZED)))
+  (ok (asserts! (is-eq tx-sender (var-get contract-owner)) ERR-NOT-AUTHORIZED))
+)
 
 (define-public (set-fee (new-fee uint))
-  (begin (try! (assert-owner)) (var-set inscribe-fee new-fee) (ok true)))
+  (begin
+    (try! (assert-owner))
+    (var-set inscribe-fee new-fee)
+    (ok true)
+  )
+)
 
 (define-public (set-free-threshold (n uint))
-  (begin (try! (assert-owner)) (var-set free-threshold n) (ok true)))
+  (begin
+    (try! (assert-owner))
+    (var-set free-threshold n)
+    (ok true)
+  )
+)
 
 ;; A discount must be a real discount: strictly below the standard fee.
-(define-public (set-discount (who principal) (fee uint))
+(define-public (set-discount
+    (who principal)
+    (fee uint)
+  )
   (begin
     (try! (assert-owner))
     (asserts! (< fee (var-get inscribe-fee)) ERR-BAD-DISCOUNT)
     (map-set Discounts who fee)
-    (ok true)))
+    (ok true)
+  )
+)
 
 (define-public (remove-discount (who principal))
-  (begin (try! (assert-owner)) (map-delete Discounts who) (ok true)))
+  (begin
+    (try! (assert-owner))
+    (map-delete Discounts who)
+    (ok true)
+  )
+)
 
-(define-public (set-payouts (a principal) (bb principal))
-  (begin (try! (assert-owner)) (var-set payout-a a) (var-set payout-b bb) (ok true)))
+(define-public (set-payouts
+    (a principal)
+    (bb principal)
+  )
+  (begin
+    (try! (assert-owner))
+    (var-set payout-a a)
+    (var-set payout-b bb)
+    (ok true)
+  )
+)
 
 (define-public (transfer-ownership (new-owner principal))
-  (begin (try! (assert-owner)) (var-set contract-owner new-owner) (ok true)))
+  (begin
+    (try! (assert-owner))
+    (var-set contract-owner new-owner)
+    (ok true)
+  )
+)
 
 ;; ---------------------------------------------------------------------------
 ;; Readers
 ;; ---------------------------------------------------------------------------
 
 (define-read-only (get-binding (token-id uint))
-  (map-get? Bindings token-id))
+  (map-get? Bindings token-id)
+)
 
 (define-read-only (is-inscribed (token-id uint))
-  (ok (is-some (map-get? Bindings token-id))))
+  (ok (is-some (map-get? Bindings token-id)))
+)
 
 (define-read-only (get-fee)
-  (ok (var-get inscribe-fee)))
+  (ok (var-get inscribe-fee))
+)
 
 (define-read-only (get-free-threshold)
-  (ok (var-get free-threshold)))
+  (ok (var-get free-threshold))
+)
 
 (define-read-only (get-discount (who principal))
-  (map-get? Discounts who))
+  (map-get? Discounts who)
+)
 
 (define-read-only (get-payouts)
-  (ok { a: (var-get payout-a), b: (var-get payout-b) }))
+  (ok {
+    a: (var-get payout-a),
+    b: (var-get payout-b),
+  })
+)
 
 (define-read-only (get-inscribed-count)
-  (ok (var-get inscribed-count)))
+  (ok (var-get inscribed-count))
+)
 
 (define-read-only (get-owner)
-  (ok (var-get contract-owner)))
+  (ok (var-get contract-owner))
+)
