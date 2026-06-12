@@ -121,6 +121,25 @@ guard.
 
 ---
 
+## Verified on-chain
+
+This contract uses Clarity-4 features (`current-contract` built-in, `as-contract?` +
+`with-nft` in-contract post-conditions) that local clarinet can't compile, so it is
+validated with **stxer mainnet-fork simulations** — deployed onto a fork pinned at the
+live chain tip and driven against the **real** `xtrata-v3-2-3` + `bitcoin-pepe`.
+
+**Full path coverage: 70 / 70 passed** — every public function, both auth paths, every
+error code, all fee branches, the mint-failure atomic revert, the escrow invariant, and
+the in-contract post-conditions. See **[`SIMULATIONS.md`](./SIMULATIONS.md)** for the full
+coverage matrix and run instructions.
+
+- Full coverage: https://stxer.xyz/simulations/mainnet/c863075a32034646eaed69c4c31d7c50
+- Sims: `contracts/clarinet/simulations/verify-collection-registry-full.mjs`
+
+> Deploy at `clarity_version` ≥ 4.
+
+---
+
 ## For other collections
 
 This registry is **single-collection by design** — it's hardwired to Bitcoin
@@ -144,6 +163,7 @@ Everything else — escrow, swaps, fees, discounts — works as-is.
 | Bitcoin Pepe (source) | `SP16SRR777TVB1WS5XSS9QT3YEZEC9JQFKYZENRAJ.bitcoin-pepe` |
 | This registry | `xtrata-collection-registry-v1.0` |
 
-*Files: `xtrata-collection-registry-v1.0.clar` (mainnet-addressed deployment copy)
-lives here; a clarinet-checkable copy using local aliases lives one folder up in
-`contracts/` and is what the test suite runs against.*
+*Files: `xtrata-collection-registry-v1.0.clar` (mainnet-addressed deployment source)
+lives here alongside `SIMULATIONS.md`. It is validated by the stxer sims in
+`contracts/clarinet/simulations/`, not by local clarinet (which can't compile its
+Clarity-4 features).*
