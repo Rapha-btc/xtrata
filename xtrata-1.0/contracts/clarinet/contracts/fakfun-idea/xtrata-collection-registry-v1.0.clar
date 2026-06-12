@@ -89,7 +89,14 @@
 (define-read-only (fee-for (payer principal))
   (if (< (var-get inscribed-count) (var-get free-threshold))
     u0
-    (default-to (var-get inscribe-fee) (map-get? Discounts payer))
+    ;; a pinned discount applies, but is CLAMPED to the standard fee so it can
+    ;; never become a surcharge if the owner later lowers `inscribe-fee` below it
+    (let ((standard (var-get inscribe-fee)))
+      (match (map-get? Discounts payer)
+        d (if (< d standard) d standard)
+        standard
+      )
+    )
   )
 )
 
