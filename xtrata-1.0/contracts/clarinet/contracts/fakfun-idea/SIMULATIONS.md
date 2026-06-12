@@ -112,6 +112,24 @@ other — the pepe and its on-chain twin are never both liquid simultaneously.
 registry code: `u200` NOT-OWNER, `u201` ALREADY-INSCRIBED, `u202` NOT-INSCRIBED,
 `u203` WRONG-STATE, `u204` NOT-AUTHORIZED, `u205` BAD-DISCOUNT.
 
+## Rendezvous (RV) property fuzzing
+
+Complementing the stxer integration sims, `tests/rv/` property-fuzzes the pure
+admin/fee/discount surface on simnet (`@stacks/clarinet-sdk` 3.16 supports the
+Clarity-4 features). RV surfaced a real edge the stxer sims didn't, because it
+fuzzes admin-call *orderings*:
+
+- **Finding** — `set-discount` enforces `discount < inscribe-fee` at write time,
+  but `set-fee` could later drop the fee below a pinned discount, turning a
+  "discount" into a **surcharge**. Repro: `set-discount(w, 2 STX)` → `set-fee(1 STX)`
+  → `fee-for(w) = 2 STX`.
+- **Fix** — `fee-for` clamps a discount to the standard fee
+  (`(if (< d standard) d standard)`); a discount can never exceed standard.
+- **After the fix** — `invariant-no-discount-surcharge` holds by construction:
+  200 runs, 97 + 103 invariant checks, 0 failures. stxer re-run: still 70/70.
+
+See `tests/rv/README.md` to reproduce.
+
 ## Deploy requirement
 
 Deploy at **`clarity_version` 4 or higher** (the contract uses the `current-contract`
