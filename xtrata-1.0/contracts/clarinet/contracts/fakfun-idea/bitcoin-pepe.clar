@@ -1,12 +1,8 @@
-;; SP16SRR777TVB1WS5XSS9QT3YEZEC9JQFKYZENRAJ.bitcoin-pepe
 
-;; bitcoin-pepe
-;; contractType: public custom
 
 (impl-trait 'SP2PABAF9FTAJYNFZH93XENAJ8FVY99RRM50D2JG9.nft-trait.nft-trait)
 (define-non-fungible-token bitcoin-pepe uint)
 
-;; Constants
 (define-constant DEPLOYER tx-sender)
 (define-constant COMM u1000)
 (define-constant COMM-ADDR 'SPNWZ5V2TPWGQGVDR6T7B6RQ4XMGZ4PXTEE0VQ0S)
@@ -27,15 +23,11 @@
 (define-constant ERR-NO-MORE-MINTS u113)
 (define-constant ERR-INVALID-PERCENTAGE u114)
 
-;; Internal variables
 (define-data-var mint-limit uint u2089)
 (define-data-var last-id uint u1)
 (define-data-var total-price uint u0)
 
-;; Mint and Secondary payouts 
-;; 100% mint + 50% secondary
 (define-data-var artist-address principal 'SM2J5VCY4DCFX6VZYDANHMXA3VN9DMWYCEK7Y8D93)
-;; 50% secondary only
 (define-data-var royalty-address-1 principal 'SP3ANWNWTHJAH4E1WNQ9RT7V07ERJN5S4DA7X6XEW)
 
 (define-data-var ipfs-root (string-ascii 80) "ipfs://ipfs/QmRNSQYjHXoohquaPbmc6DFH6kmc3s3rgMsNpUBvgojEpE/json/")
@@ -54,7 +46,6 @@
 
 (define-public (claim-two) (mint (list true true)))
 
-;; Mintpass Minting
 (define-private (mint (orders (list 25 bool)))
   (let 
     (
@@ -161,14 +152,12 @@
     (asserts! (not (var-get metadata-frozen)) (err ERR-METADATA-FROZEN))
     (var-set ipfs-root new-base-uri)
     (ok true)))
-;; Non-custodial SIP-009 transfer function
 (define-public (transfer (id uint) (sender principal) (recipient principal))
   (begin
     (asserts! (is-eq tx-sender sender) (err ERR-NOT-AUTHORIZED))
     (asserts! (is-none (map-get? market id)) (err ERR-LISTING))
     (trnsfr id sender recipient)))
 
-;; read-only functions
 (define-read-only (get-owner (token-id uint))
   (ok (nft-get-owner? bitcoin-pepe token-id)))
 
@@ -212,7 +201,6 @@
     (asserts! (or (is-eq tx-sender (var-get artist-address)) (is-eq tx-sender DEPLOYER)) (err ERR-NOT-AUTHORIZED))
     (ok (var-set license-name name))))
 
-;; Non-custodial marketplace extras
 (use-trait commission-trait 'SP3D6PV2ACBPEKYJTCMH7HEN02KP87QSP8KTEH335.commission-trait.commission)
 
 (define-map token-count principal uint)
@@ -299,11 +287,9 @@
   )
   (ok true)))
 
-;; Extra functionality required for mintpass
 (define-public (toggle-sale-state)
   (let 
     (
-      ;; (premint (not (var-get premint-enabled)))
       (sale (not (var-get sale-enabled)))
     )
     (asserts! (or (is-eq tx-sender (var-get artist-address)) (is-eq tx-sender DEPLOYER)) (err ERR-NOT-AUTHORIZED))
@@ -367,7 +353,6 @@
 (define-read-only (get-sale-enabled)
   (ok (var-get sale-enabled)))  
 
-;; Airdrop
 (define-public (admin-airdrop)
   (let
     (
