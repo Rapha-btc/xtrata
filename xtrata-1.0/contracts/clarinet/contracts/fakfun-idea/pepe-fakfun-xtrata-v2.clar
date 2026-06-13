@@ -1,81 +1,26 @@
-;; xtrata-fakfun-forever-v2  (Bitcoin Pepe) -- canonical-gated
-;; ---------------------------------------------------------------------------
-;; Per-collection escrow vault that binds one Gamma NFT to one permanent
-;; on-chain Xtrata inscription, and keeps EXACTLY ONE of the two liquid at a
-;; time. Clone this contract per collection (swap the two source constants).
-;;
-;; v2 vs v1: inscribe now REQUIRES the bytes to match this token's canonical
-;; hash -- seeded from the verified 2089-row table, then FROZEN -- so
-;; non-canonical art is impossible, raw call or not. Inscribe is also
-;; PERMISSIONLESS: anyone can inscribe any token's canonical twin (only the
-;; owner can ever swap, since swaps require depositing the pepe), so holders,
-;; whales, or the project can drive the whole collection to forever. This
-;; contract knows nothing about v1; the off-chain layer unions the legacy v1
-;; tokens with v2 for "is it forever?" display.
-;;
-;; SOURCE collection : 'SP16SRR777TVB1WS5XSS9QT3YEZEC9JQFKYZENRAJ.bitcoin-pepe        (Gamma NFT, off-chain art)
-;; MASTER inscriber  : 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v3-2-3       (on-chain bytes + hash verify)
-;;
-;; LIFECYCLE for a token (e.g. Bitcoin Pepe #69):
-;;
-;;   inscribe(#69)            holder of #69 pays the fee, mints the Xtrata
-;;                            doppelganger; it is ESCROWED here on mint.
-;;                            -> holder keeps #69, registry holds the Xtrata.
-;;
-;;   swap-pepe-for-xtrata(#69) deposit #69, withdraw the Xtrata.
-;;                            -> registry holds #69, holder holds the Xtrata.
-;;
-;;   swap-xtrata-for-pepe(#69) deposit the Xtrata back, withdraw #69.
-;;                            -> registry holds the Xtrata, holder holds #69.
-;;
-;; INVARIANT: for every bound token, the registry custodies exactly one side
-;; of the pair. The pepe and its inscription can never both be liquid at once,
-;; so the canonical identity lives in one place at a time.
-;;
-;; FEES: the holder always pays the master's ~0.1 STX inscription fee directly
-;; (mint runs as the holder, then the inscription is pulled into escrow). On
-;; top of that the registry charges its own fee, split 50/50 to two payouts:
-;;   - the first `free-threshold` inscriptions are FREE (default 87, launch promo),
-;;   - then `inscribe-fee` (default 3 STX),
-;;   - unless the payer has a pinned per-address discount (e.g. a big holder).
-;; All three knobs are owner-settable.
-;;
-;; PAUSE NOTE: inscribe calls the master's mint-single-tx with the holder as
-;; tx-sender, so from the master's view `contract-caller` is THIS registry. If
-;; the master is paused, this registry must be on its AllowedCallers list.
-;; ---------------------------------------------------------------------------
+(define-constant ERR-NO-SUCH-TOKEN (err u200))
+(define-constant ERR-ALREADY-INSCRIBED (err u201))
+(define-constant ERR-NOT-INSCRIBED (err u202))
+(define-constant ERR-WRONG-STATE (err u203))
+(define-constant ERR-NOT-AUTHORIZED (err u204))
+(define-constant ERR-BAD-DISCOUNT (err u205))
+(define-constant ERR-NOT-CANONICAL (err u206))
+(define-constant ERR-FINALIZED (err u207))
 
-(define-constant ERR-NO-SUCH-TOKEN (err u200)) ;; token-id is not a real collection token (get-owner = none)
-(define-constant ERR-ALREADY-INSCRIBED (err u201)) ;; this token already has a binding
-(define-constant ERR-NOT-INSCRIBED (err u202)) ;; no binding for this token
-(define-constant ERR-WRONG-STATE (err u203)) ;; the side you want is not the side escrowed
-(define-constant ERR-NOT-AUTHORIZED (err u204)) ;; not contract owner
-(define-constant ERR-BAD-DISCOUNT (err u205)) ;; discount fee must be < inscribe-fee
-(define-constant ERR-NOT-CANONICAL (err u206)) ;; expected-hash != this token's seeded canonical hash
-(define-constant ERR-FINALIZED (err u207)) ;; canonical set is frozen; seeding closed
-
-(define-constant MASTER 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v3-2-3) ;; xtrata master inscriber
-(define-constant SOURCE 'SP16SRR777TVB1WS5XSS9QT3YEZEC9JQFKYZENRAJ.bitcoin-pepe) ;; this collection (clone: change these two lines)
-;; `current-contract` is a Clarity-4 built-in keyword = this contract's own
-;; principal (the escrow vault). No definition needed.
+(define-constant MASTER 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v3-2-3)
+(define-constant SOURCE 'SP16SRR777TVB1WS5XSS9QT3YEZEC9JQFKYZENRAJ.bitcoin-pepe)
 (define-data-var contract-owner principal tx-sender)
-(define-data-var free-threshold uint u87) ;; first 87 v2 inscriptions are free (launch promo)
-(define-data-var inscribe-fee uint u3000000) ;; 3 STX after the free tier, split 50/50
-(define-data-var payout-a principal tx-sender) ;; deployer (our 50%)
-(define-data-var payout-b principal 'SP10W2EEM757922QTVDZZ5CSEW55JEFNN30J69TM7) ;; Jim / xtrata (his 50%)
+(define-data-var free-threshold uint u87)
+(define-data-var inscribe-fee uint u3000000)
+(define-data-var payout-a principal tx-sender)
+(define-data-var payout-b principal 'SP10W2EEM757922QTVDZZ5CSEW55JEFNN30J69TM7)
 (define-data-var inscribed-count uint u0)
 
-;; Per-address fee override (absolute microSTX). Whitelisted addresses pay this
-;; instead of `inscribe-fee` once the free tier is used up. e.g. a big holder
-;; like chadstx.btc could be pinned to u1000000 (1 STX).
 (define-map Discounts
   principal
   uint
 )
 
-;; source-token-id -> binding. Presence means an Xtrata doppelganger exists.
-;; `xtrata-escrowed` true  = registry holds the Xtrata, holder holds the pepe.
-;; `xtrata-escrowed` false = registry holds the pepe,   holder holds the Xtrata.
 (define-map Bindings
   uint
   {
@@ -87,28 +32,12 @@
   }
 )
 
-;; source-token-id -> the ONE canonical rolling-sha256 for that pepe's art.
-;; Seeded by the owner from the verified pepe_xtrata_inputs table (all 2089),
-;; then FROZEN. Once frozen this map can never change, so inscribe can only ever
-;; accept the real art -- non-canonical bytes become impossible.
 (define-map CanonicalHash uint (buff 32))
 (define-data-var canonical-finalized bool false)
 
-;; ---------------------------------------------------------------------------
-;; Internal
-;; ---------------------------------------------------------------------------
-
-;; What `payer` would pay to inscribe right now:
-;;   - free for the first `free-threshold` inscriptions (everyone),
-;;   - then a per-address discount fee if one is pinned for them,
-;;   - otherwise the standard `inscribe-fee`.
-;; `inscribed-count` only counts successful inscriptions (bumped after a
-;; successful mint), so the free tier is exact.
 (define-read-only (fee-for (payer principal))
   (if (< (var-get inscribed-count) (var-get free-threshold))
     u0
-    ;; a pinned discount applies, but is CLAMPED to the standard fee so it can
-    ;; never become a surcharge if the owner later lowers `inscribe-fee` below it
     (let ((standard (var-get inscribe-fee)))
       (match (map-get? Discounts payer)
         d (if (< d standard) d standard)
@@ -133,12 +62,6 @@
   )
 )
 
-;; Release an escrowed asset OUT of the vault to `recipient`. The transfer runs
-;; as the contract (it owns the escrowed token), so we wrap `as-contract?` here
-;; and pass the recipient in -- that is why the public swaps don't capture
-;; tx-sender. The `with-nft` allowance is an IN-CONTRACT POST CONDITION: the
-;; vault is permitted to move ONLY that one token id of that one collection in
-;; this call, so a bug can never drain other escrowed NFTs.
 (define-private (release-xtrata-to
     (id uint)
     (recipient principal)
@@ -157,10 +80,6 @@
   )
 )
 
-;; ---------------------------------------------------------------------------
-;; Inscribe: owner of the pepe mints its Xtrata doppelganger into escrow
-;; ---------------------------------------------------------------------------
-
 (define-public (inscribe
     (token-id uint)
     (expected-hash (buff 32))
@@ -170,24 +89,13 @@
     (token-uri (string-ascii 256))
   )
   (begin
-    ;; 1. token must be a real collection token. ANYONE may inscribe -- the
-    ;;    canonical-hash gate (step 2) guarantees the bytes are correct no matter
-    ;;    who calls, and only the owner can ever swap (swaps require depositing
-    ;;    the pepe), so a non-owner just gifts a canonical twin into escrow.
     (asserts!
       (is-some (unwrap! (contract-call? SOURCE get-owner token-id) ERR-NO-SUCH-TOKEN))
       ERR-NO-SUCH-TOKEN
     )
-    ;; 2. the bytes MUST be this token's canonical art (impossible once frozen)
     (asserts! (is-eq (some expected-hash) (map-get? CanonicalHash token-id)) ERR-NOT-CANONICAL)
-    ;; 3. one doppelganger per token in THIS registry. We deliberately do NOT
-    ;;    check v1: a malicious v1 binding must never be able to block the
-    ;;    canonical v2 twin. The hash gate (step 2) guarantees v2 is always
-    ;;    correct, so v2 can always supersede a bad v1 inscription.
     (asserts! (is-none (map-get? Bindings token-id)) ERR-ALREADY-INSCRIBED)
-    ;; 4. registry fee (on top of the master's ~0.1 STX), split 50/50
     (try! (charge-fee tx-sender))
-    ;; 5. mint the Xtrata inscription (the caller pays the master fee, mints to them)
     (let (
         (result (try! (contract-call? MASTER mint-single-tx expected-hash mime total-size
           chunks token-uri
@@ -195,7 +103,6 @@
         (xtrata-id (get token-id result))
         (total-inscribed (+ (var-get inscribed-count) u1))
       )
-      ;; 6. escrow that fresh inscription inside this registry on mint
       (try! (contract-call? MASTER transfer xtrata-id tx-sender current-contract))
       (map-insert Bindings token-id {
         xtrata-id: xtrata-id,
@@ -218,9 +125,6 @@
   )
 )
 
-;; ---------------------------------------------------------------------------
-;; Swap: deposit the pepe, withdraw the Xtrata (and back)
-;; ---------------------------------------------------------------------------
 
 (define-public (swap-pepe-for-xtrata (token-id uint))
   (let (
@@ -228,9 +132,7 @@
       (x-id (get xtrata-id b))
     )
     (asserts! (get xtrata-escrowed b) ERR-WRONG-STATE)
-    ;; deposit pepe into escrow (the pepe transfer asserts the caller owns it)
     (try! (contract-call? SOURCE transfer token-id tx-sender current-contract))
-    ;; release the escrowed Xtrata to the caller
     (try! (release-xtrata-to x-id tx-sender))
     (map-set Bindings token-id (merge b { xtrata-escrowed: false }))
     (print {
@@ -249,9 +151,7 @@
       (x-id (get xtrata-id b))
     )
     (asserts! (not (get xtrata-escrowed b)) ERR-WRONG-STATE)
-    ;; deposit the Xtrata into escrow (the xtrata transfer asserts the caller owns it)
     (try! (contract-call? MASTER transfer x-id tx-sender current-contract))
-    ;; release the escrowed pepe to the caller
     (try! (release-pepe-to token-id tx-sender))
     (map-set Bindings token-id (merge b { xtrata-escrowed: true }))
     (print {
@@ -264,15 +164,9 @@
   )
 )
 
-;; ---------------------------------------------------------------------------
-;; Admin
-;; ---------------------------------------------------------------------------
-
 (define-private (assert-owner)
   (ok (asserts! (is-eq tx-sender (var-get contract-owner)) ERR-NOT-AUTHORIZED))
 )
-
-;; ---- Canonical set: seed all 2089 from the verified table, then freeze ----
 
 (define-private (seed-one
     (e { id: uint, hash: (buff 32) })
@@ -284,8 +178,6 @@
   )
 )
 
-;; Owner seeds canonical hashes in batches (<=200) while the set is open.
-;; Overwrite-safe until frozen; call repeatedly to cover all 2089.
 (define-public (seed-canonical (entries (list 200 { id: uint, hash: (buff 32) })))
   (begin
     (try! (assert-owner))
@@ -294,8 +186,6 @@
   )
 )
 
-;; One-way freeze. After this, CanonicalHash is immutable forever -- not even
-;; the owner can change the canonical art, so the gate is fully trustless.
 (define-public (finalize-canonical)
   (begin
     (try! (assert-owner))
@@ -320,7 +210,6 @@
   )
 )
 
-;; A discount must be a real discount: strictly below the standard fee.
 (define-public (set-discount
     (who principal)
     (fee uint)
@@ -360,10 +249,6 @@
     (ok true)
   )
 )
-
-;; ---------------------------------------------------------------------------
-;; Readers
-;; ---------------------------------------------------------------------------
 
 (define-read-only (get-binding (token-id uint))
   (map-get? Bindings token-id)
