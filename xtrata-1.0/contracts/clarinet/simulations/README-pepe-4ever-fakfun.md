@@ -42,11 +42,20 @@ file (`free-threshold u87`, live-read fee).
 | **Live-read fee resolves** (102000 for a 1-chunk pepe, across the full size range) | PASS |
 | **Jim raises the fee → live-read adapts** | PASS |
 | FE post-condition recipe (deny, 2 STX PCs, 0 NFT PCs) | PASS |
-| Swaps round-trip both ways; non-owner blocked (`u1`); wrong-state `u203`; not-inscribed `u202` | PASS |
+| Swaps round-trip both ways; non-owner `swap-pepe-for-xtrata` blocked (`u1`); wrong-state `u203`; not-inscribed `u202` | PASS |
 | Fee funding exact + atomic, contract net 0 (no dust) | PASS |
 | `free-threshold u87` free tier; `set-discount u0` path | PASS |
 | Regressions: tamper `u206`, double `u201`, nonexistent `u200`, post-finalize seed `u207`, admin-only `u204`, bad-discount `u205` | PASS |
 | Cross-principal master dedup (re-inscribe a hash the old contract minted as a different principal) | PASS |
+
+### Swap ownership safety (code-verified; not in the stxer harness)
+`swap-xtrata-for-pepe` in the *right* state (twin liquid) by a caller who does
+**not** own the twin reverts with **`(err u100)`** — the master's `transfer`
+asserts `(is-eq (some sender) (nft-get-owner? xtrata-inscription id))`
+(`ERR-NOT-AUTHORIZED = u100`) *before* `nft-transfer?` (so it's u100, not u1).
+`try!` propagates it, so **the pepe is never released** — you can't pull the
+pepe without depositing a twin you actually own. (The harness covers non-owner
+`swap-pepe-for-xtrata` and wrong-state `u203`, but not this exact path.)
 
 ### The Jim-fee-change test (the headline)
 1. Baseline: `quote-single-tx-fee.total-fee == 102000`; inscribe succeeds.
