@@ -1,222 +1,307 @@
----
 id: 0
-name: "Simulated deployment, used as a default for `clarinet console`, `clarinet test` and `clarinet check`"
+name: Simulated deployment, used as a default for `clarinet console`, `clarinet test` and `clarinet check`
 network: simnet
 genesis:
   wallets:
-    - name: deployer
-      address: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-      balance: "100000000000000"
-      sbtc-balance: "1000000000"
-    - name: faucet
-      address: STNHKEPYEPJ8ET55ZZ0M5A34J0R3N5FM2CMMMAZ6
-      balance: "100000000000000"
-      sbtc-balance: "1000000000"
-    - name: wallet_1
-      address: ST1SJ3DTE5DN7X54YDH5D64R3BCB6A2AG2ZQ8YPD5
-      balance: "100000000000000"
-      sbtc-balance: "1000000000"
-    - name: wallet_2
-      address: ST2CY5V39NHDPWSXMW9QDT3HC3GD6Q6XX4CFRK9AG
-      balance: "100000000000000"
-      sbtc-balance: "1000000000"
-    - name: wallet_3
-      address: ST2JHG361ZXG51QTKY2NQCVBPPRRE2KZB1HR05NNC
-      balance: "100000000000000"
-      sbtc-balance: "1000000000"
-    - name: wallet_4
-      address: ST2NEB84ASENDXKYGJPQW86YXQCEFEX2ZQPG87ND
-      balance: "100000000000000"
-      sbtc-balance: "1000000000"
-    - name: wallet_5
-      address: ST2REHHS5J3CERCRBEPMGH7921Q6PYKAADT7JP2VB
-      balance: "100000000000000"
-      sbtc-balance: "1000000000"
-    - name: wallet_6
-      address: ST3AM1A56AK2C1XAFJ4115ZSV26EB49BVQ10MGCS0
-      balance: "100000000000000"
-      sbtc-balance: "1000000000"
-    - name: wallet_7
-      address: ST3PF13W7Z0RRM42A8VZRVFQ75SV1K26RXEP8YGKJ
-      balance: "100000000000000"
-      sbtc-balance: "1000000000"
-    - name: wallet_8
-      address: ST3NBRSFKX28FQ2ZJ1MAKX58HKHSDGNV5N7R21XCP
-      balance: "100000000000000"
-      sbtc-balance: "1000000000"
+  - name: deployer
+    address: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+    balance: '100000000000000'
+    sbtc-balance: '1000000000'
+  - name: faucet
+    address: STNHKEPYEPJ8ET55ZZ0M5A34J0R3N5FM2CMMMAZ6
+    balance: '100000000000000'
+    sbtc-balance: '1000000000'
+  - name: wallet_1
+    address: ST1SJ3DTE5DN7X54YDH5D64R3BCB6A2AG2ZQ8YPD5
+    balance: '100000000000000'
+    sbtc-balance: '1000000000'
+  - name: wallet_2
+    address: ST2CY5V39NHDPWSXMW9QDT3HC3GD6Q6XX4CFRK9AG
+    balance: '100000000000000'
+    sbtc-balance: '1000000000'
+  - name: wallet_3
+    address: ST2JHG361ZXG51QTKY2NQCVBPPRRE2KZB1HR05NNC
+    balance: '100000000000000'
+    sbtc-balance: '1000000000'
+  - name: wallet_4
+    address: ST2NEB84ASENDXKYGJPQW86YXQCEFEX2ZQPG87ND
+    balance: '100000000000000'
+    sbtc-balance: '1000000000'
+  - name: wallet_5
+    address: ST2REHHS5J3CERCRBEPMGH7921Q6PYKAADT7JP2VB
+    balance: '100000000000000'
+    sbtc-balance: '1000000000'
+  - name: wallet_6
+    address: ST3AM1A56AK2C1XAFJ4115ZSV26EB49BVQ10MGCS0
+    balance: '100000000000000'
+    sbtc-balance: '1000000000'
+  - name: wallet_7
+    address: ST3PF13W7Z0RRM42A8VZRVFQ75SV1K26RXEP8YGKJ
+    balance: '100000000000000'
+    sbtc-balance: '1000000000'
+  - name: wallet_8
+    address: ST3NBRSFKX28FQ2ZJ1MAKX58HKHSDGNV5N7R21XCP
+    balance: '100000000000000'
+    sbtc-balance: '1000000000'
   contracts:
-    - genesis
-    - lockup
-    - bns
-    - cost-voting
-    - costs
-    - pox
-    - costs-2
-    - pox-2
-    - costs-3
-    - pox-3
-    - pox-4
-    - signers
-    - signers-voting
-    - costs-4
+  - genesis
+  - lockup
+  - bns
+  - cost-voting
+  - costs
+  - pox
+  - costs-2
+  - pox-2
+  - costs-3
+  - pox-3
+  - pox-4
+  - signers
+  - signers-voting
+  - costs-4
 plan:
   batches:
-    - id: 0
-      transactions:
-        - emulated-contract-publish:
-            contract-name: sip009-nft-trait
-            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            path: contracts/sip009-nft-trait.clar
-            clarity-version: 2
-        - emulated-contract-publish:
-            contract-name: sip010-ft-trait
-            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            path: contracts/sip010-ft-trait.clar
-            clarity-version: 2
-      epoch: "2.5"
-    - id: 1
-      transactions:
-        - emulated-contract-publish:
-            contract-name: mock-ipfs-collection
-            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            path: contracts/mock-ipfs-collection.clar
-            clarity-version: 3
-        - emulated-contract-publish:
-            contract-name: mock-sbtc
-            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            path: contracts/mock-sbtc.clar
-            clarity-version: 3
-        - emulated-contract-publish:
-            contract-name: mock-usdcx
-            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            path: contracts/mock-usdcx.clar
-            clarity-version: 3
-        - emulated-contract-publish:
-            contract-name: xtrata-arcade-scores-v1-0
-            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            path: contracts/xtrata-arcade-scores-v1.0.clar
-            clarity-version: 3
-        - emulated-contract-publish:
-            contract-name: xtrata-arcade-scores-v1-1
-            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            path: contracts/xtrata-arcade-scores-v1.1.clar
-            clarity-version: 3
-        - emulated-contract-publish:
-            contract-name: xtrata-arcade-scores-v1-2
-            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            path: contracts/xtrata-arcade-scores-v1.2.clar
-            clarity-version: 3
-        - emulated-contract-publish:
-            contract-name: xtrata-arcade-scores-v1-3
-            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            path: contracts/xtrata-arcade-scores-v1.3.clar
-            clarity-version: 3
-        - emulated-contract-publish:
-            contract-name: xtrata-v1-1-1
-            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            path: contracts/xtrata-v1.1.1.clar
-            clarity-version: 3
-        - emulated-contract-publish:
-            contract-name: xtrata-v2-1-0
-            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            path: contracts/xtrata-v2.1.0.clar
-            clarity-version: 3
-        - emulated-contract-publish:
-            contract-name: xtrata-backup-registry-v1-0
-            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            path: contracts/xtrata-backup-registry-v1.0.clar
-            clarity-version: 3
-        - emulated-contract-publish:
-            contract-name: xtrata-collection-mint-v1-0
-            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            path: contracts/xtrata-collection-mint-v1.0.clar
-            clarity-version: 3
-        - emulated-contract-publish:
-            contract-name: xtrata-collection-mint-v1-1
-            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            path: contracts/xtrata-collection-mint-v1.1.clar
-            clarity-version: 3
-        - emulated-contract-publish:
-            contract-name: xtrata-collection-mint-v1-2
-            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            path: contracts/xtrata-collection-mint-v1.2.clar
-            clarity-version: 3
-        - emulated-contract-publish:
-            contract-name: xtrata-collection-mint-v1-3
-            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            path: contracts/xtrata-collection-mint-v1.3.clar
-            clarity-version: 3
-        - emulated-contract-publish:
-            contract-name: xtrata-collection-mint-v1-4
-            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            path: contracts/xtrata-collection-mint-v1.4.clar
-            clarity-version: 3
-        - emulated-contract-publish:
-            contract-name: xtrata-commerce
-            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            path: contracts/xtrata-commerce.clar
-            clarity-version: 3
-        - emulated-contract-publish:
-            contract-name: xtrata-market-sbtc-v1-0
-            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            path: contracts/xtrata-market-sbtc-v1.0.clar
-            clarity-version: 3
-        - emulated-contract-publish:
-            contract-name: xtrata-market-stx-v1-0
-            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            path: contracts/xtrata-market-stx-v1.0.clar
-            clarity-version: 3
-        - emulated-contract-publish:
-            contract-name: xtrata-market-usdc-v1-0
-            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            path: contracts/xtrata-market-usdc-v1.0.clar
-            clarity-version: 3
-        - emulated-contract-publish:
-            contract-name: xtrata-market-v1-0
-            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            path: contracts/xtrata-market-v1.0.clar
-            clarity-version: 3
-        - emulated-contract-publish:
-            contract-name: xtrata-market-v1-1
-            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            path: contracts/xtrata-market-v1.1.clar
-            clarity-version: 3
-        - emulated-contract-publish:
-            contract-name: xtrata-migrated-ipfs-collection-v1-0
-            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            path: contracts/xtrata-migrated-ipfs-collection-v1.0.clar
-            clarity-version: 3
-        - emulated-contract-publish:
-            contract-name: xtrata-preinscribed-collection-sale-v1-0
-            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            path: contracts/xtrata-preinscribed-collection-sale-v1.0.clar
-            clarity-version: 3
-        - emulated-contract-publish:
-            contract-name: xtrata-small-mint-v1-0
-            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            path: contracts/xtrata-small-mint-v1.0.clar
-            clarity-version: 3
-        - emulated-contract-publish:
-            contract-name: xtrata-v1-1-0
-            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            path: contracts/xtrata-v1.1.0.clar
-            clarity-version: 3
-      epoch: "3.3"
-    - id: 2
-      transactions:
-        - emulated-contract-publish:
-            contract-name: xtrata-v2-1-1
-            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            path: contracts/xtrata-v2.1.1.clar
-            clarity-version: 3
-        - emulated-contract-publish:
-            contract-name: xtrata-v3-0-0
-            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            path: contracts/xtrata-v3.0.0.clar
-            clarity-version: 3
-        - emulated-contract-publish:
-            contract-name: xtrata-vault
-            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            path: contracts/xtrata-vault.clar
-            clarity-version: 3
-      epoch: "3.3"
+  - id: 0
+    transactions:
+    - transaction-type: emulated-contract-publish
+      contract-name: nft-trait
+      emulated-sender: SP2PABAF9FTAJYNFZH93XENAJ8FVY99RRM50D2JG9
+      path: .cache/requirements/SP2PABAF9FTAJYNFZH93XENAJ8FVY99RRM50D2JG9.nft-trait.clar
+      clarity-version: 1
+    - transaction-type: emulated-contract-publish
+      contract-name: commission-trait
+      emulated-sender: SP3D6PV2ACBPEKYJTCMH7HEN02KP87QSP8KTEH335
+      path: .cache/requirements/SP3D6PV2ACBPEKYJTCMH7HEN02KP87QSP8KTEH335.commission-trait.clar
+      clarity-version: 1
+    epoch: '2.0'
+  - id: 1
+    transactions:
+    - transaction-type: emulated-contract-publish
+      contract-name: bitcoin-pepe
+      emulated-sender: SP16SRR777TVB1WS5XSS9QT3YEZEC9JQFKYZENRAJ
+      path: .cache/requirements/SP16SRR777TVB1WS5XSS9QT3YEZEC9JQFKYZENRAJ.bitcoin-pepe.clar
+      clarity-version: 2
+    - transaction-type: emulated-contract-publish
+      contract-name: leo-cats
+      emulated-sender: SP2N959SER36FZ5QT1CX9BR63W3E8X35WQCMBYYWC
+      path: .cache/requirements/SP2N959SER36FZ5QT1CX9BR63W3E8X35WQCMBYYWC.leo-cats.clar
+      clarity-version: 2
+    - transaction-type: emulated-contract-publish
+      contract-name: bitcoin-pepe
+      emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+      path: contracts/fakfun-idea/bitcoin-pepe.clar
+      clarity-version: 2
+    - transaction-type: emulated-contract-publish
+      contract-name: leo-cats
+      emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+      path: contracts/fakfun-idea/leo-cats.clar
+      clarity-version: 2
+    - transaction-type: emulated-contract-publish
+      contract-name: sip009-nft-trait
+      emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+      path: contracts/sip009-nft-trait.clar
+      clarity-version: 2
+    - transaction-type: emulated-contract-publish
+      contract-name: sip010-ft-trait
+      emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+      path: contracts/sip010-ft-trait.clar
+      clarity-version: 2
+    epoch: '2.5'
+  - id: 2
+    transactions:
+    - transaction-type: emulated-contract-publish
+      contract-name: xtrata-v1-1-1
+      emulated-sender: SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X
+      path: .cache/requirements/SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v1-1-1.clar
+      clarity-version: 3
+    - transaction-type: emulated-contract-publish
+      contract-name: xtrata-v2-1-0
+      emulated-sender: SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X
+      path: .cache/requirements/SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-0.clar
+      clarity-version: 3
+    epoch: '3.3'
+  - id: 3
+    transactions:
+    - transaction-type: emulated-contract-publish
+      contract-name: xtrata-v3-2-3
+      emulated-sender: SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X
+      path: .cache/requirements/SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v3-2-3.clar
+      clarity-version: 3
+    - transaction-type: emulated-contract-publish
+      contract-name: fakfun-xtrata-core
+      emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+      path: contracts/fakfun-idea/fakfun-xtrata-core.clar
+      clarity-version: 4
+    - transaction-type: emulated-contract-publish
+      contract-name: leo-fakfun-xtrata
+      emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+      path: contracts/fakfun-idea/leo-fakfun-xtrata.clar
+      clarity-version: 4
+    - transaction-type: emulated-contract-publish
+      contract-name: xtrata-v1-1-1
+      emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+      path: contracts/xtrata-v1.1.1.clar
+      clarity-version: 3
+    - transaction-type: emulated-contract-publish
+      contract-name: xtrata-v2-1-0
+      emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+      path: contracts/xtrata-v2.1.0.clar
+      clarity-version: 3
+    - transaction-type: emulated-contract-publish
+      contract-name: xtrata-v3-2-3
+      emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+      path: contracts/fakfun-idea/xtrata-v3.2.3.clar
+      clarity-version: 3
+    - transaction-type: emulated-contract-publish
+      contract-name: leo-fakfun-xtrata-fuzz
+      emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+      path: tests/rv/.build/leo-fakfun-xtrata-fuzz.clar
+      clarity-version: 4
+    - transaction-type: emulated-contract-publish
+      contract-name: mock-ipfs-collection
+      emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+      path: contracts/mock-ipfs-collection.clar
+      clarity-version: 3
+    - transaction-type: emulated-contract-publish
+      contract-name: mock-sbtc
+      emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+      path: contracts/mock-sbtc.clar
+      clarity-version: 3
+    - transaction-type: emulated-contract-publish
+      contract-name: mock-usdcx
+      emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+      path: contracts/mock-usdcx.clar
+      clarity-version: 3
+    - transaction-type: emulated-contract-publish
+      contract-name: pepe-4ever-fakfun
+      emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+      path: contracts/fakfun-idea/pepe-4ever-fakfun.clar
+      clarity-version: 4
+    - transaction-type: emulated-contract-publish
+      contract-name: pepe-4ever-fakfun-fuzz
+      emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+      path: tests/rv/.build/pepe-4ever-fakfun-fuzz.clar
+      clarity-version: 4
+    - transaction-type: emulated-contract-publish
+      contract-name: xtrata-arcade-scores-v1-0
+      emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+      path: contracts/xtrata-arcade-scores-v1.0.clar
+      clarity-version: 3
+    - transaction-type: emulated-contract-publish
+      contract-name: xtrata-arcade-scores-v1-1
+      emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+      path: contracts/xtrata-arcade-scores-v1.1.clar
+      clarity-version: 3
+    - transaction-type: emulated-contract-publish
+      contract-name: xtrata-arcade-scores-v1-2
+      emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+      path: contracts/xtrata-arcade-scores-v1.2.clar
+      clarity-version: 3
+    - transaction-type: emulated-contract-publish
+      contract-name: xtrata-arcade-scores-v1-3
+      emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+      path: contracts/xtrata-arcade-scores-v1.3.clar
+      clarity-version: 3
+    - transaction-type: emulated-contract-publish
+      contract-name: xtrata-backup-registry-v1-0
+      emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+      path: contracts/xtrata-backup-registry-v1.0.clar
+      clarity-version: 3
+    - transaction-type: emulated-contract-publish
+      contract-name: xtrata-collection-mint-v1-0
+      emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+      path: contracts/xtrata-collection-mint-v1.0.clar
+      clarity-version: 3
+    - transaction-type: emulated-contract-publish
+      contract-name: xtrata-collection-mint-v1-1
+      emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+      path: contracts/xtrata-collection-mint-v1.1.clar
+      clarity-version: 3
+    - transaction-type: emulated-contract-publish
+      contract-name: xtrata-collection-mint-v1-2
+      emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+      path: contracts/xtrata-collection-mint-v1.2.clar
+      clarity-version: 3
+    - transaction-type: emulated-contract-publish
+      contract-name: xtrata-collection-mint-v1-3
+      emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+      path: contracts/xtrata-collection-mint-v1.3.clar
+      clarity-version: 3
+    - transaction-type: emulated-contract-publish
+      contract-name: xtrata-collection-mint-v1-4
+      emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+      path: contracts/xtrata-collection-mint-v1.4.clar
+      clarity-version: 3
+    - transaction-type: emulated-contract-publish
+      contract-name: xtrata-commerce
+      emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+      path: contracts/xtrata-commerce.clar
+      clarity-version: 3
+    - transaction-type: emulated-contract-publish
+      contract-name: xtrata-fakfun-forever-v2-fuzz
+      emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+      path: tests/rv/.build/xtrata-fakfun-forever-v2-fuzz.clar
+      clarity-version: 4
+    - transaction-type: emulated-contract-publish
+      contract-name: xtrata-market-sbtc-v1-0
+      emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+      path: contracts/xtrata-market-sbtc-v1.0.clar
+      clarity-version: 3
+    epoch: '3.4'
+  - id: 4
+    transactions:
+    - transaction-type: emulated-contract-publish
+      contract-name: xtrata-market-stx-v1-0
+      emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+      path: contracts/xtrata-market-stx-v1.0.clar
+      clarity-version: 3
+    - transaction-type: emulated-contract-publish
+      contract-name: xtrata-market-usdc-v1-0
+      emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+      path: contracts/xtrata-market-usdc-v1.0.clar
+      clarity-version: 3
+    - transaction-type: emulated-contract-publish
+      contract-name: xtrata-market-v1-0
+      emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+      path: contracts/xtrata-market-v1.0.clar
+      clarity-version: 3
+    - transaction-type: emulated-contract-publish
+      contract-name: xtrata-market-v1-1
+      emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+      path: contracts/xtrata-market-v1.1.clar
+      clarity-version: 3
+    - transaction-type: emulated-contract-publish
+      contract-name: xtrata-migrated-ipfs-collection-v1-0
+      emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+      path: contracts/xtrata-migrated-ipfs-collection-v1.0.clar
+      clarity-version: 3
+    - transaction-type: emulated-contract-publish
+      contract-name: xtrata-preinscribed-collection-sale-v1-0
+      emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+      path: contracts/xtrata-preinscribed-collection-sale-v1.0.clar
+      clarity-version: 3
+    - transaction-type: emulated-contract-publish
+      contract-name: xtrata-small-mint-v1-0
+      emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+      path: contracts/xtrata-small-mint-v1.0.clar
+      clarity-version: 3
+    - transaction-type: emulated-contract-publish
+      contract-name: xtrata-v1-1-0
+      emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+      path: contracts/xtrata-v1.1.0.clar
+      clarity-version: 3
+    - transaction-type: emulated-contract-publish
+      contract-name: xtrata-v2-1-1
+      emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+      path: contracts/xtrata-v2.1.1.clar
+      clarity-version: 3
+    - transaction-type: emulated-contract-publish
+      contract-name: xtrata-v3-0-0
+      emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+      path: contracts/xtrata-v3.0.0.clar
+      clarity-version: 3
+    - transaction-type: emulated-contract-publish
+      contract-name: xtrata-vault
+      emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+      path: contracts/xtrata-vault.clar
+      clarity-version: 3
+    epoch: '3.4'
