@@ -10,7 +10,7 @@
 (define-constant MASTER 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v3-2-3)
 (define-constant SOURCE 'SP2N959SER36FZ5QT1CX9BR63W3E8X35WQCMBYYWC.leo-cats)
 (define-data-var contract-owner principal tx-sender)
-(define-data-var free-threshold uint u87)
+(define-data-var free-threshold uint u69)
 (define-data-var inscribe-fee uint u4000000)
 (define-data-var payout-a principal tx-sender)
 (define-data-var payout-b principal 'SP10W2EEM757922QTVDZZ5CSEW55JEFNN30J69TM7)
