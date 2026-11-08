@@ -45,8 +45,14 @@
   }
 )
 
-(define-map CanonicalHash uint (buff 32))
-(define-map BoundTwins uint uint)
+(define-map CanonicalHash
+  uint
+  (buff 32)
+)
+(define-map BoundTwins
+  uint
+  uint
+)
 (define-data-var canonical-finalized bool false)
 
 (define-read-only (fee-for (payer principal))
@@ -54,7 +60,10 @@
     u0
     (let ((standard (var-get inscribe-fee)))
       (match (map-get? Discounts payer)
-        d (if (< d standard) d standard)
+        d (if (< d standard)
+          d
+          standard
+        )
         standard
       )
     )
@@ -107,14 +116,20 @@
       (is-some (unwrap! (contract-call? SOURCE get-owner token-id) ERR-NO-SUCH-TOKEN))
       ERR-NO-SUCH-TOKEN
     )
-    (asserts! (is-eq (some expected-hash) (map-get? CanonicalHash token-id)) ERR-NOT-CANONICAL)
+    (asserts! (is-eq (some expected-hash) (map-get? CanonicalHash token-id))
+      ERR-NOT-CANONICAL
+    )
     (asserts! (is-none (map-get? Bindings token-id)) ERR-ALREADY-INSCRIBED)
     (and (not (is-eq tx-sender (var-get contract-owner))) (try! (charge-fee tx-sender)))
-    (let ((master-fee (get total-fee (try! (contract-call? MASTER quote-single-tx-fee total-size (len chunks))))))
+    (let ((master-fee (get total-fee
+        (try! (contract-call? MASTER quote-single-tx-fee total-size (len chunks)))
+      )))
       (try! (stx-transfer? master-fee tx-sender current-contract))
       (let (
           (result (try! (as-contract? ((with-stx master-fee))
-            (try! (contract-call? MASTER mint-single-tx expected-hash mime total-size chunks token-uri))
+            (try! (contract-call? MASTER mint-single-tx expected-hash mime total-size
+              chunks token-uri
+            ))
           )))
           (xtrata-id (get token-id result))
           (total-inscribed (+ (var-get inscribed-count) u1))
@@ -142,14 +157,15 @@
   )
 )
 
-
 (define-public (bind-staged
     (token-id uint)
     (xtrata-id uint)
   )
   (let (
       (canonical (unwrap! (map-get? CanonicalHash token-id) ERR-NOT-CANONICAL))
-      (twin-hash (unwrap! (contract-call? MASTER get-inscription-hash xtrata-id) ERR-NOT-CANONICAL))
+      (twin-hash (unwrap! (contract-call? MASTER get-inscription-hash xtrata-id)
+        ERR-NOT-CANONICAL
+      ))
       (total-inscribed (+ (var-get inscribed-count) u1))
     )
     (asserts!
@@ -294,7 +310,10 @@
 )
 
 (define-private (seed-one
-    (e { id: uint, hash: (buff 32) })
+    (e {
+      id: uint,
+      hash: (buff 32),
+    })
     (acc bool)
   )
   (begin
@@ -303,7 +322,10 @@
   )
 )
 
-(define-public (seed-canonical (entries (list 200 { id: uint, hash: (buff 32) })))
+(define-public (seed-canonical (entries (list 200 {
+  id: uint,
+  hash: (buff 32),
+})))
   (begin
     (try! (assert-owner))
     (asserts! (not (var-get canonical-finalized)) ERR-FINALIZED)
