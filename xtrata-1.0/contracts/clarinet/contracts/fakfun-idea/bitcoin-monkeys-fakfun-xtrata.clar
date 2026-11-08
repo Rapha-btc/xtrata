@@ -7,6 +7,13 @@
 (define-constant ERR-NOT-CANONICAL (err u206))
 (define-constant ERR-FINALIZED (err u207))
 (define-constant ERR-TWIN-USED (err u208))
+(define-constant ERR-NO-LUMP-PRICE (err u209))
+(define-constant ERR-LUMP-PAID (err u210))
+(define-constant ERR-BAD-TERMS (err u211))
+(define-constant ERR-NOTHING-TO-CLAIM (err u212))
+(define-constant ERR-TOO-EARLY (err u213))
+(define-constant LUMP-SWEEP-DELAY u12960)
+(define-constant TERMS "I agree: (1) all fees of SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v3-2-3 paid through fak.fun registries are kicked back to SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22; (2) I will deploy a new Xtrata master with no pause function where 50 percent of all master fees goes to SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22, and fak.fun may wrap that master and distribute its share as it chooses.")
 
 (define-constant MASTER 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v3-2-3)
 (define-constant SOURCE 'SP2KAF9RF86PVX3NEE27DFV1CQX0T4WGR41X3S45C.bitcoin-monkeys)
@@ -16,6 +23,11 @@
 (define-data-var payout-a principal tx-sender)
 (define-data-var payout-b principal 'SP10W2EEM757922QTVDZZ5CSEW55JEFNN30J69TM7)
 (define-data-var inscribed-count uint u0)
+(define-data-var lump-price uint u0)
+(define-data-var lump-payer (optional principal) none)
+(define-data-var lump-pot uint u0)
+(define-data-var lump-sweep-at uint u0)
+(define-data-var terms-accepted bool false)
 
 (define-map Discounts
   principal
@@ -97,7 +109,7 @@
     )
     (asserts! (is-eq (some expected-hash) (map-get? CanonicalHash token-id)) ERR-NOT-CANONICAL)
     (asserts! (is-none (map-get? Bindings token-id)) ERR-ALREADY-INSCRIBED)
-    (try! (charge-fee tx-sender))
+    (and (not (is-eq tx-sender (var-get contract-owner))) (try! (charge-fee tx-sender)))
     (let ((master-fee (get total-fee (try! (contract-call? MASTER quote-single-tx-fee total-size (len chunks))))))
       (try! (stx-transfer? master-fee tx-sender current-contract))
       (let (
@@ -147,7 +159,7 @@
     (asserts! (is-eq twin-hash canonical) ERR-NOT-CANONICAL)
     (asserts! (is-none (map-get? Bindings token-id)) ERR-ALREADY-INSCRIBED)
     (asserts! (map-insert BoundTwins xtrata-id token-id) ERR-TWIN-USED)
-    (try! (charge-fee tx-sender))
+    (and (not (is-eq tx-sender (var-get contract-owner))) (try! (charge-fee tx-sender)))
     (try! (contract-call? MASTER transfer xtrata-id tx-sender current-contract))
     (map-insert Bindings token-id {
       xtrata-id: xtrata-id,
@@ -166,6 +178,76 @@
       inscribed-count: total-inscribed,
     })
     (ok xtrata-id)
+  )
+)
+
+(define-public (set-lump-price (price uint))
+  (begin
+    (try! (assert-owner))
+    (asserts! (is-none (var-get lump-payer)) ERR-LUMP-PAID)
+    (var-set lump-price price)
+    (ok true)
+  )
+)
+
+(define-public (pay-lump-sum)
+  (let ((price (var-get lump-price)))
+    (asserts! (> price u0) ERR-NO-LUMP-PRICE)
+    (asserts! (is-none (var-get lump-payer)) ERR-LUMP-PAID)
+    (try! (stx-transfer? (- price (/ price u2)) tx-sender (var-get payout-a)))
+    (try! (stx-transfer? (/ price u2) tx-sender current-contract))
+    (var-set lump-pot (/ price u2))
+    (var-set lump-sweep-at (+ burn-block-height LUMP-SWEEP-DELAY))
+    (var-set lump-payer (some tx-sender))
+    (print {
+      event: "lump-sum-paid",
+      payer: tx-sender,
+      price: price,
+    })
+    (ok true)
+  )
+)
+
+(define-public (accept-terms-and-claim (terms (string-ascii 400)))
+  (let (
+      (claimer tx-sender)
+      (pot (var-get lump-pot))
+    )
+    (asserts! (is-eq claimer (var-get payout-b)) ERR-NOT-AUTHORIZED)
+    (asserts! (is-eq terms TERMS) ERR-BAD-TERMS)
+    (asserts! (> pot u0) ERR-NOTHING-TO-CLAIM)
+    (var-set lump-pot u0)
+    (var-set terms-accepted true)
+    (try! (as-contract? ((with-stx pot))
+      (try! (stx-transfer? pot current-contract claimer))
+    ))
+    (print {
+      event: "terms-accepted",
+      claimer: claimer,
+      amount: pot,
+    })
+    (ok pot)
+  )
+)
+
+(define-public (sweep-lump)
+  (let (
+      (pot (var-get lump-pot))
+      (recipient (var-get payout-a))
+    )
+    (try! (assert-owner))
+    (asserts! (> pot u0) ERR-NOTHING-TO-CLAIM)
+    (asserts! (>= burn-block-height (var-get lump-sweep-at)) ERR-TOO-EARLY)
+    (var-set lump-pot u0)
+    (try! (as-contract? ((with-stx pot))
+      (try! (stx-transfer? pot current-contract recipient))
+    ))
+    (print {
+      event: "lump-swept",
+      recipient: recipient,
+      amount: pot,
+    })
+    (ok pot)
   )
 )
 
@@ -311,6 +393,25 @@
 
 (define-read-only (get-discount (who principal))
   (map-get? Discounts who)
+)
+
+(define-read-only (get-lump-sum)
+  (ok {
+    price: (var-get lump-price),
+    payer: (var-get lump-payer),
+  })
+)
+
+(define-read-only (get-lump-pot)
+  (ok {
+    pot: (var-get lump-pot),
+    sweep-at: (var-get lump-sweep-at),
+    accepted: (var-get terms-accepted),
+  })
+)
+
+(define-read-only (get-terms)
+  TERMS
 )
 
 (define-read-only (get-payouts)
