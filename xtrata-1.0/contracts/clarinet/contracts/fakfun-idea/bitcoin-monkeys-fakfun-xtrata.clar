@@ -267,6 +267,25 @@
   )
 )
 
+(define-public (rescue-stx)
+  (let (
+      (extra (- (stx-get-balance current-contract) (var-get lump-pot)))
+      (recipient (var-get payout-a))
+    )
+    (try! (assert-owner))
+    (asserts! (> extra u0) ERR-NOTHING-TO-CLAIM)
+    (try! (as-contract? ((with-stx extra))
+      (try! (stx-transfer? extra current-contract recipient))
+    ))
+    (print {
+      event: "stx-rescued",
+      recipient: recipient,
+      amount: extra,
+    })
+    (ok extra)
+  )
+)
+
 (define-public (swap-nft-for-xtrata (token-id uint))
   (let (
       (b (unwrap! (map-get? Bindings token-id) ERR-NOT-INSCRIBED))
