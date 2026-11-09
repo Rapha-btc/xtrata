@@ -259,18 +259,18 @@ async function build() {
   section("Lump sum: one payment, price set by owner");
   ev("lump initial", "(get-lump-sum)", "(ok (tuple (payer none) (price u0)))");
   await reg("pay before price -> u209", STRANGER, "pay-lump-sum", [], "(err u209)");
-  await reg("set price by stranger -> u204", STRANGER, "set-lump-price", [uintCV(3000000)], "(err u204)");
-  await reg("set price above stranger balance -> ok", DEPLOYER, "set-lump-price", [uintCV(1000000000)], "(ok true)");
+  await reg("set price by stranger -> u204", STRANGER, "set-lump-price", [uintCV(3000000), uintCV(0)], "(err u204)");
+  await reg("set price above stranger balance -> ok", DEPLOYER, "set-lump-price", [uintCV(1000000000), uintCV(0)], "(ok true)");
   await reg("pay without funds -> u1", STRANGER, "pay-lump-sum", [], "(err u1)");
   ev("still unpaid after failed pay", "(get-lump-sum)", "(ok (tuple (payer none) (price u1000000000)))");
-  await reg("set price 3 STX -> ok", DEPLOYER, "set-lump-price", [uintCV(3000000)], "(ok true)");
+  await reg("set price 3 STX -> ok", DEPLOYER, "set-lump-price", [uintCV(3000000), uintCV(0)], "(ok true)");
   cap("lp0"); bal(STRANGER, "lp0-s");
   await reg("pay lump sum -> ok", STRANGER, "pay-lump-sum", [], "(ok true)", { fee: 3000, wantEvent: new RegExp(`^\\(tuple \\(event "lump-sum-paid"\\) \\(payer ${STRANGER}\\) \\(price u3000000\\)\\)$`) });
   cap("lp1"); bal(STRANGER, "lp1-s");
   ev("lump records payer", "(get-lump-sum)", `(ok (tuple (payer (some ${STRANGER})) (price u3000000)))`);
   await reg("second pay -> u210", KEEPER, "pay-lump-sum", [], "(err u210)");
-  await reg("reprice after paid -> u210", DEPLOYER, "set-lump-price", [uintCV(1)], "(err u210)");
-  await reg("reprice after paid by stranger -> u204", STRANGER, "set-lump-price", [uintCV(1)], "(err u204)");
+  await reg("reprice after paid -> u210", DEPLOYER, "set-lump-price", [uintCV(1), uintCV(0)], "(err u210)");
+  await reg("reprice after paid by stranger -> u204", STRANGER, "set-lump-price", [uintCV(1), uintCV(0)], "(err u204)");
 
   section("Jim's half: accept terms and claim; early sweep blocked");
   const TERMS = code.match(/define-constant TERMS "([^"]*)"/)[1];
@@ -293,7 +293,7 @@ async function build() {
   const REG2 = `${REG}-sw`, CID2 = `${DEPLOYER}.${REG2}`;
   const dep2 = await makeUnsignedContractDeploy({ contractName: REG2, codeBody: code, clarityVersion: ClarityVersion.Clarity5, nonce: await nonce(DEPLOYER), network: NET, publicKey: "00".repeat(33), fee: 300000 });
   push(dep2, DEPLOYER, { kind: "deploy", label: `deploy ${REG2}` });
-  await call("copy set price 2000001 -> ok", DEPLOYER, CID2, "set-lump-price", [uintCV(2000001)], "(ok true)");
+  await call("copy set price 2000001 -> ok", DEPLOYER, CID2, "set-lump-price", [uintCV(2000001), uintCV(0)], "(ok true)");
   bal(DEPLOYER, "ao0");
   await call("copy pay lump -> ok", KEEPER, CID2, "pay-lump-sum", [], "(ok true)");
   bal(DEPLOYER, "ao1");
@@ -312,20 +312,71 @@ async function build() {
   const REG3 = `${REG}-lc`, CID3 = `${DEPLOYER}.${REG3}`;
   const dep3 = await makeUnsignedContractDeploy({ contractName: REG3, codeBody: code, clarityVersion: ClarityVersion.Clarity5, nonce: await nonce(DEPLOYER), network: NET, publicKey: "00".repeat(33), fee: 300000 });
   push(dep3, DEPLOYER, { kind: "deploy", label: `deploy ${REG3}` });
-  await call("late copy set price -> ok", DEPLOYER, CID3, "set-lump-price", [uintCV(2000000)], "(ok true)");
+  await call("late copy set price -> ok", DEPLOYER, CID3, "set-lump-price", [uintCV(2000000), uintCV(0)], "(ok true)");
   await call("late copy pay -> ok", KEEPER, CID3, "pay-lump-sum", [], "(ok true)");
 
   section("Fourth copy: claim follows set-payouts");
   const REG4 = `${REG}-pb`, CID4 = `${DEPLOYER}.${REG4}`;
   const dep4 = await makeUnsignedContractDeploy({ contractName: REG4, codeBody: code, clarityVersion: ClarityVersion.Clarity5, nonce: await nonce(DEPLOYER), network: NET, publicKey: "00".repeat(33), fee: 300000 });
   push(dep4, DEPLOYER, { kind: "deploy", label: `deploy ${REG4}` });
-  await call("pb copy set price -> ok", DEPLOYER, CID4, "set-lump-price", [uintCV(2000000)], "(ok true)");
+  await call("pb copy set price -> ok", DEPLOYER, CID4, "set-lump-price", [uintCV(2000000), uintCV(0)], "(ok true)");
   await call("pb copy pay -> ok", KEEPER, CID4, "pay-lump-sum", [], "(ok true)");
   await call("pb copy set-payouts new b -> ok", DEPLOYER, CID4, "set-payouts", [pcv(DEPLOYER), pcv(STRANGER)], "(ok true)");
   await call("pb copy old payout-b -> u204", PAYOUT_B, CID4, "accept-terms-and-claim", [stringAsciiCV(TERMS)], "(err u204)");
   bal(STRANGER, "nb0-s"); bal(CID4, "nb0-r");
   await call("pb copy new payout-b claims -> ok", STRANGER, CID4, "accept-terms-and-claim", [stringAsciiCV(TERMS)], "(ok u1000000)", { fee: 3000 });
   bal(STRANGER, "nb1-s"); bal(CID4, "nb1-r");
+
+  section("Lump splits: hold is half of price minus cost");
+  const copy = async (sfx) => {
+    const name = `${REG}-${sfx}`;
+    const dep = await makeUnsignedContractDeploy({ contractName: name, codeBody: code, clarityVersion: ClarityVersion.Clarity5, nonce: await nonce(DEPLOYER), network: NET, publicKey: "00".repeat(33), fee: 300000 });
+    push(dep, DEPLOYER, { kind: "deploy", label: `deploy ${name}` });
+    return `${DEPLOYER}.${name}`;
+  };
+  const splitCaps = (n, cid) => { bal(DEPLOYER, `${n}-a`); bal(KEEPER, `${n}-k`); bal(cid, `${n}-r`); };
+  const S1 = await copy("h1");
+  ev("cost defaults to 0", `(contract-call? '${S1} get-lump-cost)`, "(ok u0)");
+  ev("hold defaults to 0", `(contract-call? '${S1} get-lump-hold)`, "(ok u0)");
+  await call("zero price -> u214", DEPLOYER, S1, "set-lump-price", [uintCV(0), uintCV(0)], "(err u214)");
+  await call("cost above price -> u214", DEPLOYER, S1, "set-lump-price", [uintCV(100), uintCV(101)], "(err u214)");
+  await call("cost above price by stranger -> u204", STRANGER, S1, "set-lump-price", [uintCV(100), uintCV(101)], "(err u204)");
+  await call("Monkeys-like price -> ok", DEPLOYER, S1, "set-lump-price", [uintCV(22764761), uintCV(14227975)], "(ok true)");
+  ev("cost stored", `(contract-call? '${S1} get-lump-cost)`, "(ok u14227975)");
+  ev("hold derived", `(contract-call? '${S1} get-lump-hold)`, "(ok u4268393)");
+  ev("price stored", `(contract-call? '${S1} get-lump-sum)`, "(ok (tuple (payer none) (price u22764761)))");
+  splitCaps("s10", S1);
+  await call("Monkeys-like pay -> ok", KEEPER, S1, "pay-lump-sum", [], "(ok true)", { fee: 3000 });
+  splitCaps("s11", S1);
+  ev("pot is the hold", `(contract-call? '${S1} get-lump-pot)`, /^\(ok \(tuple \(accepted false\) \(pot u4268393\) \(sweep-at u\d+\)\)\)$/);
+  await call("repricing a paid split -> u210", DEPLOYER, S1, "set-lump-price", [uintCV(1), uintCV(1)], "(err u210)");
+  await call("payout-b claims the hold -> ok", PAYOUT_B, S1, "accept-terms-and-claim", [stringAsciiCV(TERMS)], "(ok u4268393)");
+  ev("split contract is empty", `(stx-get-balance '${S1})`, "u0");
+  const S2 = await copy("h0");
+  await call("zero margin set -> ok", DEPLOYER, S2, "set-lump-price", [uintCV(1000000), uintCV(1000000)], "(ok true)");
+  ev("zero margin hold", `(contract-call? '${S2} get-lump-hold)`, "(ok u0)");
+  splitCaps("s20", S2);
+  await call("zero margin pay -> ok", KEEPER, S2, "pay-lump-sum", [], "(ok true)", { fee: 3000 });
+  splitCaps("s21", S2);
+  ev("zero margin pot", `(contract-call? '${S2} get-lump-pot)`, /^\(ok \(tuple \(accepted false\) \(pot u0\) \(sweep-at u\d+\)\)\)$/);
+  await call("zero margin claim -> u212", PAYOUT_B, S2, "accept-terms-and-claim", [stringAsciiCV(TERMS)], "(err u212)");
+  await call("zero margin sweep -> u212", DEPLOYER, S2, "sweep-lump", [], "(err u212)");
+  const S3 = await copy("hc");
+  await call("zero cost set -> ok", DEPLOYER, S3, "set-lump-price", [uintCV(1000001), uintCV(0)], "(ok true)");
+  ev("zero cost hold is half", `(contract-call? '${S3} get-lump-hold)`, "(ok u500000)");
+  splitCaps("s30", S3);
+  await call("zero cost pay -> ok", KEEPER, S3, "pay-lump-sum", [], "(ok true)", { fee: 3000 });
+  splitCaps("s31", S3);
+  await call("zero cost claim -> ok", PAYOUT_B, S3, "accept-terms-and-claim", [stringAsciiCV(TERMS)], "(ok u500000)");
+  ev("zero cost contract is empty", `(stx-get-balance '${S3})`, "u0");
+  const S4 = await copy("ho");
+  await call("odd difference set -> ok", DEPLOYER, S4, "set-lump-price", [uintCV(3000001), uintCV(1000000)], "(ok true)");
+  ev("odd difference hold floors", `(contract-call? '${S4} get-lump-hold)`, "(ok u1000000)");
+  splitCaps("s40", S4);
+  await call("odd difference pay -> ok", KEEPER, S4, "pay-lump-sum", [], "(ok true)", { fee: 3000 });
+  splitCaps("s41", S4);
+  await call("odd difference claim -> ok", PAYOUT_B, S4, "accept-terms-and-claim", [stringAsciiCV(TERMS)], "(ok u1000000)");
+  ev("odd difference contract is empty", `(stx-get-balance '${S4})`, "u0");
 
   section("Pause probe (what a re-pause does to a live run)");
   const P26 = await keeperMint("t26", A(26));
@@ -439,6 +490,9 @@ async function main() {
   d("rescue owner", "rs0-a", "rs1-a", 500000n - G);
   d("rescue registry", "rs0-r", "rs1-r", -500000n);
   d("lump payer", "lp0-s", "lp1-s", -(3000000n + G));
+  for (const [n, lab, a, k, r] of [["s1", "Monkeys-like", 18496368n, -(22764761n + G), 4268393n], ["s2", "zero margin", 1000000n, -(1000000n + G), 0n], ["s3", "zero cost", 500001n, -(1000001n + G), 500000n], ["s4", "odd difference", 2000001n, -(3000001n + G), 1000000n]]) {
+    d(`${lab} payout-a`, `${n}0-a`, `${n}1-a`, a); d(`${lab} payer`, `${n}0-k`, `${n}1-k`, k); d(`${lab} held`, `${n}0-r`, `${n}1-r`, r);
+  }
 
   console.log(`\n=== ${pass} passed, ${fail} failed of ${pass + fail} ===\n${url}`);
   if (fails.length) console.log("FAILED:\n" + fails.join("\n"));

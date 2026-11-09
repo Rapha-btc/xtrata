@@ -9,8 +9,8 @@ bytes as Clarity 5.
 
 ## Result
 
-**353 of 353 passed** on contract commit `6569230`:
-https://stxer.xyz/simulations/mainnet/7fe6af536aaa44cfdf3a940be6cc2736
+**422 of 422 passed** on the uncommitted cost-based split amendment:
+https://stxer.xyz/simulations/mainnet/66897f6334712c03f68e0c50b41c7810
 
 | Checks | What changed | Simulation |
 |---|---|---|
@@ -20,6 +20,7 @@ https://stxer.xyz/simulations/mainnet/7fe6af536aaa44cfdf3a940be6cc2736
 | 304/304 | `clarinet format` bytes | [62e58283](https://stxer.xyz/simulations/mainnet/62e582830298813bdf1c2ffe8e22a447) |
 | 341/341 | Boundary, late claim, `set-payouts`, prints | [a6af28b9](https://stxer.xyz/simulations/mainnet/a6af28b9be1b3ed4a508c9d4a9d9c99d) |
 | 353/353 | `rescue-stx` | [7fe6af53](https://stxer.xyz/simulations/mainnet/7fe6af536aaa44cfdf3a940be6cc2736) |
+| 422/422 | Cost-based split, hold = (price - cost) / 2 | [66897f63](https://stxer.xyz/simulations/mainnet/66897f6334712c03f68e0c50b41c7810) |
 
 ## Coverage
 
@@ -34,8 +35,8 @@ https://stxer.xyz/simulations/mainnet/7fe6af536aaa44cfdf3a940be6cc2736
 | `inscribe` regression | Real 26-chunk art, direct and through core |
 | Registry fees | Free tier; 4 STX split 2 + 2; 0 discount; registry keeps no STX |
 | Owner pays 0 | `inscribe` and `bind-staged`; `fee-for` still reads the standard fee |
-| `set-lump-price` | Success, `u204`, `u210` after payment |
-| `pay-lump-sum` | `u209` no price, `u210` already paid, `u1` no funds, half to `payout-a`, half held, odd price gives `payout-a` the extra micro-STX, print |
+| `set-lump-price` | Price and cost, `u204`, `u210` after payment, `u214` when cost exceeds price |
+| `pay-lump-sum` | `u209` no price, `u210` already paid, `u1` no funds, Monkeys-like price and cost, zero margin (no hold), zero cost (hold is half), odd difference (extra micro-STX to `payout-a`), print |
 | `accept-terms-and-claim` | Success, `u204` stranger and owner, `u211` wrong terms, `u212` nothing left, late claim with no sweep, claim follows `set-payouts`, print |
 | `sweep-lump` | `u213` one block before `sweep-at`, success at exactly `sweep-at`, `u204`, `u212`, print |
 | `rescue-stx` | `u204`, `u212` nothing extra, takes only STX above the pot |
