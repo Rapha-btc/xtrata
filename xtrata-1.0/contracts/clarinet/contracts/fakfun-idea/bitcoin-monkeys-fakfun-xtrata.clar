@@ -12,6 +12,7 @@
 (define-constant ERR-BAD-TERMS (err u211))
 (define-constant ERR-NOTHING-TO-CLAIM (err u212))
 (define-constant ERR-TOO-EARLY (err u213))
+(define-constant ERR-BAD-LUMP (err u214))
 (define-constant LUMP-SWEEP-DELAY u12960)
 (define-constant TERMS "I agree: (1) all fees of SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v3-2-3 paid through fak.fun registries are kicked back to SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22; (2) I will deploy a new Xtrata master with no pause function where 50 percent of all master fees goes to SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22, and fak.fun may wrap that master and distribute its share as it chooses.")
 
@@ -24,6 +25,7 @@
 (define-data-var payout-b principal 'SP10W2EEM757922QTVDZZ5CSEW55JEFNN30J69TM7)
 (define-data-var inscribed-count uint u0)
 (define-data-var lump-price uint u0)
+(define-data-var lump-cost uint u0)
 (define-data-var lump-payer (optional principal) none)
 (define-data-var lump-pot uint u0)
 (define-data-var lump-sweep-at uint u0)
@@ -197,22 +199,31 @@
   )
 )
 
-(define-public (set-lump-price (price uint))
+(define-public (set-lump-price
+    (price uint)
+    (cost uint)
+  )
   (begin
     (try! (assert-owner))
     (asserts! (is-none (var-get lump-payer)) ERR-LUMP-PAID)
+    (asserts! (> price u0) ERR-BAD-LUMP)
+    (asserts! (<= cost price) ERR-BAD-LUMP)
     (var-set lump-price price)
+    (var-set lump-cost cost)
     (ok true)
   )
 )
 
 (define-public (pay-lump-sum)
-  (let ((price (var-get lump-price)))
+  (let (
+      (price (var-get lump-price))
+      (hold (/ (- price (var-get lump-cost)) u2))
+    )
     (asserts! (> price u0) ERR-NO-LUMP-PRICE)
     (asserts! (is-none (var-get lump-payer)) ERR-LUMP-PAID)
-    (try! (stx-transfer? (- price (/ price u2)) tx-sender (var-get payout-a)))
-    (try! (stx-transfer? (/ price u2) tx-sender current-contract))
-    (var-set lump-pot (/ price u2))
+    (try! (stx-transfer? (- price hold) tx-sender (var-get payout-a)))
+    (and (> hold u0) (try! (stx-transfer? hold tx-sender current-contract)))
+    (var-set lump-pot hold)
     (var-set lump-sweep-at (+ burn-block-height LUMP-SWEEP-DELAY))
     (var-set lump-payer (some tx-sender))
     (print {
@@ -441,6 +452,14 @@
     price: (var-get lump-price),
     payer: (var-get lump-payer),
   })
+)
+
+(define-read-only (get-lump-cost)
+  (ok (var-get lump-cost))
+)
+
+(define-read-only (get-lump-hold)
+  (ok (/ (- (var-get lump-price) (var-get lump-cost)) u2))
 )
 
 (define-read-only (get-lump-pot)
