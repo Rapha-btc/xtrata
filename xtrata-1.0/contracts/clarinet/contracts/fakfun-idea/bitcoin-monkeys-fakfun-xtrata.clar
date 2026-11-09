@@ -14,7 +14,7 @@
 (define-constant ERR-TOO-EARLY (err u213))
 (define-constant ERR-BAD-LUMP (err u214))
 (define-constant LUMP-SWEEP-DELAY u12960)
-(define-constant TERMS "I agree: (1) all fees of SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v3-2-3 paid through fak.fun registries are kicked back to SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22; (2) I will deploy a new Xtrata master with no pause function where 50 percent of all master fees goes to SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22, and fak.fun may wrap that master and distribute its share as it chooses.")
+(define-constant TERMS "I agree: (1) 50 percent of the fees of SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v3-2-3 paid through fak.fun registries are kicked back to SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22; (2) I will deploy a new Xtrata master with no pause function where 50 percent of all master fees goes to SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22, and fak.fun may wrap that master and distribute its share as it chooses.")
 
 (define-constant MASTER 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v3-2-3)
 (define-constant SOURCE 'SP2KAF9RF86PVX3NEE27DFV1CQX0T4WGR41X3S45C.bitcoin-monkeys)
@@ -235,7 +235,7 @@
   )
 )
 
-(define-public (accept-terms-and-claim (terms (string-ascii 400)))
+(define-public (accept-terms-and-claim (terms (string-ascii 500)))
   (let (
       (claimer tx-sender)
       (pot (var-get lump-pot))
